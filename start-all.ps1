@@ -386,6 +386,26 @@ func start --port $BACKEND_PORT --verbose 2>&1 | Tee-Object -FilePath '$logFile'
 function Start-Frontend {
     Write-Header "STARTING FRONTEND"
     
+    # CRITICAL: Ensure dependencies are installed before starting
+    Push-Location $FRONTEND_DIR
+    try {
+        if (-not (Test-Path "node_modules")) {
+            Write-Warning "Frontend dependencies not found!"
+            Write-Info "Installing dependencies (this may take a few minutes)..."
+            npm install
+            Write-Success "Dependencies installed"
+        } elseif (-not (Test-Path "node_modules\vite")) {
+            Write-Warning "Vite not found in node_modules!"
+            Write-Info "Reinstalling dependencies..."
+            npm install
+            Write-Success "Dependencies reinstalled"
+        } else {
+            Write-Success "Frontend dependencies verified"
+        }
+    } finally {
+        Pop-Location
+    }
+    
     $logFile = Join-Path $SCRIPT_DIR "logs\frontend-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
     $logsDir = Join-Path $SCRIPT_DIR "logs"
     
@@ -414,11 +434,13 @@ Write-Host 'Log File: $logFile' -ForegroundColor Yellow
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
 
-# Check if node_modules exists, install if needed
+# Double-check node_modules in the new window
 if (-not (Test-Path 'node_modules')) {
-    Write-Host 'Installing dependencies...' -ForegroundColor Yellow
-    npm install
-    Write-Host 'Dependencies installed!' -ForegroundColor Green
+    Write-Host 'ERROR: node_modules not found!' -ForegroundColor Red
+    Write-Host 'Please run: npm install' -ForegroundColor Yellow
+    Write-Host 'Press any key to exit...'
+    `$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+    exit 1
 }
 
 # Use npm run dev which properly resolves vite from node_modules
