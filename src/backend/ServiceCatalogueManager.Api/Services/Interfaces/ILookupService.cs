@@ -20,4 +20,5 @@ public interface ILookupService
     Task<IEnumerable<RequirementLevelDto>> GetRequirementLevelsAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<RoleDto>> GetRolesAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<EffortCategoryDto>> GetEffortCategoriesAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<object>> GetServicesListAsync(CancellationToken cancellationToken = default);
 }
