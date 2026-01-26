@@ -35,9 +35,15 @@ public class ExportFunctions
         _logger.LogInformation("Exporting services to PDF");
 
         var exportRequest = await req.ReadFromJsonAsync<ExportRequestDto>(cancellationToken);
+        if (exportRequest == null)
+        {
+            var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+            await errorResponse.WriteStringAsync("Invalid request body", cancellationToken);
+            return errorResponse;
+        }
         exportRequest = exportRequest with { Format = ExportFormat.Pdf };
 
-        var result = await _exportService.ExportAsync(exportRequest!, cancellationToken);
+        var result = await _exportService.ExportAsync(exportRequest, cancellationToken);
 
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", result.ContentType);
@@ -57,9 +63,15 @@ public class ExportFunctions
         _logger.LogInformation("Exporting services to Markdown");
 
         var exportRequest = await req.ReadFromJsonAsync<ExportRequestDto>(cancellationToken);
+        if (exportRequest == null)
+        {
+            var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+            await errorResponse.WriteStringAsync("Invalid request body", cancellationToken);
+            return errorResponse;
+        }
         exportRequest = exportRequest with { Format = ExportFormat.Markdown };
 
-        var result = await _exportService.ExportAsync(exportRequest!, cancellationToken);
+        var result = await _exportService.ExportAsync(exportRequest, cancellationToken);
 
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", result.ContentType);
