@@ -314,8 +314,16 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         modelBuilder.Entity<ServiceTeamAllocation>(entity =>
         {
             entity.ToTable("ServiceTeamAllocation");
-            entity.HasKey(e => e.AllocationId);
-            entity.Property(e => e.AllocationPercentage).HasPrecision(18, 2);
+            entity.HasKey(e => e.TeamAllocationId);
+            entity.Property(e => e.CloudArchitects).HasPrecision(18, 2);
+            entity.Property(e => e.SolutionArchitects).HasPrecision(18, 2);
+            entity.Property(e => e.TechnicalLeads).HasPrecision(18, 2);
+            entity.Property(e => e.Developers).HasPrecision(18, 2);
+            entity.Property(e => e.QAEngineers).HasPrecision(18, 2);
+            entity.Property(e => e.DevOpsEngineers).HasPrecision(18, 2);
+            entity.Property(e => e.SecuritySpecialists).HasPrecision(18, 2);
+            entity.Property(e => e.ProjectManagers).HasPrecision(18, 2);
+            entity.Property(e => e.BusinessAnalysts).HasPrecision(18, 2);
 
             entity.HasOne(e => e.Service)
                 .WithMany(s => s.TeamAllocations)

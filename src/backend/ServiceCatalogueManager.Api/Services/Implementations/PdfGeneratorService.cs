@@ -93,7 +93,7 @@ public class PdfGeneratorService : IPdfGeneratorService
                             {
                                 foreach (var prereq in service.Prerequisites)
                                 {
-                                    column.Item().Text($"• {prereq.PrerequisiteName}");
+                                    column.Item().Text($"• {prereq.PrerequisiteDescription}");
                                 }
                             });
                         }
@@ -105,7 +105,7 @@ public class PdfGeneratorService : IPdfGeneratorService
                             {
                                 foreach (var dep in service.Dependencies)
                                 {
-                                    column.Item().Text($"• {dep.DependencyName} ({dep.DependencyTypeName})");
+                                    column.Item().Text($"• {dep.DependentServiceName} ({dep.DependencyTypeName})");
                                 }
                             });
                         }
@@ -117,7 +117,7 @@ public class PdfGeneratorService : IPdfGeneratorService
                             {
                                 foreach (var size in service.SizeOptions)
                                 {
-                                    column.Item().Text($"• {size.SizeName}: {size.EstimatedDays} days");
+                                    column.Item().Text($"• {size.SizeName}: {size.ScopeDescription ?? "No description"}");
                                 }
                             });
                         }
