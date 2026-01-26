@@ -4,6 +4,7 @@ import { useIsAuthenticated } from '@azure/msal-react';
 
 import { Layout } from './components/common/Layout';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Pages
@@ -17,16 +18,18 @@ import { LoginPage } from './pages/Login';
 import { NotFoundPage } from './pages/NotFound';
 
 function App() {
-  const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true' || import.meta.env.VITE_DEV_MODE === 'true';
-  const isAuthenticated = skipAuth || useIsAuthenticated();
+  // Auth bypass only in development mode with explicit environment check
+  const isDevelopment = import.meta.env.MODE === 'development';
+  const skipAuth = isDevelopment && import.meta.env.VITE_SKIP_AUTH === 'true';
+  const isAuthenticated = useIsAuthenticated();
 
-  if (skipAuth) {
-    console.log('🔥 APP: Auth bypassed - rendering without ProtectedRoute');
-  }
+  // Security: Only allow skip in development mode
+  const shouldAuthenticate = !skipAuth && !isAuthenticated;
 
   return (
-    <Suspense fallback={<LoadingSpinner fullScreen />}>
-      <Routes>
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
+        <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
 
@@ -54,6 +57,7 @@ function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
+  </ErrorBoundary>
   );
 }
 

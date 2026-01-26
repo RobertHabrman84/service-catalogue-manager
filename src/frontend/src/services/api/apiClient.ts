@@ -77,12 +77,18 @@ class ApiClient {
     const contentType = response.headers.get('content-type');
     
     let data: T;
+    
+    // Handle different content types properly
     if (contentType?.includes('application/json')) {
       data = await response.json();
-    } else if (contentType?.includes('application/octet-stream') || contentType?.includes('application/pdf')) {
-      data = (await response.blob()) as unknown as T;
+    } else if (contentType?.includes('application/octet-stream') || 
+               contentType?.includes('application/pdf') ||
+               contentType?.includes('image/')) {
+      // For binary content, return as Blob (caller should expect Blob type)
+      data = (await response.blob()) as T;
     } else {
-      data = (await response.text()) as unknown as T;
+      // For text content, return as string (caller should expect string type)
+      data = (await response.text()) as T;
     }
 
     if (!response.ok) {
@@ -92,7 +98,7 @@ class ApiClient {
           : `HTTP ${response.status}: ${response.statusText}`,
         status: response.status,
         statusText: response.statusText,
-        details: typeof data === 'object' ? data as Record<string, unknown> : undefined,
+        details: typeof data === 'object' && data !== null ? data as Record<string, unknown> : undefined,
       };
       throw error;
     }
@@ -146,14 +152,45 @@ class ApiClient {
     } catch (error) {
       clearTimeout(timeoutId);
 
+      // Handle all error types properly
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          throw { message: 'Request timeout', code: 'TIMEOUT' } as ApiError;
+          const timeoutError: ApiError = { 
+            message: 'Request timeout', 
+            code: 'TIMEOUT',
+            status: 408
+          };
+          throw timeoutError;
         }
-        throw { message: error.message, code: 'NETWORK_ERROR' } as ApiError;
+        const networkError: ApiError = { 
+          message: error.message, 
+          code: 'NETWORK_ERROR',
+          status: 0
+        };
+        throw networkError;
+      }
+      
+      // Handle non-Error exceptions
+      if (typeof error === 'string') {
+        const stringError: ApiError = { 
+          message: error, 
+          code: 'UNKNOWN_ERROR' 
+        };
+        throw stringError;
+      }
+      
+      // Handle ApiError objects thrown from handleResponse
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error as ApiError;
       }
 
-      throw error;
+      // Last resort: wrap unknown errors
+      const unknownError: ApiError = { 
+        message: 'An unknown error occurred', 
+        code: 'UNKNOWN_ERROR',
+        details: { originalError: error }
+      };
+      throw unknownError;
     }
   }
 

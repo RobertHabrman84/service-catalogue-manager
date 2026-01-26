@@ -40,12 +40,22 @@ var host = new HostBuilder()
         {
             var connectionString = configuration.GetConnectionString("AzureSQL")
                 ?? configuration["AzureSQL__ConnectionString"];
+            
+            // Validate connection string
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException(
+                    "AzureSQL connection string is not configured. " +
+                    "Please set ConnectionStrings:AzureSQL or AzureSQL__ConnectionString.");
+            }
+            
             options.UseSqlServer(connectionString, sqlOptions =>
             {
                 sqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 5,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorNumbersToAdd: null);
+                sqlOptions.CommandTimeout(30);
             });
         });
 
@@ -76,18 +86,19 @@ var host = new HostBuilder()
         // Cache Service
         services.AddSingleton<ICacheService, InMemoryCacheService>();
 
-        // TODO: Implement these services
-        // services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
-        // services.AddScoped<IMarkdownGeneratorService, MarkdownGeneratorService>();
-        // services.AddScoped<IBlobStorageService, BlobStorageService>();
-        // services.AddScoped<IUuBookKitService, UuBookKitService>();
-                // AutoMapper
+        // Export & Document Generation Services
+        services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
+        services.AddScoped<IMarkdownGeneratorService, MarkdownGeneratorService>();
+        services.AddScoped<IBlobStorageService, BlobStorageService>();
+        services.AddScoped<IUuBookKitService, UuBookKitService>();
+        
+        // AutoMapper
         services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
         // FluentValidation
         services.AddValidatorsFromAssemblyContaining<Program>();
 
-        // HTTP Clients
+        // HTTP Clients with Retry Policy
         services.AddHttpClient("UuBookKit", client =>
         {
             var baseUrl = configuration["UuBookKit__ApiUrl"];
@@ -96,10 +107,15 @@ var host = new HostBuilder()
                 client.BaseAddress = new Uri(baseUrl);
             }
             client.DefaultRequestHeaders.Add("Accept", "application/json");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        })
+        .AddStandardResilienceHandler(options =>
+        {
+            options.Retry.MaxRetryAttempts = 3;
+            options.Retry.Delay = TimeSpan.FromSeconds(1);
+            options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
         });
-        // TODO: Add Polly retry policy when Polly.Extensions.Http is properly configured
-        // .AddTransientHttpErrorPolicy(policy => 
-        //     policy.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
         // Memory Cache
         services.AddMemoryCache();
