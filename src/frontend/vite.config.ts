@@ -5,6 +5,16 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: [
+      '@azure/msal-browser',
+      '@azure/msal-react',
+      'react-hook-form',
+    ],
+    esbuildOptions: {
+      target: 'esnext',
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
