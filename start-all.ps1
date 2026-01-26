@@ -365,13 +365,14 @@ function Start-Frontend {
     Push-Location $FRONTEND_DIR
     
     try {
-        Write-Info "Starting Next.js development server..."
+        Write-Info "Starting Vite development server..."
         Write-Info "Frontend will be available at: http://localhost:$FRONTEND_PORT"
         Write-Info "Press Ctrl+C to stop"
         Write-Host ""
         
         $env:PORT = $FRONTEND_PORT
-        npm run dev
+        # Use npx to ensure vite is found in node_modules/.bin/
+        npx vite
     } finally {
         Pop-Location
     }
@@ -400,7 +401,8 @@ function Start-All {
         Write-Info "Starting frontend..."
         Write-Host ""
         $env:PORT = $FRONTEND_PORT
-        npm run dev
+        # Use npx to ensure vite is found in node_modules/.bin/
+        npx vite
     } finally {
         Pop-Location
         Stop-Job $backendJob -ErrorAction SilentlyContinue
