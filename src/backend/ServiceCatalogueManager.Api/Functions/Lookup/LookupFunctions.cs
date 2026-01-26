@@ -159,4 +159,101 @@ public class LookupFunctions
         await response.WriteAsJsonAsync(ApiResponse<IEnumerable<PrerequisiteCategoryDto>>.Ok(categories), cancellationToken);
         return response;
     }
+
+    /// <summary>
+    /// Get tool categories
+    /// </summary>
+    [Function("GetToolCategories")]
+    public async Task<HttpResponseData> GetToolCategories(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lookups/tool-categories")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting tool categories");
+
+        // Return empty list for now - can be implemented later with proper DB table
+        var toolCategories = Array.Empty<object>();
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(ApiResponse<object>.Ok(toolCategories), cancellationToken);
+        return response;
+    }
+
+    /// <summary>
+    /// Get requirement levels
+    /// </summary>
+    [Function("GetRequirementLevels")]
+    public async Task<HttpResponseData> GetRequirementLevels(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lookups/requirement-levels")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting requirement levels");
+
+        // Return mock data for requirement levels
+        var requirementLevels = new[]
+        {
+            new { Id = 1, Code = "REQUIRED", Name = "Required", Description = "Mandatory requirement" },
+            new { Id = 2, Code = "RECOMMENDED", Name = "Recommended", Description = "Recommended but not mandatory" },
+            new { Id = 3, Code = "OPTIONAL", Name = "Optional", Description = "Optional requirement" }
+        };
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(ApiResponse<object>.Ok(requirementLevels), cancellationToken);
+        return response;
+    }
+
+    /// <summary>
+    /// Get services list (simple list for dropdowns)
+    /// </summary>
+    [Function("GetServicesList")]
+    public async Task<HttpResponseData> GetServicesList(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lookups/services-list")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting services list");
+
+        try
+        {
+            // Try to get from database through service catalog service
+            var services = await _lookupService.GetServicesListAsync(cancellationToken);
+            
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(ApiResponse<object>.Ok(services), cancellationToken);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get services list from database, returning empty list");
+            
+            // Return empty list if database is not available
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(ApiResponse<object>.Ok(Array.Empty<object>()), cancellationToken);
+            return response;
+        }
+    }
+
+    /// <summary>
+    /// Get license types
+    /// </summary>
+    [Function("GetLicenseTypes")]
+    public async Task<HttpResponseData> GetLicenseTypes(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lookups/license-types")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting license types");
+
+        // Return mock data for license types
+        var licenseTypes = new[]
+        {
+            new { Id = 1, Code = "MIT", Name = "MIT License", IsOpenSource = true },
+            new { Id = 2, Code = "APACHE", Name = "Apache License 2.0", IsOpenSource = true },
+            new { Id = 3, Code = "GPL", Name = "GNU General Public License", IsOpenSource = true },
+            new { Id = 4, Code = "PROPRIETARY", Name = "Proprietary License", IsOpenSource = false },
+            new { Id = 5, Code = "BSD", Name = "BSD License", IsOpenSource = true },
+            new { Id = 6, Code = "COMMERCIAL", Name = "Commercial License", IsOpenSource = false }
+        };
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(ApiResponse<object>.Ok(licenseTypes), cancellationToken);
+        return response;
+    }
 }

@@ -185,6 +185,31 @@ public class LookupService : ILookupService
         return _mapper.Map<IEnumerable<EffortCategoryDto>>(categories);
     }
 
+    public async Task<IEnumerable<object>> GetServicesListAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var services = await _dbContext.ServiceCatalogItems
+                .Where(s => s.IsActive)
+                .Select(s => new
+                {
+                    s.Id,
+                    s.ServiceCode,
+                    s.ServiceName,
+                    s.Description
+                })
+                .OrderBy(s => s.ServiceName)
+                .ToListAsync(cancellationToken);
+
+            return services;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get services list from database, returning empty list");
+            return Array.Empty<object>();
+        }
+    }
+
     public void InvalidateCache()
     {
         _cache.Remove("all_lookups");
