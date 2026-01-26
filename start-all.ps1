@@ -358,38 +358,39 @@ function Start-Backend {
     Write-Host ""
     
     # Create startup script for backend
-    $backendScript = @"
-`$ErrorActionPreference = 'Continue'
-`$Host.UI.RawUI.WindowTitle = 'Backend API - Port $BACKEND_PORT'
-
-# Ensure Azure Functions Core Tools is in PATH
-`$funcPath = Get-Command func -ErrorAction SilentlyContinue
-if (-not `$funcPath) {
-    # Try common installation paths
-    `$possiblePaths = @(
-        "`$env:APPDATA\npm",
-        "`$env:ProgramFiles\nodejs",
-        "`$env:ProgramFiles(x86)\Microsoft SDKs\Azure\Azure Functions Core Tools"
+    # Find func.cmd location in parent process before creating script
+    $funcCommand = $null
+    $funcLocations = @(
+        "$env:APPDATA\npm\func.cmd",
+        "$env:ProgramFiles\nodejs\func.cmd",
+        "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Azure Functions Core Tools\func.cmd"
     )
     
-    foreach (`$p in `$possiblePaths) {
-        if (Test-Path "`$p\func.cmd" -or Test-Path "`$p\func.exe") {
-            `$env:PATH = "`$p;`$env:PATH"
+    foreach ($loc in $funcLocations) {
+        if (Test-Path $loc) {
+            $funcCommand = $loc
             break
         }
     }
     
-    # Verify func is now available
-    `$funcPath = Get-Command func -ErrorAction SilentlyContinue
-    if (-not `$funcPath) {
-        Write-Host 'ERROR: Azure Functions Core Tools (func) not found!' -ForegroundColor Red
-        Write-Host 'Please install it: npm install -g azure-functions-core-tools@4' -ForegroundColor Yellow
-        Write-Host 'Or ensure it is in your PATH' -ForegroundColor Yellow
-        Write-Host 'Press any key to exit...'
-        `$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-        exit 1
+    if (-not $funcCommand) {
+        # Try Get-Command as last resort
+        $cmd = Get-Command func -ErrorAction SilentlyContinue
+        if ($cmd) {
+            $funcCommand = $cmd.Source
+        } else {
+            Write-Error "Azure Functions Core Tools (func) not found!"
+            Write-Warning "Please install it: npm install -g azure-functions-core-tools@4"
+            return
+        }
     }
-}
+    
+    Write-Info "func.cmd found at: $funcCommand"
+    
+    # Create backend startup script with absolute path to func
+    $backendScript = @"
+`$ErrorActionPreference = 'Continue'
+`$Host.UI.RawUI.WindowTitle = 'Backend API - Port $BACKEND_PORT'
 
 Set-Location '$BACKEND_DIR'
 Write-Host '========================================' -ForegroundColor Cyan
@@ -398,11 +399,12 @@ Write-Host '========================================' -ForegroundColor Cyan
 Write-Host 'Port: $BACKEND_PORT' -ForegroundColor Yellow
 Write-Host 'Directory: $BACKEND_DIR' -ForegroundColor Yellow
 Write-Host 'Log File: $logFile' -ForegroundColor Yellow
-Write-Host 'func Command: ' -NoNewline -ForegroundColor Yellow
-Write-Host `$funcPath.Source -ForegroundColor Green
+Write-Host 'func Command: $funcCommand' -ForegroundColor Green
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
-func start --port $BACKEND_PORT 2>&1 | Tee-Object -FilePath '$logFile'
+
+# Use absolute path to func.cmd
+& '$funcCommand' start --port $BACKEND_PORT 2>&1 | Tee-Object -FilePath '$logFile'
 "@
     
     $tempScript = Join-Path $env:TEMP "start-backend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
@@ -470,6 +472,13 @@ if (-not (Test-Path 'node_modules')) {
     Write-Host 'Press any key to exit...'
     `$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
     exit 1
+}
+
+# Clean Vite cache to avoid stale dependency optimization issues
+Write-Host 'Cleaning Vite cache...' -ForegroundColor Yellow
+if (Test-Path 'node_modules\.vite') {
+    Remove-Item -Recurse -Force 'node_modules\.vite' -ErrorAction SilentlyContinue
+    Write-Host 'Vite cache cleared' -ForegroundColor Green
 }
 
 # Use npm run dev which properly resolves vite from node_modules
