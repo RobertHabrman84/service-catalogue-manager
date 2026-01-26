@@ -345,69 +345,108 @@ function Build-Frontend {
 function Start-Backend {
     Write-Header "STARTING BACKEND API"
     
-    Push-Location $BACKEND_DIR
+    $logFile = Join-Path $SCRIPT_DIR "logs\backend-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+    $logsDir = Join-Path $SCRIPT_DIR "logs"
     
-    try {
-        Write-Info "Starting Azure Functions..."
-        Write-Info "Backend will be available at: http://localhost:$BACKEND_PORT"
-        Write-Info "Press Ctrl+C to stop"
-        Write-Host ""
-        
-        func start --port $BACKEND_PORT
-    } finally {
-        Pop-Location
+    if (-not (Test-Path $logsDir)) {
+        New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
     }
+    
+    Write-Info "Starting Azure Functions in new window..."
+    Write-Info "Backend will be available at: http://localhost:$BACKEND_PORT"
+    Write-Info "Logs: $logFile"
+    Write-Host ""
+    
+    # Create startup script for backend
+    $backendScript = @"
+`$ErrorActionPreference = 'Continue'
+`$Host.UI.RawUI.WindowTitle = 'Backend API - Port $BACKEND_PORT'
+Set-Location '$BACKEND_DIR'
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'BACKEND API STARTING' -ForegroundColor Cyan
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'Port: $BACKEND_PORT' -ForegroundColor Yellow
+Write-Host 'Directory: $BACKEND_DIR' -ForegroundColor Yellow
+Write-Host 'Log File: $logFile' -ForegroundColor Yellow
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host ''
+func start --port $BACKEND_PORT --verbose 2>&1 | Tee-Object -FilePath '$logFile'
+"@
+    
+    $tempScript = Join-Path $env:TEMP "start-backend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
+    $backendScript | Out-File -FilePath $tempScript -Encoding UTF8
+    
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $tempScript
+    
+    Write-Success "Backend started in new window"
+    Write-Info "Waiting 5 seconds for backend initialization..."
+    Start-Sleep -Seconds 5
 }
 
 function Start-Frontend {
     Write-Header "STARTING FRONTEND"
     
-    Push-Location $FRONTEND_DIR
+    $logFile = Join-Path $SCRIPT_DIR "logs\frontend-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+    $logsDir = Join-Path $SCRIPT_DIR "logs"
     
-    try {
-        Write-Info "Starting Vite development server..."
-        Write-Info "Frontend will be available at: http://localhost:$FRONTEND_PORT"
-        Write-Info "Press Ctrl+C to stop"
-        Write-Host ""
-        
-        $env:PORT = $FRONTEND_PORT
-        # Use npx to ensure vite is found in node_modules/.bin/
-        npx vite
-    } finally {
-        Pop-Location
+    if (-not (Test-Path $logsDir)) {
+        New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
     }
+    
+    Write-Info "Starting Vite development server in new window..."
+    Write-Info "Frontend will be available at: http://localhost:$FRONTEND_PORT"
+    Write-Info "Logs: $logFile"
+    Write-Host ""
+    
+    # Create startup script for frontend
+    $frontendScript = @"
+`$ErrorActionPreference = 'Continue'
+`$Host.UI.RawUI.WindowTitle = 'Frontend - Port $FRONTEND_PORT'
+`$env:PORT = '$FRONTEND_PORT'
+`$env:DEBUG = '*'
+Set-Location '$FRONTEND_DIR'
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'FRONTEND STARTING' -ForegroundColor Cyan
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'Port: $FRONTEND_PORT' -ForegroundColor Yellow
+Write-Host 'Directory: $FRONTEND_DIR' -ForegroundColor Yellow
+Write-Host 'Log File: $logFile' -ForegroundColor Yellow
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host ''
+npx vite --debug 2>&1 | Tee-Object -FilePath '$logFile'
+"@
+    
+    $tempScript = Join-Path $env:TEMP "start-frontend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
+    $frontendScript | Out-File -FilePath $tempScript -Encoding UTF8
+    
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $tempScript
+    
+    Write-Success "Frontend started in new window"
 }
 
 function Start-All {
     Write-Header "STARTING ALL SERVICES"
     
-    Write-Info "Starting services in parallel..."
+    Write-Info "Starting services in separate windows..."
+    Write-Host ""
     
-    # Start backend in background
-    $backendJob = Start-Job -ScriptBlock {
-        param($dir, $port)
-        Set-Location $dir
-        func start --port $port
-    } -ArgumentList $BACKEND_DIR, $BACKEND_PORT
+    # Start backend in new window
+    Start-Backend
     
-    Write-Success "Backend starting (Job ID: $($backendJob.Id))"
+    # Start frontend in new window
+    Start-Frontend
     
-    # Wait a bit for backend to start
-    Start-Sleep -Seconds 3
-    
-    # Start frontend in foreground
-    Push-Location $FRONTEND_DIR
-    try {
-        Write-Info "Starting frontend..."
-        Write-Host ""
-        $env:PORT = $FRONTEND_PORT
-        # Use npx to ensure vite is found in node_modules/.bin/
-        npx vite
-    } finally {
-        Pop-Location
-        Stop-Job $backendJob -ErrorAction SilentlyContinue
-        Remove-Job $backendJob -ErrorAction SilentlyContinue
-    }
+    Write-Host ""
+    Write-Success "All services started!"
+    Write-Host ""
+    Write-Info "Backend: http://localhost:$BACKEND_PORT"
+    Write-Info "Frontend: http://localhost:$FRONTEND_PORT"
+    Write-Info "Logs: $(Join-Path $SCRIPT_DIR 'logs')"
+    Write-Host ""
+    Write-Warning "Keep this window open. Close service windows to stop services."
+    Write-Host ""
+    Write-Host "Press any key to exit..."
+    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 }
 
 # ============================================================================
