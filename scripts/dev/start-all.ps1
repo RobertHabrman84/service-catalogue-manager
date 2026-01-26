@@ -3,21 +3,29 @@
     Starts all services for local development.
 .DESCRIPTION
     Launches frontend, backend, and optionally database services concurrently.
+    Includes robust backend health check before starting frontend.
 .PARAMETER SkipDatabase
     Skip starting the database container
 .PARAMETER FrontendPort
     Port for frontend dev server (default: 5173)
 .PARAMETER BackendPort
     Port for backend Functions host (default: 7071)
+.PARAMETER SkipHealthCheck
+    Skip backend health check (not recommended)
+.PARAMETER HealthCheckTimeout
+    Maximum time to wait for backend health check in seconds (default: 60)
 .EXAMPLE
     .\start-all.ps1
     .\start-all.ps1 -SkipDatabase
+    .\start-all.ps1 -HealthCheckTimeout 120
 #>
 
 param(
     [switch]$SkipDatabase,
     [int]$FrontendPort = 5173,
-    [int]$BackendPort = 7071
+    [int]$BackendPort = 7071,
+    [switch]$SkipHealthCheck,
+    [int]$HealthCheckTimeout = 60
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,6 +40,76 @@ Write-Host ""
 
 # Store background jobs
 $jobs = @()
+
+# Function: Wait for Backend Health Check
+function Wait-BackendHealthy {
+    param(
+        [int]$Port,
+        [int]$TimeoutSeconds = 60
+    )
+    
+    $healthUrl = "http://localhost:$Port/api/health"
+    $startTime = Get-Date
+    $attempt = 0
+    $maxAttempts = [Math]::Ceiling($TimeoutSeconds / 2)
+    
+    Write-Host ""
+    Write-Host "Waiting for backend health check..." -ForegroundColor Yellow
+    Write-Host "  URL: $healthUrl" -ForegroundColor Gray
+    Write-Host "  Timeout: $TimeoutSeconds seconds" -ForegroundColor Gray
+    Write-Host ""
+    
+    while ($true) {
+        $attempt++
+        $elapsed = ((Get-Date) - $startTime).TotalSeconds
+        
+        # Check timeout
+        if ($elapsed -ge $TimeoutSeconds) {
+            Write-Host ""
+            Write-Host "  Backend health check TIMEOUT after $([Math]::Round($elapsed, 1))s" -ForegroundColor Red
+            Write-Host "  Backend may still be starting. Check logs with: Get-Job | Receive-Job" -ForegroundColor Yellow
+            return $false
+        }
+        
+        try {
+            # Progress indicator
+            $progressPercent = [Math]::Min(100, ($elapsed / $TimeoutSeconds) * 100)
+            Write-Host "`r  Attempt $attempt/$maxAttempts... [" -NoNewline -ForegroundColor Gray
+            Write-Host "$([Math]::Round($elapsed, 1))s" -NoNewline -ForegroundColor Cyan
+            Write-Host "]" -NoNewline -ForegroundColor Gray
+            
+            # Make HTTP request with short timeout
+            $response = Invoke-WebRequest -Uri $healthUrl -Method Get -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
+            
+            if ($response.StatusCode -eq 200) {
+                Write-Host ""
+                Write-Host ""
+                Write-Host "  Backend is HEALTHY!" -ForegroundColor Green
+                Write-Host "  Response time: $([Math]::Round($elapsed, 1))s" -ForegroundColor Gray
+                
+                # Try to parse health response
+                try {
+                    $healthData = $response.Content | ConvertFrom-Json
+                    if ($healthData.status) {
+                        Write-Host "  Status: $($healthData.status)" -ForegroundColor Gray
+                    }
+                } catch {
+                    # Ignore JSON parse errors
+                }
+                
+                return $true
+            }
+        }
+        catch {
+            # Expected errors during startup (connection refused, timeout, etc.)
+            # Continue waiting...
+        }
+        
+        # Exponential backoff: 1s, 2s, 3s, 4s, then 5s
+        $sleepTime = [Math]::Min(5, $attempt)
+        Start-Sleep -Seconds $sleepTime
+    }
+}
 
 try {
     # Start Database (Docker)
@@ -66,8 +144,27 @@ try {
     $jobs += $backendJob
     Write-Host "  Backend starting in background (Job ID: $($backendJob.Id))" -ForegroundColor Green
 
-    # Wait for backend to start
-    Start-Sleep -Seconds 5
+    # Wait for backend health check
+    if (-not $SkipHealthCheck) {
+        $isHealthy = Wait-BackendHealthy -Port $BackendPort -TimeoutSeconds $HealthCheckTimeout
+        
+        if (-not $isHealthy) {
+            Write-Host ""
+            Write-Host "WARNING: Backend health check failed!" -ForegroundColor Red
+            Write-Host "Frontend will start anyway, but may not work correctly." -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "To diagnose, run:" -ForegroundColor Cyan
+            Write-Host "  Get-Job -Id $($backendJob.Id) | Receive-Job" -ForegroundColor Gray
+            Write-Host "  Invoke-WebRequest http://localhost:$BackendPort/api/health" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "Press Enter to continue or Ctrl+C to abort..." -ForegroundColor Yellow
+            Read-Host
+        }
+    }
+    else {
+        Write-Host "  Skipping health check (not recommended)" -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+    }
 
     # Start Frontend as background job
     Write-Host ""
@@ -98,6 +195,10 @@ try {
     Write-Host "  View logs:     Get-Job | Receive-Job" -ForegroundColor Gray
     Write-Host "  Stop all:      Get-Job | Stop-Job | Remove-Job" -ForegroundColor Gray
     Write-Host "  Or press Ctrl+C to stop" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Health Check:" -ForegroundColor Cyan
+    Write-Host "  curl http://localhost:$BackendPort/api/health" -ForegroundColor Gray
+    Write-Host "  curl http://localhost:$BackendPort/api/health/detailed" -ForegroundColor Gray
     Write-Host ""
 
     # Keep script running and show logs
