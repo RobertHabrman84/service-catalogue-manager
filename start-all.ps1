@@ -413,7 +413,16 @@ Write-Host 'Directory: $FRONTEND_DIR' -ForegroundColor Yellow
 Write-Host 'Log File: $logFile' -ForegroundColor Yellow
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
-npx vite --debug 2>&1 | Tee-Object -FilePath '$logFile'
+
+# Check if node_modules exists, install if needed
+if (-not (Test-Path 'node_modules')) {
+    Write-Host 'Installing dependencies...' -ForegroundColor Yellow
+    npm install
+    Write-Host 'Dependencies installed!' -ForegroundColor Green
+}
+
+# Use npm run dev which properly resolves vite from node_modules
+npm run dev 2>&1 | Tee-Object -FilePath '$logFile'
 "@
     
     $tempScript = Join-Path $env:TEMP "start-frontend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
