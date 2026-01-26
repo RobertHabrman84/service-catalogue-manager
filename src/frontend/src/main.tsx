@@ -24,27 +24,19 @@ const queryClient = new QueryClient({
 });
 
 // ========================================
-// 🔥 FORCE AUTH BYPASS - VŽDY VYPNUTO PRO DEV
+// Environment Configuration
 // ========================================
 
-const FORCE_SKIP_AUTH = true;
-
+const isDevelopment = import.meta.env.MODE === 'development';
 const envSkipAuth = import.meta.env.VITE_SKIP_AUTH === 'true';
-const envDevMode = import.meta.env.VITE_DEV_MODE === 'true';
-const skipAuth = FORCE_SKIP_AUTH || envSkipAuth || envDevMode;
+const skipAuth = isDevelopment && envSkipAuth;
 
-console.log('🔥 AUTH BYPASS (V3):', {
-  FORCE_SKIP_AUTH,
-  envSkipAuth,
-  envDevMode,
-  finalSkipAuth: skipAuth,
-  allEnv: import.meta.env
-});
-
-if (skipAuth) {
-  console.log('✅ AUTH BYPASSED - NO MSAL LOADED');
-} else {
-  console.log('⚠️ AUTH ENABLED - MSAL WILL LOAD');
+// Only log in development mode (without sensitive data)
+if (isDevelopment) {
+  console.log('🔧 Development Mode:', {
+    skipAuth,
+    mode: import.meta.env.MODE,
+  });
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

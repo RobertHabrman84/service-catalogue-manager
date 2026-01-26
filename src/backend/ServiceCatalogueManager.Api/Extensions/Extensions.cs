@@ -124,8 +124,31 @@ public static class HttpRequestDataExtensions
     /// </summary>
     public static string? GetQueryParameter(this HttpRequestData request, string name)
     {
-        var query = System.Web.HttpUtility.ParseQueryString(request.Url.Query);
-        return query[name];
+        // Parse query string manually (System.Web not available in .NET 8)
+        var query = request.Url.Query;
+        if (string.IsNullOrEmpty(query))
+        {
+            return null;
+        }
+
+        // Remove leading '?' if present
+        if (query.StartsWith('?'))
+        {
+            query = query[1..];
+        }
+
+        // Split by '&' and find the parameter
+        var parameters = query.Split('&');
+        foreach (var param in parameters)
+        {
+            var keyValue = param.Split('=', 2);
+            if (keyValue.Length == 2 && keyValue[0].Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                return Uri.UnescapeDataString(keyValue[1]);
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

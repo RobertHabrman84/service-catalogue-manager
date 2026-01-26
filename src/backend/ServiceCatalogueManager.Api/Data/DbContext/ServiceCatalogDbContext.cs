@@ -314,8 +314,8 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         modelBuilder.Entity<ServiceTeamAllocation>(entity =>
         {
             entity.ToTable("ServiceTeamAllocation");
-//             entity.HasKey(e => e.AllocationId);
-//             entity.Property(e => e.AllocationPercentage).HasPrecision(18, 2);
+            entity.HasKey(e => e.AllocationId);
+            entity.Property(e => e.AllocationPercentage).HasPrecision(18, 2);
 
             entity.HasOne(e => e.Service)
                 .WithMany(s => s.TeamAllocations)
