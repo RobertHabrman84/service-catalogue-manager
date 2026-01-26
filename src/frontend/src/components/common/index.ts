@@ -29,5 +29,8 @@ export { Alert } from './Alert/Alert';
 export { Pagination } from './Pagination/Pagination';
 export * from './Breadcrumb';
 
+// Avatar Components
+export { Avatar, AvatarGroup, AvatarWithName } from './Avatar';
+
 // Hooks
 export { useNotification } from './useNotification/useNotification';

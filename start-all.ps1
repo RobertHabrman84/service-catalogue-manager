@@ -505,31 +505,48 @@ function Wait-ForBackend {
     $startTime = Get-Date
     $timeout = (Get-Date).AddSeconds($TimeoutSeconds)
     $attempt = 0
+    $endpoints = @("/", "/api")
     
     while ((Get-Date) -lt $timeout) {
         $attempt++
         
-        try {
-            # Try to connect to backend health endpoint or root
-            $response = Invoke-WebRequest -Uri "http://localhost:$Port" -Method GET -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
-            
-            if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 404) {
+        foreach ($endpoint in $endpoints) {
+            try {
+                $uri = "http://localhost:$Port$endpoint"
+                $response = Invoke-WebRequest -Uri $uri -Method GET -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
+                
+                # Accept any response (200, 404, etc.) - it means the server is listening
                 $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-                Write-Success "Backend is ready! (took $elapsed seconds, $attempt attempts)"
+                Write-Success "Backend is ready! ($uri responded with $($response.StatusCode), took $elapsed seconds, $attempt attempts)"
                 return $true
+            } catch [System.Net.WebException] {
+                # Try to parse the exception
+                if ($_.Exception.Response) {
+                    $statusCode = [int]$_.Exception.Response.StatusCode
+                    if ($statusCode -ge 200 -and $statusCode -lt 600) {
+                        # Any HTTP response means server is listening
+                        $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
+                        Write-Success "Backend is ready! (responded with $statusCode, took $elapsed seconds)"
+                        return $true
+                    }
+                }
+                # Connection refused or timeout - backend not ready yet
+            } catch {
+                # Other errors - backend not ready yet
             }
-        } catch {
-            # Backend not ready yet, continue waiting
-            if ($attempt % 5 -eq 0) {
-                $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-                Write-Host "  Still waiting... ($elapsed seconds elapsed, attempt $attempt)" -ForegroundColor Gray
-            }
+        }
+        
+        # Backend not ready yet, continue waiting
+        if ($attempt % 5 -eq 0) {
+            $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
+            Write-Host "  Still waiting... ($elapsed seconds elapsed, attempt $attempt)" -ForegroundColor Gray
         }
         
         Start-Sleep -Seconds $RetryIntervalSeconds
     }
     
     Write-Warning "Backend did not respond within $TimeoutSeconds seconds"
+    Write-Warning "Check backend window for errors"
     Write-Warning "Frontend will start anyway, but backend may not be fully ready"
     return $false
 }
