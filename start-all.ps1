@@ -370,7 +370,7 @@ Write-Host 'Directory: $BACKEND_DIR' -ForegroundColor Yellow
 Write-Host 'Log File: $logFile' -ForegroundColor Yellow
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
-func start --port $BACKEND_PORT --verbose 2>&1 | Tee-Object -FilePath '$logFile'
+func start --port $BACKEND_PORT 2>&1 | Tee-Object -FilePath '$logFile'
 "@
     
     $tempScript = Join-Path $env:TEMP "start-backend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
@@ -421,7 +421,6 @@ function Start-Frontend {
 `$ErrorActionPreference = 'Continue'
 `$Host.UI.RawUI.WindowTitle = 'Frontend - Port $FRONTEND_PORT'
 `$env:PORT = '$FRONTEND_PORT'
-`$env:DEBUG = '*'
 Set-Location '$FRONTEND_DIR'
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host 'FRONTEND STARTING' -ForegroundColor Cyan
