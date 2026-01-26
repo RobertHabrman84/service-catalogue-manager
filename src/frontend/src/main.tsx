@@ -1,12 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
-import { BrowserRouter } from 'react-router-dom';
+import { RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MsalProvider } from '@azure/msal-react';
 import { ToastContainer } from 'react-toastify';
 
-import App from './App';
+import { router } from './routes';
 import { store } from '@store/store';
 import { msalInstance } from '@services/auth/msalInstance';
 
@@ -47,11 +47,17 @@ if (skipAuth) {
   console.log('⚠️ AUTH ENABLED - MSAL WILL LOAD');
 }
 
-const AppContent = () => (
-  <Provider store={store}>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <Provider store={store}>
+      <QueryClientProvider client={queryClient}>
+        {skipAuth ? (
+          <RouterProvider router={router} />
+        ) : (
+          <MsalProvider instance={msalInstance}>
+            <RouterProvider router={router} />
+          </MsalProvider>
+        )}
         <ToastContainer
           position="top-right"
           autoClose={5000}
@@ -64,19 +70,7 @@ const AppContent = () => (
           pauseOnHover
           theme="light"
         />
-      </BrowserRouter>
-    </QueryClientProvider>
-  </Provider>
-);
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    {skipAuth ? (
-      <AppContent />
-    ) : (
-      <MsalProvider instance={msalInstance}>
-        <AppContent />
-      </MsalProvider>
-    )}
+      </QueryClientProvider>
+    </Provider>
   </React.StrictMode>
 );

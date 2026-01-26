@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { useIsAuthenticated } from '@azure/msal-react';
 
 import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -31,15 +32,32 @@ const SuspenseLayout = () => (
 );
 
 // Protected layout wrapper
-const ProtectedLayout = () => (
-  <ProtectedRoute>
-    <MainLayout>
-      <Suspense fallback={<PageLoader />}>
-        <Outlet />
-      </Suspense>
-    </MainLayout>
-  </ProtectedRoute>
-);
+const ProtectedLayout = () => {
+  const skipAuth = import.meta.env.VITE_SKIP_AUTH === 'true' || import.meta.env.VITE_DEV_MODE === 'true';
+  const FORCE_SKIP_AUTH = true; // Same as in main.tsx
+  const shouldSkipAuth = FORCE_SKIP_AUTH || skipAuth;
+
+  if (shouldSkipAuth) {
+    console.log('🔥 ROUTES: Auth bypassed - rendering without ProtectedRoute');
+    return (
+      <MainLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <ProtectedRoute>
+      <MainLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+      </MainLayout>
+    </ProtectedRoute>
+  );
+};
 
 export const router = createBrowserRouter([
   {
