@@ -379,8 +379,6 @@ func start --port $BACKEND_PORT --verbose 2>&1 | Tee-Object -FilePath '$logFile'
     Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $tempScript
     
     Write-Success "Backend started in new window"
-    Write-Info "Waiting 5 seconds for backend initialization..."
-    Start-Sleep -Seconds 5
 }
 
 function Start-Frontend {
@@ -455,6 +453,47 @@ npm run dev 2>&1 | Tee-Object -FilePath '$logFile'
     Write-Success "Frontend started in new window"
 }
 
+function Wait-ForBackend {
+    param(
+        [int]$Port = 7071,
+        [int]$TimeoutSeconds = 120,
+        [int]$RetryIntervalSeconds = 2
+    )
+    
+    Write-Info "Waiting for backend to be ready on http://localhost:$Port..."
+    
+    $startTime = Get-Date
+    $timeout = (Get-Date).AddSeconds($TimeoutSeconds)
+    $attempt = 0
+    
+    while ((Get-Date) -lt $timeout) {
+        $attempt++
+        
+        try {
+            # Try to connect to backend health endpoint or root
+            $response = Invoke-WebRequest -Uri "http://localhost:$Port" -Method GET -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
+            
+            if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 404) {
+                $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
+                Write-Success "Backend is ready! (took $elapsed seconds, $attempt attempts)"
+                return $true
+            }
+        } catch {
+            # Backend not ready yet, continue waiting
+            if ($attempt % 5 -eq 0) {
+                $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
+                Write-Host "  Still waiting... ($elapsed seconds elapsed, attempt $attempt)" -ForegroundColor Gray
+            }
+        }
+        
+        Start-Sleep -Seconds $RetryIntervalSeconds
+    }
+    
+    Write-Warning "Backend did not respond within $TimeoutSeconds seconds"
+    Write-Warning "Frontend will start anyway, but backend may not be fully ready"
+    return $false
+}
+
 function Start-All {
     Write-Header "STARTING ALL SERVICES"
     
@@ -463,6 +502,20 @@ function Start-All {
     
     # Start backend in new window
     Start-Backend
+    
+    # Wait for backend to be ready before starting frontend
+    Write-Host ""
+    $backendReady = Wait-ForBackend -Port $BACKEND_PORT -TimeoutSeconds 120
+    
+    if ($backendReady) {
+        Write-Host ""
+        Write-Info "Backend is ready, now starting frontend..."
+    } else {
+        Write-Host ""
+        Write-Warning "Starting frontend anyway..."
+    }
+    
+    Write-Host ""
     
     # Start frontend in new window
     Start-Frontend
