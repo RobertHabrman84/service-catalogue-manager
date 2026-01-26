@@ -11,8 +11,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$DB_NAME = "ServiceCatalogueDB"
-$SA_PASSWORD = "YourStrong!Passw0rd"
+$DB_NAME = "ServiceCatalogueManager"
+$SA_PASSWORD = "YourStrong@Passw0rd"
 $SERVER = "localhost,1433"
 $SEEDS_DIR = Join-Path $PSScriptRoot "..\seeds"
 
