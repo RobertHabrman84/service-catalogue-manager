@@ -32,5 +32,9 @@ export * from './Breadcrumb';
 // Avatar Components
 export { Avatar, AvatarGroup, AvatarWithName } from './Avatar';
 
+// Error Handling
+export { ErrorBoundary } from './ErrorBoundary/ErrorBoundary';
+export { ErrorFallback } from './ErrorBoundary/ErrorFallback';
+
 // Hooks
 export { useNotification } from './useNotification/useNotification';

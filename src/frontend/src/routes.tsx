@@ -5,6 +5,7 @@ import { useIsAuthenticated } from '@azure/msal-react';
 import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { ErrorBoundary, ErrorFallback } from './components/common';
 
 // Lazy-loaded pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -59,10 +60,19 @@ const ProtectedLayout = () => {
   );
 };
 
+// Global error fallback for router errors
+const RouterErrorFallback = () => (
+  <ErrorFallback 
+    error={new Error('Navigation error occurred')} 
+    onReset={() => window.location.href = '/'}
+  />
+);
+
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <SuspenseLayout />,
+    errorElement: <RouterErrorFallback />,
     children: [
       // Public routes
       {
