@@ -8,6 +8,7 @@ import {
   FolderIcon, 
   PlusCircleIcon,
   DocumentArrowDownIcon,
+  DocumentArrowUpIcon,
   Cog6ToothIcon,
   Bars3Icon,
   XMarkIcon,
@@ -30,6 +31,7 @@ const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
   { name: 'Service Catalog', href: '/catalog', icon: FolderIcon },
   { name: 'Create Service', href: '/services/new', icon: PlusCircleIcon },
+  { name: 'Import', href: '/import', icon: DocumentArrowUpIcon },
   { name: 'Export', href: '/export', icon: DocumentArrowDownIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
