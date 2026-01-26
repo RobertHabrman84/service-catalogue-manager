@@ -6,9 +6,16 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    include: [
+    // Force re-optimization on every restart to clear cache issues
+    force: true,
+    // Exclude problematic packages from optimization
+    // Let them be bundled directly without pre-bundling
+    exclude: [
       '@azure/msal-browser',
       '@azure/msal-react',
+    ],
+    // Still pre-bundle react-hook-form as it works fine
+    include: [
       'react-hook-form',
     ],
     esbuildOptions: {
