@@ -18,6 +18,8 @@ param(
     [switch]$DbOnly = $false,
     [switch]$RecreateDb = $false,
     [switch]$SeedData = $false,
+    [switch]$SkipHealthCheck = $false,
+    [int]$HealthCheckTimeout = 120,
     [switch]$Help = $false
 )
 
@@ -89,15 +91,17 @@ function Show-Help {
     Write-Host ""
     
     Write-Host "OPTIONS:" -ForegroundColor $COLOR_INFO
-    Write-Host "  -DbOnly           Start only the database"
-    Write-Host "  -BackendOnly      Start database + backend API"
-    Write-Host "  -FrontendOnly     Start only the frontend"
-    Write-Host "  -SkipDb           Skip database startup"
-    Write-Host "  -SkipBuild        Skip the build step"
-    Write-Host "  -CleanBuild       Clean before building"
-    Write-Host "  -RecreateDb       Recreate database (drops existing)"
-    Write-Host "  -SeedData         Seed database with sample data"
-    Write-Host "  -Help             Show this help message"
+    Write-Host "  -DbOnly                  Start only the database"
+    Write-Host "  -BackendOnly             Start database + backend API"
+    Write-Host "  -FrontendOnly            Start only the frontend"
+    Write-Host "  -SkipDb                  Skip database startup"
+    Write-Host "  -SkipBuild               Skip the build step"
+    Write-Host "  -CleanBuild              Clean before building"
+    Write-Host "  -RecreateDb              Recreate database (drops existing)"
+    Write-Host "  -SeedData                Seed database with sample data"
+    Write-Host "  -SkipHealthCheck         Skip backend health check (not recommended)"
+    Write-Host "  -HealthCheckTimeout <s>  Health check timeout in seconds (default: 120)"
+    Write-Host "  -Help                    Show this help message"
     Write-Host ""
     
     Write-Host "EXAMPLES:" -ForegroundColor $COLOR_INFO
@@ -496,58 +500,108 @@ npm run dev 2>&1 | Tee-Object -FilePath '$logFile'
 function Wait-ForBackend {
     param(
         [int]$Port = 7071,
-        [int]$TimeoutSeconds = 120,
-        [int]$RetryIntervalSeconds = 2
+        [int]$TimeoutSeconds = 120
     )
     
-    Write-Info "Waiting for backend to be ready on http://localhost:$Port..."
+    Write-Host ""
+    Write-Info "Waiting for backend health check on http://localhost:$Port..."
+    Write-Host "  Timeout: $TimeoutSeconds seconds" -ForegroundColor Gray
+    Write-Host ""
     
     $startTime = Get-Date
     $timeout = (Get-Date).AddSeconds($TimeoutSeconds)
     $attempt = 0
-    $endpoints = @("/", "/api")
+    $maxAttempts = [Math]::Ceiling($TimeoutSeconds / 2)
+    
+    # Priority order: health endpoint first, then fallbacks
+    $endpoints = @(
+        @{Path="/api/health"; IsHealth=$true},
+        @{Path="/api/health/detailed"; IsHealth=$true},
+        @{Path="/api"; IsHealth=$false},
+        @{Path="/"; IsHealth=$false}
+    )
     
     while ((Get-Date) -lt $timeout) {
         $attempt++
+        $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
         
-        foreach ($endpoint in $endpoints) {
+        # Progress indicator
+        Write-Host "`r  Attempt $attempt/$maxAttempts... [" -NoNewline -ForegroundColor Gray
+        Write-Host "${elapsed}s" -NoNewline -ForegroundColor Cyan
+        Write-Host "]" -NoNewline -ForegroundColor Gray
+        
+        foreach ($ep in $endpoints) {
             try {
-                $uri = "http://localhost:$Port$endpoint"
+                $uri = "http://localhost:$Port$($ep.Path)"
                 $response = Invoke-WebRequest -Uri $uri -Method GET -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
                 
-                # Accept any response (200, 404, etc.) - it means the server is listening
-                $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-                Write-Success "Backend is ready! ($uri responded with $($response.StatusCode), took $elapsed seconds, $attempt attempts)"
+                # Success!
+                Write-Host ""  # New line after progress
+                Write-Host ""
+                Write-Success "Backend is HEALTHY!"
+                Write-Host "  Endpoint: $uri" -ForegroundColor Gray
+                Write-Host "  Status: $($response.StatusCode)" -ForegroundColor Gray
+                Write-Host "  Response time: ${elapsed}s" -ForegroundColor Gray
+                
+                # Try to parse JSON health response
+                if ($ep.IsHealth -and $response.Content) {
+                    try {
+                        $healthData = $response.Content | ConvertFrom-Json
+                        if ($healthData.status) {
+                            Write-Host "  Health Status: $($healthData.status)" -ForegroundColor Green
+                        }
+                        if ($healthData.timestamp) {
+                            Write-Host "  Timestamp: $($healthData.timestamp)" -ForegroundColor Gray
+                        }
+                    } catch {
+                        # JSON parsing failed, ignore
+                    }
+                }
+                
                 return $true
+                
             } catch [System.Net.WebException] {
-                # Try to parse the exception
+                # Check if we got any HTTP response (even error codes)
                 if ($_.Exception.Response) {
                     $statusCode = [int]$_.Exception.Response.StatusCode
                     if ($statusCode -ge 200 -and $statusCode -lt 600) {
                         # Any HTTP response means server is listening
-                        $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-                        Write-Success "Backend is ready! (responded with $statusCode, took $elapsed seconds)"
+                        Write-Host ""  # New line
+                        Write-Host ""
+                        Write-Success "Backend is responding! (HTTP $statusCode)"
+                        Write-Host "  Endpoint: $uri" -ForegroundColor Gray
+                        Write-Host "  Response time: ${elapsed}s" -ForegroundColor Gray
                         return $true
                     }
                 }
-                # Connection refused or timeout - backend not ready yet
             } catch {
-                # Other errors - backend not ready yet
+                # Connection refused, timeout, etc. - continue
             }
         }
         
-        # Backend not ready yet, continue waiting
-        if ($attempt % 5 -eq 0) {
-            $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-            Write-Host "  Still waiting... ($elapsed seconds elapsed, attempt $attempt)" -ForegroundColor Gray
-        }
-        
-        Start-Sleep -Seconds $RetryIntervalSeconds
+        # Calculate exponential backoff: 1s, 2s, 3s, 4s, 5s (max)
+        $sleepTime = [Math]::Min(5, $attempt)
+        Start-Sleep -Seconds $sleepTime
     }
     
-    Write-Warning "Backend did not respond within $TimeoutSeconds seconds"
-    Write-Warning "Check backend window for errors"
-    Write-Warning "Frontend will start anyway, but backend may not be fully ready"
+    # Timeout reached
+    Write-Host ""  # New line after progress
+    Write-Host ""
+    Write-Warning "Backend health check TIMEOUT after $TimeoutSeconds seconds"
+    Write-Warning "Backend may still be starting. Check backend window for errors."
+    Write-Host ""
+    Write-Host "To diagnose:" -ForegroundColor Cyan
+    Write-Host "  1. Check backend window for compilation errors" -ForegroundColor Gray
+    Write-Host "  2. Try manual health check:" -ForegroundColor Gray
+    Write-Host "     Invoke-WebRequest http://localhost:$Port/api/health" -ForegroundColor White
+    Write-Host "  3. Check port availability:" -ForegroundColor Gray
+    Write-Host "     netstat -ano | findstr :$Port" -ForegroundColor White
+    Write-Host ""
+    Write-Warning "Frontend will start anyway, but may not work correctly."
+    Write-Host ""
+    Write-Host "Press Enter to continue or Ctrl+C to abort..." -ForegroundColor Yellow
+    Read-Host
+    
     return $false
 }
 
@@ -561,15 +615,20 @@ function Start-All {
     Start-Backend
     
     # Wait for backend to be ready before starting frontend
-    Write-Host ""
-    $backendReady = Wait-ForBackend -Port $BACKEND_PORT -TimeoutSeconds 120
-    
-    if ($backendReady) {
-        Write-Host ""
-        Write-Info "Backend is ready, now starting frontend..."
+    if ($script:SkipHealthCheck) {
+        Write-Warning "Skipping backend health check (not recommended)"
+        Write-Info "Waiting 5 seconds before starting frontend..."
+        Start-Sleep -Seconds 5
     } else {
-        Write-Host ""
-        Write-Warning "Starting frontend anyway..."
+        $backendReady = Wait-ForBackend -Port $BACKEND_PORT -TimeoutSeconds $script:HealthCheckTimeout
+        
+        if ($backendReady) {
+            Write-Host ""
+            Write-Info "Backend is ready, now starting frontend..."
+        } else {
+            Write-Host ""
+            Write-Warning "Starting frontend anyway..."
+        }
     }
     
     Write-Host ""
