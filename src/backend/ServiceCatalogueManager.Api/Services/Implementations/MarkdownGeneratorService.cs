@@ -98,11 +98,11 @@ public class MarkdownGeneratorService : IMarkdownGeneratorService
             
             foreach (var dep in service.Dependencies)
             {
-                sb.AppendLine($"- **{dep.DependencyName}** ({dep.DependencyTypeName})");
+                sb.AppendLine($"- **{dep.DependentServiceName}** ({dep.DependencyTypeName})");
                 
-                if (!string.IsNullOrEmpty(dep.DependencyDescription))
+                if (!string.IsNullOrEmpty(dep.Notes))
                 {
-                    sb.AppendLine($"  {dep.DependencyDescription}");
+                    sb.AppendLine($"  {dep.Notes}");
                 }
             }
             

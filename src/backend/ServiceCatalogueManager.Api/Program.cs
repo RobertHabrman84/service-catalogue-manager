@@ -109,13 +109,10 @@ var host = new HostBuilder()
             client.DefaultRequestHeaders.Add("Accept", "application/json");
             client.Timeout = TimeSpan.FromSeconds(30);
         })
-        .AddStandardResilienceHandler(options =>
-        {
-            options.Retry.MaxRetryAttempts = 3;
-            options.Retry.Delay = TimeSpan.FromSeconds(1);
-            options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
-            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
-        });
+        .AddPolicyHandler(Polly.Extensions.Http.HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .WaitAndRetryAsync(3, retryAttempt => 
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
         // Memory Cache
         services.AddMemoryCache();

@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using Microsoft.Extensions.Options;
 using ServiceCatalogueManager.Api.Configuration;
+using ServiceCatalogueManager.Api.Data.Repositories;
 using ServiceCatalogueManager.Api.Models.DTOs.ServiceCatalog;
 using ServiceCatalogueManager.Api.Models.DTOs.UuBookKit;
 using ServiceCatalogueManager.Api.Services.Interfaces;
@@ -15,17 +16,20 @@ public class UuBookKitService : IUuBookKitService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly UuBookKitOptions _options;
     private readonly IMarkdownGeneratorService _markdownGenerator;
+    private readonly IServiceCatalogRepository _repository;
     private readonly ILogger<UuBookKitService> _logger;
 
     public UuBookKitService(
         IHttpClientFactory httpClientFactory,
         IOptions<UuBookKitOptions> options,
         IMarkdownGeneratorService markdownGenerator,
+        IServiceCatalogRepository repository,
         ILogger<UuBookKitService> logger)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _markdownGenerator = markdownGenerator ?? throw new ArgumentNullException(nameof(markdownGenerator));
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -34,24 +38,39 @@ public class UuBookKitService : IUuBookKitService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(request.Service);
 
-        _logger.LogInformation("Publishing service {ServiceCode} to UuBookKit", request.Service.ServiceCode);
+        _logger.LogInformation("Publishing service ID {ServiceId} to UuBookKit", request.ServiceId);
 
         try
         {
+            // Fetch service details from repository
+            var service = await _repository.GetByIdAsync(request.ServiceId, cancellationToken);
+            if (service == null)
+            {
+                _logger.LogWarning("Service ID {ServiceId} not found", request.ServiceId);
+                return new UuBookKitPublishResultDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Service ID {request.ServiceId} not found",
+                    ErrorCode = "SERVICE_NOT_FOUND"
+                };
+            }
+
             // Generate markdown content
-            var markdown = await _markdownGenerator.GenerateServiceMarkdownAsync(request.Service, cancellationToken);
+            var markdown = await _markdownGenerator.GenerateServiceMarkdownAsync(service, cancellationToken);
 
             var httpClient = _httpClientFactory.CreateClient("UuBookKit");
 
             var publishRequest = new
             {
-                title = request.Service.ServiceName,
+                title = service.ServiceName,
                 content = markdown,
-                code = request.Service.ServiceCode,
-                category = request.Service.CategoryName,
-                tags = new[] { request.Service.CategoryName, "service-catalog" }
+                code = service.ServiceCode,
+                category = service.CategoryName,
+                tags = new[] { service.CategoryName ?? "Uncategorized", "service-catalog" },
+                targetBookUri = request.TargetBookUri,
+                targetPageCode = request.TargetPageCode,
+                forceUpdate = request.ForceUpdate
             };
 
             var response = await httpClient.PostAsJsonAsync("/api/pages/publish", publishRequest, cancellationToken);
@@ -65,43 +84,45 @@ public class UuBookKitService : IUuBookKitService
                 return new UuBookKitPublishResultDto
                 {
                     Success = false,
-                    ErrorMessage = $"UuBookKit API error: {response.StatusCode}"
+                    ErrorMessage = $"UuBookKit API error: {response.StatusCode}",
+                    ErrorCode = response.StatusCode.ToString()
                 };
             }
 
             var result = await response.Content.ReadFromJsonAsync<UuBookKitPublishResponse>(cancellationToken);
 
-            _logger.LogInformation("Successfully published service {ServiceCode} to UuBookKit, PageId: {PageId}", 
-                request.Service.ServiceCode, result?.PageId);
+            _logger.LogInformation("Successfully published service {ServiceCode} to UuBookKit, PageCode: {PageCode}", 
+                service.ServiceCode, result?.PageCode);
 
             return new UuBookKitPublishResultDto
             {
                 Success = true,
-                PageId = result?.PageId ?? string.Empty,
+                PageCode = result?.PageCode ?? string.Empty,
+                PageUri = result?.PageUri ?? string.Empty,
                 PageUrl = result?.PageUrl ?? string.Empty,
-                PublishedDate = DateTime.UtcNow
+                PublishedAt = DateTime.UtcNow
             };
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP error publishing service {ServiceCode} to UuBookKit", 
-                request.Service.ServiceCode);
+            _logger.LogError(ex, "HTTP error publishing service ID {ServiceId} to UuBookKit", request.ServiceId);
 
             return new UuBookKitPublishResultDto
             {
                 Success = false,
-                ErrorMessage = $"Connection error: {ex.Message}"
+                ErrorMessage = $"Connection error: {ex.Message}",
+                ErrorCode = "HTTP_ERROR"
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error publishing service {ServiceCode} to UuBookKit", 
-                request.Service.ServiceCode);
+            _logger.LogError(ex, "Error publishing service ID {ServiceId} to UuBookKit", request.ServiceId);
 
             return new UuBookKitPublishResultDto
             {
                 Success = false,
-                ErrorMessage = ex.Message
+                ErrorMessage = ex.Message,
+                ErrorCode = "UNEXPECTED_ERROR"
             };
         }
     }
@@ -112,40 +133,100 @@ public class UuBookKitService : IUuBookKitService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        _logger.LogInformation("Syncing {Count} services to UuBookKit", request.ServiceIds?.Count ?? 0);
+        _logger.LogInformation("Syncing {Count} services to UuBookKit", request.ServiceIds?.Length ?? 0);
 
-        var result = new UuBookKitSyncResultDto
-        {
-            TotalServices = request.ServiceIds?.Count ?? 0,
-            SuccessCount = 0,
-            FailedCount = 0,
-            Results = new List<UuBookKitPublishResultDto>()
-        };
+        var startedAt = DateTime.UtcNow;
+        var results = new List<UuBookKitSyncItemResultDto>();
 
-        if (request.ServiceIds == null || !request.ServiceIds.Any())
+        if (request.ServiceIds == null || request.ServiceIds.Length == 0)
         {
             _logger.LogWarning("No services to sync");
-            return result;
+            return new UuBookKitSyncResultDto
+            {
+                Success = true,
+                TotalServices = 0,
+                SuccessCount = 0,
+                FailedCount = 0,
+                SkippedCount = 0,
+                StartedAt = startedAt,
+                CompletedAt = DateTime.UtcNow,
+                Results = results
+            };
         }
 
         foreach (var serviceId in request.ServiceIds)
         {
             try
             {
-                // Note: In real implementation, you would fetch service details from repository
-                // For now, this is a placeholder
-                _logger.LogInformation("Would sync service ID: {ServiceId}", serviceId);
-                
-                result.SuccessCount++;
+                // Fetch service details
+                var service = await _repository.GetByIdAsync(serviceId, cancellationToken);
+                if (service == null)
+                {
+                    _logger.LogWarning("Service ID {ServiceId} not found, skipping", serviceId);
+                    results.Add(new UuBookKitSyncItemResultDto
+                    {
+                        ServiceId = serviceId,
+                        ServiceCode = $"SVC-{serviceId}",
+                        ServiceName = "Unknown",
+                        Status = SyncStatus.Skipped,
+                        ErrorMessage = "Service not found"
+                    });
+                    continue;
+                }
+
+                // Publish service
+                var publishRequest = new UuBookKitPublishRequestDto
+                {
+                    ServiceId = serviceId,
+                    ForceUpdate = request.ForceUpdate,
+                    TargetBookUri = request.TargetBookUri
+                };
+
+                var publishResult = await PublishServiceAsync(publishRequest, cancellationToken);
+
+                results.Add(new UuBookKitSyncItemResultDto
+                {
+                    ServiceId = serviceId,
+                    ServiceCode = service.ServiceCode ?? $"SVC-{serviceId}",
+                    ServiceName = service.ServiceName ?? "Unnamed Service",
+                    Status = publishResult.Success ? SyncStatus.Success : SyncStatus.Failed,
+                    PageCode = publishResult.PageCode,
+                    PageUrl = publishResult.PageUrl,
+                    ErrorMessage = publishResult.ErrorMessage
+                });
+
+                _logger.LogInformation("Synced service ID {ServiceId}: {Status}", 
+                    serviceId, publishResult.Success ? "Success" : "Failed");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to sync service ID: {ServiceId}", serviceId);
-                result.FailedCount++;
+                results.Add(new UuBookKitSyncItemResultDto
+                {
+                    ServiceId = serviceId,
+                    ServiceCode = $"SVC-{serviceId}",
+                    ServiceName = "Unknown",
+                    Status = SyncStatus.Failed,
+                    ErrorMessage = ex.Message
+                });
             }
         }
 
-        return result;
+        var successCount = results.Count(r => r.Status == SyncStatus.Success);
+        var failedCount = results.Count(r => r.Status == SyncStatus.Failed);
+        var skippedCount = results.Count(r => r.Status == SyncStatus.Skipped);
+
+        return new UuBookKitSyncResultDto
+        {
+            Success = failedCount == 0,
+            TotalServices = request.ServiceIds.Length,
+            SuccessCount = successCount,
+            FailedCount = failedCount,
+            SkippedCount = skippedCount,
+            StartedAt = startedAt,
+            CompletedAt = DateTime.UtcNow,
+            Results = results
+        };
     }
 
     public async Task<UuBookKitStatusDto> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -159,13 +240,32 @@ public class UuBookKitService : IUuBookKitService
 
             var isConnected = response.IsSuccessStatusCode;
 
+            // Try to get book info
+            string? bookUri = null;
+            string? bookName = null;
+            if (isConnected)
+            {
+                try
+                {
+                    var bookInfo = await response.Content.ReadFromJsonAsync<UuBookKitBookInfo>(cancellationToken);
+                    bookUri = bookInfo?.BookUri;
+                    bookName = bookInfo?.BookName;
+                }
+                catch
+                {
+                    // Ignore JSON parsing errors
+                }
+            }
+
             _logger.LogInformation("UuBookKit status: {Status}", isConnected ? "Connected" : "Disconnected");
 
             return new UuBookKitStatusDto
             {
                 IsConnected = isConnected,
-                ApiUrl = _options.ApiUrl,
-                LastChecked = DateTime.UtcNow
+                BookUri = bookUri,
+                BookName = bookName,
+                LastSyncAt = DateTime.UtcNow,
+                SyncedServicesCount = 0 // TODO: Implement synced services count tracking
             };
         }
         catch (Exception ex)
@@ -175,8 +275,7 @@ public class UuBookKitService : IUuBookKitService
             return new UuBookKitStatusDto
             {
                 IsConnected = false,
-                ApiUrl = _options.ApiUrl,
-                LastChecked = DateTime.UtcNow,
+                LastSyncAt = DateTime.UtcNow,
                 ErrorMessage = ex.Message
             };
         }
@@ -240,7 +339,14 @@ public class UuBookKitService : IUuBookKitService
 
     private class UuBookKitPublishResponse
     {
-        public string PageId { get; set; } = string.Empty;
+        public string PageCode { get; set; } = string.Empty;
+        public string PageUri { get; set; } = string.Empty;
         public string PageUrl { get; set; } = string.Empty;
+    }
+
+    private class UuBookKitBookInfo
+    {
+        public string BookUri { get; set; } = string.Empty;
+        public string BookName { get; set; } = string.Empty;
     }
 }
