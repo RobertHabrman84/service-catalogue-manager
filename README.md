@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Service Catalogue Manager
 
 [![Build Status](https://dev.azure.com/yourorg/service-catalogue-manager/_apis/build/status/CI?branchName=main)](https://dev.azure.com/yourorg/service-catalogue-manager/_build/latest?definitionId=1&branchName=main)
@@ -187,3 +188,6 @@ For questions or issues:
 
 **Version**: 1.0.0  
 **Last Updated**: January 2026
+=======
+# service-catalogue-manager
+>>>>>>> f4f2cc2941dbe01c84e5780a8efc644c189e30db
