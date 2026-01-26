@@ -193,7 +193,7 @@ public class LookupService : ILookupService
                 .Where(s => s.IsActive)
                 .Select(s => new
                 {
-                    s.Id,
+                    Id = s.ServiceId, // ✅ Fixed: Use ServiceId (primary key)
                     s.ServiceCode,
                     s.ServiceName,
                     s.Description
