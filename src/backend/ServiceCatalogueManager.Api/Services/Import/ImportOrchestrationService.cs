@@ -48,8 +48,8 @@ public class ImportOrchestrationService : IImportOrchestrationService
                 Description = model.Description ?? string.Empty,
                 Notes = model.Notes,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedDate = DateTime.UtcNow,
+                ModifiedDate = DateTime.UtcNow
             };
 
             // Try to find category by name (simplified - just search all)
