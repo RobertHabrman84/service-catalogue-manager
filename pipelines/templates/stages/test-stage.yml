@@ -1,0 +1,113 @@
+# =============================================================================
+# TEST STAGE TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: nodeVersion
+    type: string
+    default: '20.x'
+  - name: dotnetVersion
+    type: string
+    default: '8.x'
+  - name: runUnitTests
+    type: boolean
+    default: true
+  - name: runIntegrationTests
+    type: boolean
+    default: true
+  - name: runE2ETests
+    type: boolean
+    default: false
+  - name: runSecurityScan
+    type: boolean
+    default: true
+  - name: runCodeQuality
+    type: boolean
+    default: true
+  - name: e2eBaseUrl
+    type: string
+    default: ''
+  - name: minimumCoverage
+    type: number
+    default: 70
+
+stages:
+  - stage: Test
+    displayName: 'Test Stage'
+    dependsOn: Build
+    condition: succeeded()
+    
+    jobs:
+      # Unit Tests
+      - ${{ if eq(parameters.runUnitTests, true) }}:
+        - template: ../jobs/run-unit-tests.yml
+          parameters:
+            nodeVersion: ${{ parameters.nodeVersion }}
+            dotnetVersion: ${{ parameters.dotnetVersion }}
+            publishTestResults: true
+            publishCodeCoverage: true
+            minimumCoverage: ${{ parameters.minimumCoverage }}
+
+      # Integration Tests
+      - ${{ if eq(parameters.runIntegrationTests, true) }}:
+        - template: ../jobs/run-integration-tests.yml
+          parameters:
+            dotnetVersion: ${{ parameters.dotnetVersion }}
+            publishTestResults: true
+
+      # Security Scan
+      - ${{ if eq(parameters.runSecurityScan, true) }}:
+        - template: ../jobs/security-scan.yml
+          parameters:
+            nodeVersion: ${{ parameters.nodeVersion }}
+            dotnetVersion: ${{ parameters.dotnetVersion }}
+            failOnHighSeverity: false
+            publishResults: true
+
+      # Code Quality
+      - ${{ if eq(parameters.runCodeQuality, true) }}:
+        - template: ../jobs/code-quality.yml
+          parameters:
+            nodeVersion: ${{ parameters.nodeVersion }}
+            dotnetVersion: ${{ parameters.dotnetVersion }}
+            sonarQubeEnabled: false
+
+      # E2E Tests (Optional - typically in staging)
+      - ${{ if eq(parameters.runE2ETests, true) }}:
+        - template: ../jobs/run-e2e-tests.yml
+          parameters:
+            nodeVersion: ${{ parameters.nodeVersion }}
+            baseUrl: ${{ parameters.e2eBaseUrl }}
+            browser: 'chromium'
+            publishTestResults: true
+
+      # Test Summary
+      - job: TestSummary
+        displayName: 'Test Summary'
+        dependsOn:
+          - ${{ if eq(parameters.runUnitTests, true) }}:
+            - RunUnitTests
+          - ${{ if eq(parameters.runIntegrationTests, true) }}:
+            - RunIntegrationTests
+          - ${{ if eq(parameters.runSecurityScan, true) }}:
+            - SecurityScan
+          - ${{ if eq(parameters.runCodeQuality, true) }}:
+            - CodeQuality
+          - ${{ if eq(parameters.runE2ETests, true) }}:
+            - RunE2ETests
+        condition: always()
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        steps:
+          - script: |
+              echo "=== TEST STAGE SUMMARY ==="
+              echo "Unit Tests: ${{ parameters.runUnitTests }}"
+              echo "Integration Tests: ${{ parameters.runIntegrationTests }}"
+              echo "E2E Tests: ${{ parameters.runE2ETests }}"
+              echo "Security Scan: ${{ parameters.runSecurityScan }}"
+              echo "Code Quality: ${{ parameters.runCodeQuality }}"
+              echo "Minimum Coverage: ${{ parameters.minimumCoverage }}%"
+              echo "=========================="
+            displayName: 'Test Summary'

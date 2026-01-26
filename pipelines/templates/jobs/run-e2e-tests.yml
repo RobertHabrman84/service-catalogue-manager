@@ -1,0 +1,118 @@
+# =============================================================================
+# RUN E2E TESTS JOB TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: e2eWorkingDirectory
+    type: string
+    default: 'tests/e2e'
+  - name: nodeVersion
+    type: string
+    default: '20.x'
+  - name: publishTestResults
+    type: boolean
+    default: true
+  - name: publishScreenshots
+    type: boolean
+    default: true
+  - name: baseUrl
+    type: string
+    default: '$(E2E_BASE_URL)'
+  - name: browser
+    type: string
+    default: 'chromium'
+  - name: timeout
+    type: number
+    default: 60
+  - name: retries
+    type: number
+    default: 2
+
+jobs:
+  - job: RunE2ETests
+    displayName: 'Run E2E Tests'
+    pool:
+      vmImage: 'ubuntu-latest'
+    timeoutInMinutes: ${{ parameters.timeout }}
+    
+    steps:
+      # Setup Node.js
+      - template: ../steps/setup-node.yml
+        parameters:
+          nodeVersion: ${{ parameters.nodeVersion }}
+
+      # Install dependencies
+      - task: Npm@1
+        displayName: 'Install Dependencies'
+        inputs:
+          command: 'ci'
+          workingDir: ${{ parameters.e2eWorkingDirectory }}
+
+      # Install Playwright browsers
+      - script: |
+          cd ${{ parameters.e2eWorkingDirectory }}
+          npx playwright install --with-deps ${{ parameters.browser }}
+        displayName: 'Install Playwright Browsers'
+
+      # Wait for application to be ready
+      - script: |
+          echo "Waiting for application at ${{ parameters.baseUrl }}..."
+          for i in {1..30}; do
+            if curl -s -o /dev/null -w "%{http_code}" "${{ parameters.baseUrl }}" | grep -q "200\|301\|302"; then
+              echo "Application is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 5
+          done
+        displayName: 'Wait for Application'
+        continueOnError: true
+
+      # Run Playwright E2E tests
+      - script: |
+          cd ${{ parameters.e2eWorkingDirectory }}
+          npx playwright test --project=${{ parameters.browser }} --retries=${{ parameters.retries }} --reporter=junit,html
+        displayName: 'Run E2E Tests'
+        env:
+          BASE_URL: ${{ parameters.baseUrl }}
+          TEST_USER_EMAIL: $(E2E_TEST_USER_EMAIL)
+          TEST_USER_PASSWORD: $(E2E_TEST_USER_PASSWORD)
+          CI: true
+        continueOnError: true
+
+      # Publish test results
+      - ${{ if eq(parameters.publishTestResults, true) }}:
+        - task: PublishTestResults@2
+          displayName: 'Publish E2E Test Results'
+          inputs:
+            testResultsFormat: 'JUnit'
+            testResultsFiles: '${{ parameters.e2eWorkingDirectory }}/test-results/junit.xml'
+            testRunTitle: 'E2E Tests (${{ parameters.browser }})'
+            failTaskOnFailedTests: false
+          condition: always()
+
+      # Publish HTML report
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish E2E HTML Report'
+        inputs:
+          PathtoPublish: '${{ parameters.e2eWorkingDirectory }}/playwright-report'
+          ArtifactName: 'e2e-report-${{ parameters.browser }}'
+        condition: always()
+
+      # Publish screenshots on failure
+      - ${{ if eq(parameters.publishScreenshots, true) }}:
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publish Screenshots'
+          inputs:
+            PathtoPublish: '${{ parameters.e2eWorkingDirectory }}/test-results'
+            ArtifactName: 'e2e-screenshots-${{ parameters.browser }}'
+          condition: failed()
+
+      # Output test status
+      - script: |
+          echo "##vso[task.setvariable variable=e2eTestsCompleted;isOutput=true]true"
+          echo "E2E tests completed"
+        displayName: 'Output Test Status'
+        name: testOutput
+        condition: always()

@@ -1,0 +1,49 @@
+{
+  "recommendations": [
+    // C# / .NET
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "ms-azuretools.vscode-azurefunctions",
+
+    // TypeScript / JavaScript
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+
+    // React
+    "dsznajder.es7-react-js-snippets",
+    "rodrigovallades.es7-react-js-snippets",
+
+    // Git
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+
+    // Azure
+    "ms-azuretools.vscode-azureresourcegroups",
+    "ms-azuretools.vscode-azurestorage",
+    "ms-vscode.azure-account",
+
+    // Database
+    "ms-mssql.mssql",
+
+    // YAML
+    "redhat.vscode-yaml",
+
+    // Docker
+    "ms-azuretools.vscode-docker",
+
+    // Testing
+    "ms-playwright.playwright",
+
+    // Markdown
+    "yzhang.markdown-all-in-one",
+    "DavidAnson.vscode-markdownlint",
+
+    // Utilities
+    "EditorConfig.EditorConfig",
+    "streetsidesoftware.code-spell-checker",
+    "humao.rest-client",
+    "aaron-bond.better-comments"
+  ],
+  "unwantedRecommendations": []
+}

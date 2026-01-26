@@ -1,0 +1,55 @@
+# =============================================================================
+# SETUP .NET SDK STEP TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: dotnetVersion
+    type: string
+    default: '8.x'
+  - name: includePreviewVersions
+    type: boolean
+    default: false
+  - name: installEfTool
+    type: boolean
+    default: false
+
+steps:
+  # Install .NET SDK
+  - task: UseDotNet@2
+    displayName: 'Setup .NET SDK ${{ parameters.dotnetVersion }}'
+    inputs:
+      version: ${{ parameters.dotnetVersion }}
+      includePreviewVersions: ${{ parameters.includePreviewVersions }}
+
+  # Verify installation
+  - script: |
+      echo "=== .NET Environment ==="
+      echo ".NET SDK Version:"
+      dotnet --version
+      echo ""
+      echo "Installed SDKs:"
+      dotnet --list-sdks
+      echo ""
+      echo "Installed Runtimes:"
+      dotnet --list-runtimes
+      echo "======================"
+    displayName: 'Verify .NET Installation'
+
+  # Install EF Core tools (optional)
+  - ${{ if eq(parameters.installEfTool, true) }}:
+    - script: |
+        dotnet tool install --global dotnet-ef
+        echo "EF Core tools installed"
+        dotnet ef --version
+      displayName: 'Install EF Core Tools'
+
+  # Configure NuGet
+  - script: |
+      # Disable telemetry for CI
+      export DOTNET_CLI_TELEMETRY_OPTOUT=1
+      export DOTNET_NOLOGO=1
+      
+      echo "NuGet sources:"
+      dotnet nuget list source
+    displayName: 'Configure .NET for CI'

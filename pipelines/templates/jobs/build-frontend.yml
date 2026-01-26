@@ -1,0 +1,98 @@
+# =============================================================================
+# BUILD FRONTEND JOB TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: workingDirectory
+    type: string
+    default: 'src/frontend'
+  - name: nodeVersion
+    type: string
+    default: '20.x'
+  - name: buildConfiguration
+    type: string
+    default: 'production'
+  - name: publishArtifact
+    type: boolean
+    default: true
+  - name: artifactName
+    type: string
+    default: 'frontend-build'
+
+jobs:
+  - job: BuildFrontend
+    displayName: 'Build Frontend Application'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+      # Setup Node.js
+      - template: ../steps/setup-node.yml
+        parameters:
+          nodeVersion: ${{ parameters.nodeVersion }}
+
+      # Cache npm packages
+      - template: ../steps/cache-npm.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}
+
+      # Install dependencies
+      - task: Npm@1
+        displayName: 'Install Dependencies'
+        inputs:
+          command: 'ci'
+          workingDir: ${{ parameters.workingDirectory }}
+
+      # Run linting
+      - task: Npm@1
+        displayName: 'Run ESLint'
+        inputs:
+          command: 'custom'
+          workingDir: ${{ parameters.workingDirectory }}
+          customCommand: 'run lint'
+        continueOnError: true
+
+      # Run type checking
+      - task: Npm@1
+        displayName: 'TypeScript Type Check'
+        inputs:
+          command: 'custom'
+          workingDir: ${{ parameters.workingDirectory }}
+          customCommand: 'run type-check'
+
+      # Build application
+      - task: Npm@1
+        displayName: 'Build Application'
+        inputs:
+          command: 'custom'
+          workingDir: ${{ parameters.workingDirectory }}
+          customCommand: 'run build'
+        env:
+          VITE_API_BASE_URL: $(ApiBaseUrl)
+          VITE_AZURE_AD_CLIENT_ID: $(AzureAdClientId)
+          VITE_AZURE_AD_TENANT_ID: $(AzureAdTenantId)
+          NODE_ENV: ${{ parameters.buildConfiguration }}
+
+      # Copy static web app config
+      - task: CopyFiles@2
+        displayName: 'Copy Static Web App Config'
+        inputs:
+          SourceFolder: ${{ parameters.workingDirectory }}
+          Contents: 'staticwebapp.config.json'
+          TargetFolder: '${{ parameters.workingDirectory }}/dist'
+
+      # Publish build artifact
+      - ${{ if eq(parameters.publishArtifact, true) }}:
+        - template: ../steps/publish-artifacts.yml
+          parameters:
+            artifactName: ${{ parameters.artifactName }}
+            pathToPublish: '${{ parameters.workingDirectory }}/dist'
+
+      # Output build info
+      - script: |
+          echo "##vso[task.setvariable variable=frontendBuildCompleted;isOutput=true]true"
+          echo "Frontend build completed successfully"
+          ls -la ${{ parameters.workingDirectory }}/dist
+        displayName: 'Output Build Info'
+        name: buildInfo

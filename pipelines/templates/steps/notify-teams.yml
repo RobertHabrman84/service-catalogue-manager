@@ -1,0 +1,126 @@
+# =============================================================================
+# NOTIFY MICROSOFT TEAMS STEP TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: webhookUrl
+    type: string
+    default: '$(TeamsWebhookUrl)'
+  - name: title
+    type: string
+    default: 'Pipeline Notification'
+  - name: message
+    type: string
+    default: 'Pipeline completed'
+  - name: status
+    type: string
+    default: 'succeeded'
+    values:
+      - succeeded
+      - failed
+      - warning
+  - name: includeCommitInfo
+    type: boolean
+    default: true
+  - name: includeBuildLink
+    type: boolean
+    default: true
+
+steps:
+  # Send Teams notification
+  - script: |
+      # Set color based on status
+      case "${{ parameters.status }}" in
+        succeeded)
+          COLOR="00FF00"
+          EMOJI="✅"
+          ;;
+        failed)
+          COLOR="FF0000"
+          EMOJI="❌"
+          ;;
+        warning)
+          COLOR="FFA500"
+          EMOJI="⚠️"
+          ;;
+        *)
+          COLOR="808080"
+          EMOJI="ℹ️"
+          ;;
+      esac
+      
+      # Build the message card
+      cat > /tmp/teams-message.json << EOF
+      {
+        "@type": "MessageCard",
+        "@context": "http://schema.org/extensions",
+        "themeColor": "${COLOR}",
+        "summary": "${{ parameters.title }}",
+        "sections": [{
+          "activityTitle": "${EMOJI} ${{ parameters.title }}",
+          "facts": [
+            {
+              "name": "Status",
+              "value": "${{ parameters.status }}"
+            },
+            {
+              "name": "Message",
+              "value": "${{ parameters.message }}"
+            },
+            {
+              "name": "Build",
+              "value": "$(Build.BuildNumber)"
+            },
+            {
+              "name": "Branch",
+              "value": "$(Build.SourceBranchName)"
+            }
+      EOF
+      
+      # Add commit info if enabled
+      if [ "${{ parameters.includeCommitInfo }}" == "True" ]; then
+        cat >> /tmp/teams-message.json << EOF
+            ,{
+              "name": "Commit",
+              "value": "$(Build.SourceVersion)"
+            },
+            {
+              "name": "Author",
+              "value": "$(Build.RequestedFor)"
+            }
+      EOF
+      fi
+      
+      cat >> /tmp/teams-message.json << EOF
+          ],
+          "markdown": true
+        }]
+      EOF
+      
+      # Add build link if enabled
+      if [ "${{ parameters.includeBuildLink }}" == "True" ]; then
+        cat >> /tmp/teams-message.json << EOF
+        ,
+        "potentialAction": [{
+          "@type": "OpenUri",
+          "name": "View Build",
+          "targets": [{
+            "os": "default",
+            "uri": "$(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
+          }]
+        }]
+      EOF
+      fi
+      
+      # Close JSON
+      echo "}" >> /tmp/teams-message.json
+      
+      # Send to Teams
+      echo "Sending notification to Teams..."
+      curl -H "Content-Type: application/json" -d @/tmp/teams-message.json "${{ parameters.webhookUrl }}" || echo "Warning: Failed to send Teams notification"
+      
+      echo "Teams notification sent"
+    displayName: 'Send Teams Notification'
+    condition: always()
+    continueOnError: true

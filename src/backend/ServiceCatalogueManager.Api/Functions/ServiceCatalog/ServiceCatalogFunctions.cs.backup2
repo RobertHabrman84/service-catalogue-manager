@@ -1,0 +1,194 @@
+using System.Net;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Logging;
+using ServiceCatalogueManager.Api.Models.DTOs.ServiceCatalog;
+using ServiceCatalogueManager.Api.Models.Requests;
+using ServiceCatalogueManager.Api.Models.Responses;
+using ServiceCatalogueManager.Api.Services.Interfaces;
+
+namespace ServiceCatalogueManager.Api.Functions.ServiceCatalog;
+
+/// <summary>
+/// Azure Functions for Service Catalog CRUD operations
+/// </summary>
+public class ServiceCatalogFunctions
+{
+    private readonly IServiceCatalogService _serviceCatalogService;
+    private readonly ILogger<ServiceCatalogFunctions> _logger;
+
+    public ServiceCatalogFunctions(
+        IServiceCatalogService serviceCatalogService,
+        ILogger<ServiceCatalogFunctions> logger)
+    {
+        _serviceCatalogService = serviceCatalogService;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Get paginated list of services
+    /// </summary>
+    [Function("GetServices")]
+    public async Task<HttpResponseData> GetServices(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "services")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting services list");
+
+        var request = ParseGetServicesRequest(req);
+        var result = await _serviceCatalogService.GetServicesAsync(request, cancellationToken);
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(ApiResponse<PagedResponse<ServiceCatalogListItemDto>>.Ok(result), cancellationToken);
+        return response;
+    }
+
+    /// <summary>
+    /// Get service by ID
+    /// </summary>
+    [Function("GetServiceById")]
+    public async Task<HttpResponseData> GetServiceById(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "services/{id:int}")] HttpRequestData req,
+        int id,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting service with ID: {ServiceId}", id);
+
+        var service = await _serviceCatalogService.GetServiceFullAsync(id, cancellationToken);
+
+        if (service == null)
+        {
+            var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+            await notFoundResponse.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Fail($"Service with ID {id} not found"), cancellationToken);
+            return notFoundResponse;
+        }
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Ok(service), cancellationToken);
+        return response;
+    }
+
+    /// <summary>
+    /// Get service by code
+    /// </summary>
+    [Function("GetServiceByCode")]
+    public async Task<HttpResponseData> GetServiceByCode(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "services/code/{code}")] HttpRequestData req,
+        string code,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Getting service with code: {ServiceCode}", code);
+
+        var service = await _serviceCatalogService.GetServiceByCodeAsync(code, cancellationToken);
+
+        if (service == null)
+        {
+            var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+            await notFoundResponse.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Fail($"Service with code '{code}' not found"), cancellationToken);
+            return notFoundResponse;
+        }
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Ok(service), cancellationToken);
+        return response;
+    }
+
+    /// <summary>
+    /// Create new service
+    /// </summary>
+    [Function("CreateService")]
+    public async Task<HttpResponseData> CreateService(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "services")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Creating new service");
+
+        var createDto = await req.ReadFromJsonAsync<ServiceCatalogCreateDto>(cancellationToken);
+        if (createDto == null)
+        {
+            var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequestResponse.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Fail("Invalid request body"), cancellationToken);
+            return badRequestResponse;
+        }
+
+        var result = await _serviceCatalogService.CreateServiceAsync(createDto, null, cancellationToken);
+
+        var response = req.CreateResponse(HttpStatusCode.Created);
+        await response.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Ok(result, "Service created successfully"), cancellationToken);
+        return response;
+    }
+
+    /// <summary>
+    /// Update existing service
+    /// </summary>
+    [Function("UpdateService")]
+    public async Task<HttpResponseData> UpdateService(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "services/{id:int}")] HttpRequestData req,
+        int id,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Updating service with ID: {ServiceId}", id);
+
+        var updateDto = await req.ReadFromJsonAsync<ServiceCatalogUpdateDto>(cancellationToken);
+        if (updateDto == null)
+        {
+            var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequestResponse.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Fail("Invalid request body"), cancellationToken);
+            return badRequestResponse;
+        }
+
+        var result = await _serviceCatalogService.UpdateServiceAsync(id, updateDto, null, cancellationToken);
+
+        if (result == null)
+        {
+            var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+            await notFoundResponse.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Fail($"Service with ID {id} not found"), cancellationToken);
+            return notFoundResponse;
+        }
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Ok(result, "Service updated successfully"), cancellationToken);
+        return response;
+    }
+
+    /// <summary>
+    /// Delete service
+    /// </summary>
+    [Function("DeleteService")]
+    public async Task<HttpResponseData> DeleteService(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "services/{id:int}")] HttpRequestData req,
+        int id,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Deleting service with ID: {ServiceId}", id);
+
+        var success = await _serviceCatalogService.DeleteServiceAsync(id, cancellationToken);
+
+        if (!success)
+        {
+            var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+            await notFoundResponse.WriteAsJsonAsync(ApiResponse<bool>.Fail($"Service with ID {id} not found"), cancellationToken);
+            return notFoundResponse;
+        }
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(ApiResponse<bool>.Ok(true, "Service deleted successfully"), cancellationToken);
+        return response;
+    }
+
+    private static GetServicesRequest ParseGetServicesRequest(HttpRequestData req)
+    {
+        var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+
+        return new GetServicesRequest
+        {
+            Page = int.TryParse(query["page"], out var page) ? page : 1,
+            PageSize = int.TryParse(query["pageSize"], out var pageSize) ? pageSize : 20,
+            SearchTerm = query["search"],
+            CategoryId = int.TryParse(query["categoryId"], out var categoryId) ? categoryId : null,
+            IsActive = bool.TryParse(query["isActive"], out var isActive) ? isActive : null,
+            SortBy = query["sortBy"],
+            SortDescending = bool.TryParse(query["sortDesc"], out var sortDesc) && sortDesc
+        };
+    }
+}

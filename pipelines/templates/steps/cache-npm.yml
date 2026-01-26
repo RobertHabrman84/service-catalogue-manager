@@ -1,0 +1,35 @@
+# =============================================================================
+# CACHE NPM PACKAGES STEP TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: workingDirectory
+    type: string
+    default: 'src/frontend'
+  - name: cacheKey
+    type: string
+    default: 'npm'
+
+steps:
+  # Cache npm packages
+  - task: Cache@2
+    displayName: 'Cache NPM Packages'
+    inputs:
+      key: '${{ parameters.cacheKey }} | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/package-lock.json'
+      restoreKeys: |
+        ${{ parameters.cacheKey }} | "$(Agent.OS)"
+        ${{ parameters.cacheKey }}
+      path: '${{ parameters.workingDirectory }}/node_modules'
+      cacheHitVar: 'NPM_CACHE_RESTORED'
+
+  # Log cache status
+  - script: |
+      if [ "$(NPM_CACHE_RESTORED)" == "true" ]; then
+        echo "✓ NPM cache restored successfully"
+        echo "Cached modules:"
+        ls -la ${{ parameters.workingDirectory }}/node_modules | head -20
+      else
+        echo "✗ NPM cache not found - will install fresh"
+      fi
+    displayName: 'NPM Cache Status'

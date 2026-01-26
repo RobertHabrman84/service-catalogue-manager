@@ -1,0 +1,85 @@
+/* Header Component Styles */
+
+.header {
+  @apply sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur;
+}
+
+.headerContainer {
+  @apply mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8;
+}
+
+.logo {
+  @apply flex items-center space-x-2;
+}
+
+.logoImage {
+  @apply h-8 w-8;
+}
+
+.logoText {
+  @apply text-xl font-bold text-gray-900;
+}
+
+.nav {
+  @apply hidden md:flex md:items-center md:space-x-6;
+}
+
+.navLink {
+  @apply text-sm font-medium text-gray-600 transition-colors hover:text-gray-900;
+}
+
+.navLinkActive {
+  @apply text-blue-600;
+}
+
+.actions {
+  @apply flex items-center space-x-4;
+}
+
+.searchButton {
+  @apply rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700;
+}
+
+.notificationButton {
+  @apply relative rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700;
+}
+
+.notificationBadge {
+  @apply absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white;
+}
+
+.userMenu {
+  @apply relative;
+}
+
+.userButton {
+  @apply flex items-center space-x-2 rounded-full p-1 hover:bg-gray-100;
+}
+
+.avatar {
+  @apply h-8 w-8 rounded-full bg-blue-500 text-sm font-medium text-white;
+}
+
+.dropdown {
+  @apply absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5;
+}
+
+.dropdownItem {
+  @apply block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100;
+}
+
+.mobileMenuButton {
+  @apply inline-flex items-center justify-center rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 md:hidden;
+}
+
+.mobileMenu {
+  @apply md:hidden;
+}
+
+.mobileNav {
+  @apply space-y-1 px-2 pb-3 pt-2;
+}
+
+.mobileNavLink {
+  @apply block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900;
+}

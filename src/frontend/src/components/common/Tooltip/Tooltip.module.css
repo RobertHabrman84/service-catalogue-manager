@@ -1,0 +1,3 @@
+.tooltip { @apply relative inline-block; }
+.content { @apply absolute z-10 px-3 py-2 text-sm text-white bg-gray-900 rounded-md shadow-lg; }
+.arrow { @apply absolute w-2 h-2 bg-gray-900 transform rotate-45; }

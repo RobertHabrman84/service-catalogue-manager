@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Cache
+.cache/
+.parcel-cache/
+
+# IDE
+.idea/
+.vscode/
+
+# Coverage
+coverage/
+
+# Logs
+*.log
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.min.js
+*.min.css
+
+# Static assets
+public/
+
+# Environment files
+.env*
+!.env.example
+
+# TypeScript build info
+*.tsbuildinfo

@@ -1,0 +1,82 @@
+# =============================================================================
+# BUILD BACKEND JOB TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: workingDirectory
+    type: string
+    default: 'src/backend/ServiceCatalogueManager.Api'
+  - name: dotnetVersion
+    type: string
+    default: '8.x'
+  - name: buildConfiguration
+    type: string
+    default: 'Release'
+  - name: publishArtifact
+    type: boolean
+    default: true
+  - name: artifactName
+    type: string
+    default: 'backend-build'
+  - name: runtimeIdentifier
+    type: string
+    default: 'win-x64'
+
+jobs:
+  - job: BuildBackend
+    displayName: 'Build Backend API'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+      # Setup .NET SDK
+      - template: ../steps/setup-dotnet.yml
+        parameters:
+          dotnetVersion: ${{ parameters.dotnetVersion }}
+
+      # Cache NuGet packages
+      - template: ../steps/cache-nuget.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}
+
+      # Restore dependencies
+      - task: DotNetCoreCLI@2
+        displayName: 'Restore NuGet Packages'
+        inputs:
+          command: 'restore'
+          projects: '${{ parameters.workingDirectory }}/*.csproj'
+          feedsToUse: 'select'
+
+      # Build project
+      - task: DotNetCoreCLI@2
+        displayName: 'Build Project'
+        inputs:
+          command: 'build'
+          projects: '${{ parameters.workingDirectory }}/*.csproj'
+          arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore'
+
+      # Publish project
+      - task: DotNetCoreCLI@2
+        displayName: 'Publish Project'
+        inputs:
+          command: 'publish'
+          publishWebProjects: false
+          projects: '${{ parameters.workingDirectory }}/*.csproj'
+          arguments: '--configuration ${{ parameters.buildConfiguration }} --output $(Build.ArtifactStagingDirectory)/backend --runtime ${{ parameters.runtimeIdentifier }} --self-contained false'
+          zipAfterPublish: true
+
+      # Publish build artifact
+      - ${{ if eq(parameters.publishArtifact, true) }}:
+        - template: ../steps/publish-artifacts.yml
+          parameters:
+            artifactName: ${{ parameters.artifactName }}
+            pathToPublish: '$(Build.ArtifactStagingDirectory)/backend'
+
+      # Output build info
+      - script: |
+          echo "##vso[task.setvariable variable=backendBuildCompleted;isOutput=true]true"
+          echo "Backend build completed successfully"
+          ls -la $(Build.ArtifactStagingDirectory)/backend
+        displayName: 'Output Build Info'
+        name: buildInfo

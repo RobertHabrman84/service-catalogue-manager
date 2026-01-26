@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" modified="2026-01-24T00:00:00.000Z" agent="Service Catalogue Manager" version="22.0.0">
+  <diagram name="Component Diagram" id="component-diagram">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="frontend-pkg" value="Frontend Package" style="shape=folder;fontStyle=1;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;html=1;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="300" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="pages" value="&lt;&lt;component&gt;&gt;&#xa;Pages" style="html=1;dropTarget=0;fillColor=#fff2cc;" vertex="1" parent="frontend-pkg">
+          <mxGeometry x="20" y="40" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="components" value="&lt;&lt;component&gt;&gt;&#xa;Components" style="html=1;dropTarget=0;fillColor=#fff2cc;" vertex="1" parent="frontend-pkg">
+          <mxGeometry x="160" y="40" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="store" value="&lt;&lt;component&gt;&gt;&#xa;Redux Store" style="html=1;dropTarget=0;fillColor=#fff2cc;" vertex="1" parent="frontend-pkg">
+          <mxGeometry x="20" y="110" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="api-client" value="&lt;&lt;component&gt;&gt;&#xa;API Client" style="html=1;dropTarget=0;fillColor=#fff2cc;" vertex="1" parent="frontend-pkg">
+          <mxGeometry x="160" y="110" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="backend-pkg" value="Backend Package" style="shape=folder;fontStyle=1;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;html=1;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="400" y="40" width="340" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="functions" value="&lt;&lt;component&gt;&gt;&#xa;Azure Functions" style="html=1;dropTarget=0;fillColor=#f8cecc;" vertex="1" parent="backend-pkg">
+          <mxGeometry x="20" y="40" width="140" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="services" value="&lt;&lt;component&gt;&gt;&#xa;Services" style="html=1;dropTarget=0;fillColor=#f8cecc;" vertex="1" parent="backend-pkg">
+          <mxGeometry x="180" y="40" width="140" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="repositories" value="&lt;&lt;component&gt;&gt;&#xa;Repositories" style="html=1;dropTarget=0;fillColor=#f8cecc;" vertex="1" parent="backend-pkg">
+          <mxGeometry x="20" y="110" width="140" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="validators" value="&lt;&lt;component&gt;&gt;&#xa;Validators" style="html=1;dropTarget=0;fillColor=#f8cecc;" vertex="1" parent="backend-pkg">
+          <mxGeometry x="180" y="110" width="140" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="export-svc" value="&lt;&lt;component&gt;&gt;&#xa;Export Services" style="html=1;dropTarget=0;fillColor=#f8cecc;" vertex="1" parent="backend-pkg">
+          <mxGeometry x="20" y="180" width="140" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="mappers" value="&lt;&lt;component&gt;&gt;&#xa;AutoMapper" style="html=1;dropTarget=0;fillColor=#f8cecc;" vertex="1" parent="backend-pkg">
+          <mxGeometry x="180" y="180" width="140" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="data-pkg" value="Data Package" style="shape=folder;fontStyle=1;spacingTop=10;tabWidth=40;tabHeight=14;tabPosition=left;html=1;fillColor=#e1d5e7;" vertex="1" parent="1">
+          <mxGeometry x="400" y="360" width="340" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="dbcontext" value="&lt;&lt;component&gt;&gt;&#xa;DbContext" style="html=1;dropTarget=0;fillColor=#ffe6cc;" vertex="1" parent="data-pkg">
+          <mxGeometry x="20" y="40" width="140" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="entities" value="&lt;&lt;component&gt;&gt;&#xa;Entities" style="html=1;dropTarget=0;fillColor=#ffe6cc;" vertex="1" parent="data-pkg">
+          <mxGeometry x="180" y="40" width="140" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep1" value="" style="endArrow=open;endSize=12;dashed=1;html=1;" edge="1" parent="1" source="api-client" target="functions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep2" value="" style="endArrow=open;endSize=12;dashed=1;html=1;" edge="1" parent="1" source="repositories" target="dbcontext">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

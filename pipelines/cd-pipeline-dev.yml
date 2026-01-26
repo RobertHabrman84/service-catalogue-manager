@@ -1,0 +1,117 @@
+# CD Pipeline - Deploy to Development
+# Triggers on successful CI on develop branch
+
+trigger:
+  branches:
+    include:
+      - develop
+
+resources:
+  pipelines:
+    - pipeline: ci
+      source: 'CI Pipeline'
+      trigger:
+        branches:
+          include:
+            - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - template: templates/variables/common-variables.yml
+  - template: templates/variables/dev-variables.yml
+
+stages:
+  - stage: DeployDev
+    displayName: 'Deploy to Development'
+    jobs:
+      - deployment: DeployBackend
+        displayName: 'Deploy Backend to Azure Functions'
+        environment: 'development'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: ci
+                  artifact: backend
+
+                - task: AzureFunctionApp@1
+                  displayName: 'Deploy Azure Function'
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    appType: 'functionApp'
+                    appName: '$(backendAppName)'
+                    package: '$(Pipeline.Workspace)/ci/backend/**/*.zip'
+                    deploymentMethod: 'auto'
+
+                - task: AzureAppServiceSettings@1
+                  displayName: 'Configure App Settings'
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    appName: '$(backendAppName)'
+                    resourceGroupName: '$(resourceGroup)'
+                    appSettings: |
+                      [
+                        {
+                          "name": "AzureAd__TenantId",
+                          "value": "$(AzureTenantId)",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "AzureAd__ClientId",
+                          "value": "$(AzureClientId)",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "AzureSQL__ConnectionString",
+                          "value": "$(SqlConnectionString)",
+                          "slotSetting": false
+                        }
+                      ]
+
+      - deployment: DeployFrontend
+        displayName: 'Deploy Frontend to Static Web App'
+        environment: 'development'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: ci
+                  artifact: frontend
+
+                - task: AzureStaticWebApp@0
+                  displayName: 'Deploy Static Web App'
+                  inputs:
+                    app_location: '$(Pipeline.Workspace)/ci/frontend'
+                    skip_app_build: true
+                    azure_static_web_apps_api_token: '$(StaticWebAppDeployToken)'
+
+      - job: RunMigrations
+        displayName: 'Run Database Migrations'
+        dependsOn: DeployBackend
+        steps:
+          - task: SqlAzureDacpacDeployment@1
+            displayName: 'Run SQL Migrations'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              AuthenticationType: 'connectionString'
+              ConnectionString: '$(SqlConnectionString)'
+              deployType: 'SqlTask'
+              SqlFile: 'database/migrations/*.sql'
+
+      - job: SmokeTests
+        displayName: 'Run Smoke Tests'
+        dependsOn:
+          - DeployBackend
+          - DeployFrontend
+        steps:
+          - script: |
+              curl -f $(ApiUrl)/api/health || exit 1
+              echo "Health check passed"
+            displayName: 'API Health Check'
+
+          - script: |
+              curl -f $(FrontendUrl) || exit 1
+              echo "Frontend health check passed"
+            displayName: 'Frontend Health Check'

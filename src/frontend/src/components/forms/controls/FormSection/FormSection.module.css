@@ -1,0 +1,5 @@
+.section { padding: 24px 0; border-bottom: 1px solid #e5e7eb; }
+.section:last-child { border-bottom: none; }
+.title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.description { color: #6b7280; margin-bottom: 16px; }
+.content { display: flex; flex-direction: column; gap: 16px; }

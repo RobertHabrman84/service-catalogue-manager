@@ -1,0 +1,163 @@
+# CI Pipeline - Build and Test
+# Triggers on PR to main/develop
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+      - feature/*
+  paths:
+    exclude:
+      - docs/*
+      - '*.md'
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - template: templates/variables/common-variables.yml
+
+stages:
+  - stage: Build
+    displayName: 'Build & Test'
+    jobs:
+      - job: BuildBackend
+        displayName: 'Build Backend (.NET 8)'
+        steps:
+          - task: UseDotNet@2
+            displayName: 'Install .NET 8'
+            inputs:
+              version: '8.x'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Restore packages'
+            inputs:
+              command: 'restore'
+              projects: 'src/backend/**/*.csproj'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Build'
+            inputs:
+              command: 'build'
+              projects: 'src/backend/**/*.csproj'
+              arguments: '--configuration Release --no-restore'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Run Tests'
+            inputs:
+              command: 'test'
+              projects: 'src/backend/**/*.Tests.csproj'
+              arguments: '--configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory $(Agent.TempDirectory)/TestResults'
+
+          - task: PublishCodeCoverageResults@1
+            displayName: 'Publish Code Coverage'
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Publish'
+            inputs:
+              command: 'publish'
+              publishWebProjects: false
+              projects: 'src/backend/ServiceCatalogueManager.Api/*.csproj'
+              arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/backend'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Backend Artifacts'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/backend'
+              ArtifactName: 'backend'
+
+      - job: BuildFrontend
+        displayName: 'Build Frontend (React)'
+        steps:
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: '20.x'
+
+          - script: |
+              cd src/frontend
+              npm ci
+            displayName: 'Install dependencies'
+
+          - script: |
+              cd src/frontend
+              npm run lint
+            displayName: 'Lint'
+            continueOnError: true
+
+          - script: |
+              cd src/frontend
+              npm run type-check
+            displayName: 'Type Check'
+            continueOnError: true
+
+          - script: |
+              cd src/frontend
+              npm run test -- --coverage --watchAll=false
+            displayName: 'Run Tests'
+            continueOnError: true
+
+          - script: |
+              cd src/frontend
+              npm run build
+            displayName: 'Build'
+            env:
+              VITE_API_URL: $(ApiUrl)
+              VITE_AZURE_CLIENT_ID: $(AzureClientId)
+              VITE_AZURE_TENANT_ID: $(AzureTenantId)
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Frontend Artifacts'
+            inputs:
+              PathtoPublish: 'src/frontend/dist'
+              ArtifactName: 'frontend'
+
+      - job: SecurityScan
+        displayName: 'Security Scan'
+        steps:
+          - task: UseDotNet@2
+            inputs:
+              version: '8.x'
+
+          - script: |
+              dotnet tool install --global security-scan
+              security-scan src/backend/ServiceCatalogueManager.Api/ServiceCatalogueManager.Api.csproj
+            displayName: 'Run Security Scan'
+            continueOnError: true
+
+  - stage: CodeQuality
+    displayName: 'Code Quality'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: SonarCloud
+        displayName: 'SonarCloud Analysis'
+        steps:
+          - task: SonarCloudPrepare@1
+            inputs:
+              SonarCloud: 'SonarCloud'
+              organization: '$(sonarOrganization)'
+              scannerMode: 'MSBuild'
+              projectKey: '$(sonarProjectKey)'
+              projectName: 'Service Catalogue Manager'
+
+          - task: DotNetCoreCLI@2
+            inputs:
+              command: 'build'
+              projects: 'src/backend/**/*.csproj'
+
+          - task: SonarCloudAnalyze@1
+
+          - task: SonarCloudPublish@1
+            inputs:
+              pollingTimeoutSec: '300'

@@ -1,0 +1,62 @@
+/* Footer Component Styles */
+
+.footer {
+  @apply border-t border-gray-200 bg-white;
+}
+
+.container {
+  @apply mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8;
+}
+
+.content {
+  @apply flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0;
+}
+
+.brand {
+  @apply flex items-center space-x-2;
+}
+
+.logo {
+  @apply h-6 w-6;
+}
+
+.brandText {
+  @apply text-sm font-medium text-gray-900;
+}
+
+.nav {
+  @apply flex flex-wrap items-center justify-center space-x-6;
+}
+
+.navLink {
+  @apply text-sm text-gray-500 transition-colors hover:text-gray-900;
+}
+
+.copyright {
+  @apply text-center text-sm text-gray-400;
+}
+
+.socialLinks {
+  @apply flex items-center space-x-4;
+}
+
+.socialLink {
+  @apply text-gray-400 transition-colors hover:text-gray-600;
+}
+
+.socialIcon {
+  @apply h-5 w-5;
+}
+
+/* Compact variant */
+.footerCompact {
+  @apply py-4;
+}
+
+.footerCompact .content {
+  @apply flex-row space-y-0;
+}
+
+.footerCompact .nav {
+  @apply space-x-4;
+}

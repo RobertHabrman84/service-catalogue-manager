@@ -1,0 +1,166 @@
+{
+  "info": {
+    "name": "Service Catalogue Import API",
+    "description": "API for importing services into the Service Catalogue Manager",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:7071/api",
+      "type": "string"
+    },
+    {
+      "key": "functionKey",
+      "value": "YOUR_FUNCTION_KEY",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "value",
+        "value": "{{functionKey}}",
+        "type": "string"
+      },
+      {
+        "key": "key",
+        "value": "x-functions-key",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Import Single Service",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceCode\": \"ID001\",\n  \"serviceName\": \"Enterprise Scale Landing Zone Design\",\n  \"version\": \"v1.0\",\n  \"category\": \"Services/Architecture\",\n  \"description\": \"Complete enterprise-scale landing zone architecture and documentation for Azure cloud platform\",\n  \"usageScenarios\": [\n    {\n      \"scenarioNumber\": 1,\n      \"scenarioTitle\": \"New Azure Enterprise Setup\",\n      \"scenarioDescription\": \"Organization establishing their initial Azure presence with proper governance\"\n    }\n  ],\n  \"sizeOptions\": [\n    {\n      \"sizeCode\": \"M\",\n      \"description\": \"Medium complexity landing zone\",\n      \"duration\": \"4-6 weeks\",\n      \"effort\": {\n        \"hoursMin\": 100,\n        \"hoursMax\": 200\n      }\n    }\n  ],\n  \"responsibleRoles\": [\n    {\n      \"roleName\": \"Cloud Architect\",\n      \"isPrimaryOwner\": true,\n      \"responsibilities\": \"Overall design and architecture decisions\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/services/import",
+          "host": ["{{baseUrl}}"],
+          "path": ["services", "import"]
+        },
+        "description": "Import a single service into the catalog"
+      },
+      "response": []
+    },
+    {
+      "name": "Import Bulk Services",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"serviceCode\": \"ID001\",\n    \"serviceName\": \"Enterprise Scale Landing Zone\",\n    \"version\": \"v1.0\",\n    \"category\": \"Services/Architecture\",\n    \"description\": \"Enterprise scale landing zone design\",\n    \"responsibleRoles\": [\n      {\n        \"roleName\": \"Cloud Architect\",\n        \"isPrimaryOwner\": true\n      }\n    ]\n  },\n  {\n    \"serviceCode\": \"ID002\",\n    \"serviceName\": \"Application Landing Zone\",\n    \"version\": \"v1.0\",\n    \"category\": \"Services/Architecture\",\n    \"description\": \"Application landing zone design\",\n    \"responsibleRoles\": [\n      {\n        \"roleName\": \"Cloud Architect\",\n        \"isPrimaryOwner\": true\n      }\n    ]\n  }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/services/import/bulk",
+          "host": ["{{baseUrl}}"],
+          "path": ["services", "import", "bulk"]
+        },
+        "description": "Import multiple services in one request"
+      },
+      "response": []
+    },
+    {
+      "name": "Validate Import",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceCode\": \"ID001\",\n  \"serviceName\": \"Test Service\",\n  \"version\": \"v1.0\",\n  \"category\": \"Services/Architecture\",\n  \"description\": \"Test service for validation\",\n  \"responsibleRoles\": [\n    {\n      \"roleName\": \"Cloud Architect\",\n      \"isPrimaryOwner\": true\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/services/import/validate",
+          "host": ["{{baseUrl}}"],
+          "path": ["services", "import", "validate"]
+        },
+        "description": "Validate service without importing (dry-run)"
+      },
+      "response": []
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/services/import/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["services", "import", "health"]
+        },
+        "description": "Check API health status"
+      },
+      "response": []
+    },
+    {
+      "name": "Import with Invalid ServiceCode",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceCode\": \"INVALID\",\n  \"serviceName\": \"Test Service\",\n  \"version\": \"v1.0\",\n  \"category\": \"Services/Architecture\",\n  \"description\": \"Test service with invalid code format\",\n  \"responsibleRoles\": [\n    {\n      \"roleName\": \"Cloud Architect\",\n      \"isPrimaryOwner\": true\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/services/import",
+          "host": ["{{baseUrl}}"],
+          "path": ["services", "import"]
+        },
+        "description": "Example of validation error - invalid ServiceCode format"
+      },
+      "response": []
+    },
+    {
+      "name": "Import without Primary Owner",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceCode\": \"ID001\",\n  \"serviceName\": \"Test Service\",\n  \"version\": \"v1.0\",\n  \"category\": \"Services/Architecture\",\n  \"description\": \"Test service without primary owner\",\n  \"responsibleRoles\": [\n    {\n      \"roleName\": \"Cloud Architect\",\n      \"isPrimaryOwner\": false\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/services/import",
+          "host": ["{{baseUrl}}"],
+          "path": ["services", "import"]
+        },
+        "description": "Example of validation error - missing primary owner"
+      },
+      "response": []
+    }
+  ]
+}

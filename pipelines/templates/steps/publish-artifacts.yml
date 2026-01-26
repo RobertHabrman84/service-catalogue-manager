@@ -1,0 +1,72 @@
+# =============================================================================
+# PUBLISH ARTIFACTS STEP TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: artifactName
+    type: string
+  - name: pathToPublish
+    type: string
+  - name: publishLocation
+    type: string
+    default: 'Container'
+    values:
+      - Container
+      - FilePath
+  - name: fileSharePath
+    type: string
+    default: ''
+  - name: parallel
+    type: boolean
+    default: false
+  - name: parallelCount
+    type: number
+    default: 8
+
+steps:
+  # Verify artifact path exists
+  - script: |
+      if [ -d "${{ parameters.pathToPublish }}" ]; then
+        echo "✓ Artifact path exists: ${{ parameters.pathToPublish }}"
+        echo "Contents:"
+        ls -la "${{ parameters.pathToPublish }}"
+        echo ""
+        echo "Total size:"
+        du -sh "${{ parameters.pathToPublish }}"
+      else
+        echo "##vso[task.logissue type=error]Artifact path does not exist: ${{ parameters.pathToPublish }}"
+        exit 1
+      fi
+    displayName: 'Verify Artifact Path'
+
+  # Publish to Azure Pipelines (Container)
+  - ${{ if eq(parameters.publishLocation, 'Container') }}:
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: ${{ parameters.artifactName }}'
+      inputs:
+        PathtoPublish: ${{ parameters.pathToPublish }}
+        ArtifactName: ${{ parameters.artifactName }}
+        publishLocation: 'Container'
+        ${{ if eq(parameters.parallel, true) }}:
+          parallel: true
+          parallelCount: ${{ parameters.parallelCount }}
+
+  # Publish to File Share
+  - ${{ if eq(parameters.publishLocation, 'FilePath') }}:
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact to File Share: ${{ parameters.artifactName }}'
+      inputs:
+        PathtoPublish: ${{ parameters.pathToPublish }}
+        ArtifactName: ${{ parameters.artifactName }}
+        publishLocation: 'FilePath'
+        TargetPath: ${{ parameters.fileSharePath }}
+
+  # Log artifact info
+  - script: |
+      echo "=== Artifact Published ==="
+      echo "Name: ${{ parameters.artifactName }}"
+      echo "Path: ${{ parameters.pathToPublish }}"
+      echo "Location: ${{ parameters.publishLocation }}"
+      echo "=========================="
+    displayName: 'Artifact Info'

@@ -1,0 +1,69 @@
+using ServiceCatalogueManager.Api.Models.DTOs.Export;
+using ServiceCatalogueManager.Api.Models.DTOs.ServiceCatalog;
+using ServiceCatalogueManager.Api.Models.DTOs.UuBookKit;
+
+namespace ServiceCatalogueManager.Api.Services.Interfaces;
+
+/// <summary>
+/// Export service interface
+/// </summary>
+public interface IExportService
+{
+    Task<ExportResultDto> ExportAsync(ExportRequestDto request, CancellationToken cancellationToken = default);
+    Task<ExportResultDto?> ExportServiceAsync(int serviceId, ExportFormat format, CancellationToken cancellationToken = default);
+    Task<SavedExportDto> SaveExportAsync(ExportRequestDto request, CancellationToken cancellationToken = default);
+    Task<IEnumerable<ExportHistoryItemDto>> GetExportHistoryAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Service for PDF generation
+/// </summary>
+public interface IPdfGeneratorService
+{
+    Task<byte[]> GenerateServicePdfAsync(ServiceCatalogFullDto service, CancellationToken cancellationToken = default);
+    Task<byte[]> GenerateCatalogPdfAsync(IEnumerable<ServiceCatalogFullDto> services, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Service for Markdown generation
+/// </summary>
+public interface IMarkdownGeneratorService
+{
+    Task<string> GenerateServiceMarkdownAsync(ServiceCatalogFullDto service, CancellationToken cancellationToken = default);
+    Task<string> GenerateCatalogMarkdownAsync(IEnumerable<ServiceCatalogFullDto> services, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// UuBookKit service interface
+/// </summary>
+public interface IUuBookKitService
+{
+    Task<UuBookKitPublishResultDto> PublishServiceAsync(UuBookKitPublishRequestDto request, CancellationToken cancellationToken = default);
+    Task<UuBookKitSyncResultDto> SyncServicesAsync(UuBookKitSyncRequestDto request, CancellationToken cancellationToken = default);
+    Task<UuBookKitStatusDto> GetStatusAsync(CancellationToken cancellationToken = default);
+    Task<UuBookKitPublishResultDto?> GetServicePageInfoAsync(int serviceId, CancellationToken cancellationToken = default);
+    Task<bool> UnpublishServiceAsync(int serviceId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Blob storage service interface
+/// </summary>
+public interface IBlobStorageService
+{
+    Task<string> UploadAsync(string containerName, string blobName, byte[] content, string contentType, CancellationToken cancellationToken = default);
+    Task<byte[]?> DownloadAsync(string containerName, string blobName, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(string containerName, string blobName, CancellationToken cancellationToken = default);
+    Task<string> GetSasUrlAsync(string containerName, string blobName, TimeSpan validFor, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Cache service interface
+/// </summary>
+public interface ICacheService
+{
+    Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class;
+    Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default) where T : class;
+    Task RemoveAsync(string key, CancellationToken cancellationToken = default);
+    Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default);
+    Task ClearAsync(CancellationToken cancellationToken = default);
+}

@@ -1,0 +1,105 @@
+/* Sidebar Component Styles */
+
+.sidebar {
+  @apply fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-300;
+}
+
+.sidebarCollapsed {
+  @apply w-16;
+}
+
+.sidebarHidden {
+  @apply -translate-x-full;
+}
+
+.header {
+  @apply flex h-16 items-center justify-between border-b border-gray-200 px-4;
+}
+
+.logo {
+  @apply flex items-center space-x-2;
+}
+
+.logoImage {
+  @apply h-8 w-8;
+}
+
+.logoText {
+  @apply text-lg font-bold text-gray-900;
+}
+
+.collapseButton {
+  @apply rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600;
+}
+
+.nav {
+  @apply flex-1 overflow-y-auto px-3 py-4;
+}
+
+.navSection {
+  @apply mb-6;
+}
+
+.navSectionTitle {
+  @apply mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400;
+}
+
+.navList {
+  @apply space-y-1;
+}
+
+.navItem {
+  @apply flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900;
+}
+
+.navItemActive {
+  @apply bg-blue-50 text-blue-600;
+}
+
+.navItemIcon {
+  @apply mr-3 h-5 w-5 flex-shrink-0;
+}
+
+.navItemText {
+  @apply flex-1;
+}
+
+.navItemBadge {
+  @apply ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600;
+}
+
+.footer {
+  @apply border-t border-gray-200 p-4;
+}
+
+.userInfo {
+  @apply flex items-center space-x-3;
+}
+
+.userAvatar {
+  @apply h-10 w-10 rounded-full bg-blue-500;
+}
+
+.userDetails {
+  @apply flex-1 min-w-0;
+}
+
+.userName {
+  @apply truncate text-sm font-medium text-gray-900;
+}
+
+.userEmail {
+  @apply truncate text-xs text-gray-500;
+}
+
+/* Mobile overlay */
+.overlay {
+  @apply fixed inset-0 z-30 bg-gray-600 bg-opacity-75 transition-opacity lg:hidden;
+}
+
+/* Responsive */
+@media (max-width: 1023px) {
+  .sidebar {
+    @apply w-64 transform;
+  }
+}

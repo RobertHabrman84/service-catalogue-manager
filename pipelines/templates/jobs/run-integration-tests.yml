@@ -1,0 +1,117 @@
+# =============================================================================
+# RUN INTEGRATION TESTS JOB TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: backendWorkingDirectory
+    type: string
+    default: 'src/backend'
+  - name: dotnetVersion
+    type: string
+    default: '8.x'
+  - name: publishTestResults
+    type: boolean
+    default: true
+  - name: sqlServerImage
+    type: string
+    default: 'mcr.microsoft.com/mssql/server:2022-latest'
+  - name: timeout
+    type: number
+    default: 30
+
+jobs:
+  - job: RunIntegrationTests
+    displayName: 'Run Integration Tests'
+    pool:
+      vmImage: 'ubuntu-latest'
+    timeoutInMinutes: ${{ parameters.timeout }}
+    
+    services:
+      sqlserver:
+        image: ${{ parameters.sqlServerImage }}
+        ports:
+          - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: $(TestDbPassword)
+          MSSQL_PID: Developer
+
+    steps:
+      # Setup .NET SDK
+      - template: ../steps/setup-dotnet.yml
+        parameters:
+          dotnetVersion: ${{ parameters.dotnetVersion }}
+
+      # Wait for SQL Server to be ready
+      - script: |
+          echo "Waiting for SQL Server to be ready..."
+          for i in {1..30}; do
+            if /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$(TestDbPassword)" -Q "SELECT 1" &> /dev/null; then
+              echo "SQL Server is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+        displayName: 'Wait for SQL Server'
+        env:
+          TestDbPassword: $(TestDbPassword)
+
+      # Create test database
+      - script: |
+          /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$(TestDbPassword)" -Q "CREATE DATABASE ServiceCatalogueTest"
+          echo "Test database created"
+        displayName: 'Create Test Database'
+        env:
+          TestDbPassword: $(TestDbPassword)
+
+      # Run database migrations for test
+      - task: DotNetCoreCLI@2
+        displayName: 'Run Database Migrations'
+        inputs:
+          command: 'custom'
+          custom: 'ef'
+          arguments: 'database update --project ${{ parameters.backendWorkingDirectory }}/ServiceCatalogueManager.Api/ServiceCatalogueManager.Api.csproj'
+        env:
+          ConnectionStrings__DefaultConnection: 'Server=localhost;Database=ServiceCatalogueTest;User Id=sa;Password=$(TestDbPassword);TrustServerCertificate=True'
+
+      # Restore dependencies
+      - task: DotNetCoreCLI@2
+        displayName: 'Restore Dependencies'
+        inputs:
+          command: 'restore'
+          projects: '${{ parameters.backendWorkingDirectory }}/**/*.Tests.csproj'
+
+      # Run integration tests
+      - task: DotNetCoreCLI@2
+        displayName: 'Run Integration Tests'
+        inputs:
+          command: 'test'
+          projects: '${{ parameters.backendWorkingDirectory }}/**/*.Tests.csproj'
+          arguments: '--configuration Release --filter "Category=Integration" --logger "trx;LogFileName=integration-tests.trx" --results-directory $(Agent.TempDirectory)/TestResults'
+          publishTestResults: false
+        env:
+          ConnectionStrings__DefaultConnection: 'Server=localhost;Database=ServiceCatalogueTest;User Id=sa;Password=$(TestDbPassword);TrustServerCertificate=True'
+          AzureAd__Instance: 'https://login.microsoftonline.com/'
+          AzureAd__TenantId: $(AzureAdTenantId)
+          AzureAd__ClientId: $(AzureAdClientId)
+
+      # Publish test results
+      - ${{ if eq(parameters.publishTestResults, true) }}:
+        - task: PublishTestResults@2
+          displayName: 'Publish Integration Test Results'
+          inputs:
+            testResultsFormat: 'VSTest'
+            testResultsFiles: '$(Agent.TempDirectory)/TestResults/*.trx'
+            testRunTitle: 'Integration Tests'
+            failTaskOnFailedTests: true
+          condition: always()
+
+      # Cleanup
+      - script: |
+          echo "##vso[task.setvariable variable=integrationTestsCompleted;isOutput=true]true"
+          echo "Integration tests completed"
+        displayName: 'Cleanup & Output'
+        name: testOutput
+        condition: always()

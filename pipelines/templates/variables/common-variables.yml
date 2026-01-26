@@ -1,0 +1,25 @@
+# Common Variables Template
+# Shared across all environments
+
+variables:
+  # Node.js & .NET versions
+  nodeVersion: '20.x'
+  dotnetVersion: '8.0.x'
+
+  # Azure subscription
+  azureSubscription: 'Azure-ServiceCatalogue-Connection'
+
+  # SonarCloud
+  sonarOrganization: 'your-organization'
+  sonarProjectKey: 'service-catalogue-manager'
+
+  # Build configuration
+  buildConfiguration: 'Release'
+
+  # Artifact names
+  backendArtifact: 'backend'
+  frontendArtifact: 'frontend'
+
+  # Test settings
+  testResultsFormat: 'VSTest'
+  codeCoverageFormat: 'Cobertura'

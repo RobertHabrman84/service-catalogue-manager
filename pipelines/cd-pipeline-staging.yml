@@ -1,0 +1,107 @@
+# =============================================================================
+# SERVICE CATALOGUE MANAGER - CD PIPELINE (STAGING)
+# =============================================================================
+
+trigger:
+  branches:
+    include:
+      - release/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - template: templates/variables/common-variables.yml
+  - template: templates/variables/staging-variables.yml
+
+stages:
+  - stage: Build
+    displayName: 'Build for Staging'
+    jobs:
+      - template: templates/jobs/build-backend.yml
+        parameters:
+          configuration: 'Release'
+      - template: templates/jobs/build-frontend.yml
+        parameters:
+          environment: 'staging'
+
+  - stage: Test
+    displayName: 'Run Tests'
+    dependsOn: Build
+    jobs:
+      - template: templates/jobs/run-unit-tests.yml
+      - template: templates/jobs/run-integration-tests.yml
+      - template: templates/jobs/run-e2e-tests.yml
+        parameters:
+          environment: 'staging'
+
+  - stage: SecurityScan
+    displayName: 'Security Scan'
+    dependsOn: Build
+    jobs:
+      - template: templates/jobs/security-scan.yml
+
+  - stage: DeployStaging
+    displayName: 'Deploy to Staging'
+    dependsOn:
+      - Test
+      - SecurityScan
+    jobs:
+      - deployment: DeployToStaging
+        displayName: 'Deploy to Staging Environment'
+        environment: 'staging'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: none
+                
+                - download: current
+                  artifact: backend
+                  
+                - download: current
+                  artifact: frontend
+
+                - task: AzureFunctionApp@1
+                  displayName: 'Deploy Azure Functions'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    appType: 'functionApp'
+                    appName: '$(functionAppName)'
+                    package: '$(Pipeline.Workspace)/backend/**/*.zip'
+
+                - task: AzureStaticWebApp@0
+                  displayName: 'Deploy Static Web App'
+                  inputs:
+                    app_location: '$(Pipeline.Workspace)/frontend'
+                    azure_static_web_apps_api_token: '$(deploymentToken)'
+
+                - task: PowerShell@2
+                  displayName: 'Run Database Migration'
+                  inputs:
+                    filePath: 'pipelines/scripts/run-database-migration.ps1'
+                    arguments: '-Environment staging'
+
+                - task: PowerShell@2
+                  displayName: 'Health Check'
+                  inputs:
+                    filePath: 'pipelines/scripts/health-check.ps1'
+                    arguments: '-Url $(stagingUrl)'
+
+  - stage: SmokeTest
+    displayName: 'Smoke Tests'
+    dependsOn: DeployStaging
+    jobs:
+      - job: RunSmokeTests
+        displayName: 'Run Smoke Tests'
+        steps:
+          - task: PowerShell@2
+            displayName: 'API Smoke Test'
+            inputs:
+              targetType: 'inline'
+              script: |
+                $response = Invoke-WebRequest -Uri "$(stagingApiUrl)/health" -UseBasicParsing
+                if ($response.StatusCode -ne 200) {
+                  throw "Health check failed"
+                }
+                Write-Host "Smoke test passed"

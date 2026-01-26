@@ -1,0 +1,5 @@
+.wrapper { display: flex; flex-direction: column; gap: 4px; }
+.label { font-weight: 500; font-size: 14px; }
+.toolbar { display: flex; gap: 4px; padding: 8px; border: 1px solid #d1d5db; border-bottom: none; border-radius: 6px 6px 0 0; }
+.toolbar button { padding: 4px 8px; border: 1px solid #d1d5db; background: white; cursor: pointer; }
+.editor { min-height: 150px; padding: 12px; border: 1px solid #d1d5db; border-radius: 0 0 6px 6px; outline: none; }

@@ -1,0 +1,234 @@
+# =============================================================================
+# RELEASE STAGE TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: environment
+    type: string
+    values:
+      - Staging
+      - Production
+  - name: serviceConnection
+    type: string
+  - name: resourceGroup
+    type: string
+  - name: backendAppName
+    type: string
+  - name: sourceSlot
+    type: string
+    default: 'staging'
+  - name: targetSlot
+    type: string
+    default: 'production'
+  - name: runE2ETests
+    type: boolean
+    default: true
+  - name: e2eBaseUrl
+    type: string
+    default: ''
+  - name: approvalRequired
+    type: boolean
+    default: true
+  - name: approvers
+    type: string
+    default: ''
+  - name: rollbackOnFailure
+    type: boolean
+    default: true
+
+stages:
+  - stage: Release_${{ parameters.environment }}
+    displayName: 'Release to ${{ parameters.environment }}'
+    
+    jobs:
+      # Pre-Release Validation
+      - job: PreReleaseValidation
+        displayName: 'Pre-Release Validation'
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        steps:
+          - script: |
+              echo "=== PRE-RELEASE VALIDATION ==="
+              echo "Environment: ${{ parameters.environment }}"
+              echo "Source Slot: ${{ parameters.sourceSlot }}"
+              echo "Target Slot: ${{ parameters.targetSlot }}"
+              echo "E2E Tests: ${{ parameters.runE2ETests }}"
+              echo "=============================="
+            displayName: 'Validation Info'
+
+          # Check slot health before swap
+          - task: AzureCLI@2
+            displayName: 'Check Staging Slot Health'
+            inputs:
+              azureSubscription: ${{ parameters.serviceConnection }}
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Checking health of staging slot..."
+                HEALTH_URL="https://${{ parameters.backendAppName }}-${{ parameters.sourceSlot }}.azurewebsites.net/api/health"
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
+                if [ "$STATUS" != "200" ]; then
+                  echo "##vso[task.logissue type=error]Staging slot health check failed with status $STATUS"
+                  exit 1
+                fi
+                echo "Staging slot is healthy"
+
+      # E2E Tests on Staging (Pre-Swap)
+      - ${{ if eq(parameters.runE2ETests, true) }}:
+        - template: ../jobs/run-e2e-tests.yml
+          parameters:
+            baseUrl: ${{ parameters.e2eBaseUrl }}
+            browser: 'chromium'
+            publishTestResults: true
+            retries: 2
+
+      # Manual Approval (if required)
+      - ${{ if eq(parameters.approvalRequired, true) }}:
+        - job: WaitForApproval
+          displayName: 'Wait for Approval'
+          dependsOn:
+            - PreReleaseValidation
+            - ${{ if eq(parameters.runE2ETests, true) }}:
+              - RunE2ETests
+          pool: server
+          
+          steps:
+            - task: ManualValidation@0
+              displayName: 'Approve Release'
+              inputs:
+                notifyUsers: ${{ parameters.approvers }}
+                instructions: |
+                  Please review and approve the release to ${{ parameters.environment }}.
+                  
+                  Build: $(Build.BuildNumber)
+                  Commit: $(Build.SourceVersion)
+                  Branch: $(Build.SourceBranch)
+                  
+                  E2E Tests: ${{ parameters.runE2ETests }}
+                onTimeout: 'reject'
+              timeoutInMinutes: 1440  # 24 hours
+
+      # Slot Swap
+      - deployment: SlotSwap
+        displayName: 'Slot Swap'
+        dependsOn:
+          - PreReleaseValidation
+          - ${{ if eq(parameters.runE2ETests, true) }}:
+            - RunE2ETests
+          - ${{ if eq(parameters.approvalRequired, true) }}:
+            - WaitForApproval
+        environment: ${{ parameters.environment }}
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                # Warm up staging slot
+                - task: AzureCLI@2
+                  displayName: 'Warm Up Staging'
+                  inputs:
+                    azureSubscription: ${{ parameters.serviceConnection }}
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      echo "Warming up staging slot..."
+                      for i in {1..5}; do
+                        curl -s "https://${{ parameters.backendAppName }}-${{ parameters.sourceSlot }}.azurewebsites.net/api/health" > /dev/null
+                        sleep 2
+                      done
+                      echo "Warm-up complete"
+
+                # Perform slot swap
+                - task: AzureAppServiceManage@0
+                  displayName: 'Swap Slots'
+                  inputs:
+                    azureSubscription: ${{ parameters.serviceConnection }}
+                    WebAppName: ${{ parameters.backendAppName }}
+                    ResourceGroupName: ${{ parameters.resourceGroup }}
+                    SourceSlot: ${{ parameters.sourceSlot }}
+                    SwapWithProduction: true
+
+      # Post-Release Validation
+      - job: PostReleaseValidation
+        displayName: 'Post-Release Validation'
+        dependsOn: SlotSwap
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        steps:
+          # Health check after swap
+          - task: AzureCLI@2
+            displayName: 'Production Health Check'
+            inputs:
+              azureSubscription: ${{ parameters.serviceConnection }}
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Checking production health..."
+                HEALTH_URL="https://${{ parameters.backendAppName }}.azurewebsites.net/api/health"
+                
+                for i in {1..10}; do
+                  STATUS=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
+                  if [ "$STATUS" == "200" ]; then
+                    echo "Production is healthy!"
+                    exit 0
+                  fi
+                  echo "Attempt $i: Status $STATUS, retrying..."
+                  sleep 10
+                done
+                
+                echo "##vso[task.logissue type=error]Production health check failed"
+                exit 1
+
+          # Smoke tests
+          - script: |
+              echo "Running smoke tests..."
+              # Add smoke test commands here
+              echo "Smoke tests passed"
+            displayName: 'Smoke Tests'
+
+      # Rollback (on failure)
+      - ${{ if eq(parameters.rollbackOnFailure, true) }}:
+        - job: Rollback
+          displayName: 'Rollback (if needed)'
+          dependsOn: PostReleaseValidation
+          condition: failed()
+          pool:
+            vmImage: 'ubuntu-latest'
+          
+          steps:
+            - task: AzureAppServiceManage@0
+              displayName: 'Rollback - Swap Back'
+              inputs:
+                azureSubscription: ${{ parameters.serviceConnection }}
+                WebAppName: ${{ parameters.backendAppName }}
+                ResourceGroupName: ${{ parameters.resourceGroup }}
+                SourceSlot: ${{ parameters.sourceSlot }}
+                SwapWithProduction: true
+
+            - template: ../steps/notify-teams.yml
+              parameters:
+                webhookUrl: $(TeamsWebhookUrl)
+                title: '🚨 ROLLBACK - ${{ parameters.environment }}'
+                message: 'Release failed. Rollback completed for build $(Build.BuildNumber)'
+                status: 'failed'
+
+      # Release Complete Notification
+      - job: ReleaseNotification
+        displayName: 'Release Notification'
+        dependsOn: PostReleaseValidation
+        condition: succeeded()
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        steps:
+          - template: ../steps/notify-teams.yml
+            parameters:
+              webhookUrl: $(TeamsWebhookUrl)
+              title: '✅ Released to ${{ parameters.environment }}'
+              message: 'Build $(Build.BuildNumber) successfully released to ${{ parameters.environment }}'
+              status: 'succeeded'

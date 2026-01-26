@@ -1,0 +1,4 @@
+.container { @apply flex flex-col items-center justify-center py-12 text-center; }
+.icon { @apply h-12 w-12 text-gray-400 mb-4; }
+.title { @apply text-lg font-medium text-gray-900 mb-2; }
+.description { @apply text-gray-500 mb-6 max-w-sm; }

@@ -1,0 +1,32 @@
+# Production Environment Variables
+
+variables:
+  # Resource Group
+  resourceGroup: 'rg-service-catalogue-prod'
+  location: 'westeurope'
+
+  # Azure Functions
+  backendAppName: 'func-scm-prod-weu'
+  
+  # Static Web App
+  frontendAppName: 'swa-scm-prod-weu'
+
+  # URLs
+  ApiUrl: 'https://func-scm-prod-weu.azurewebsites.net/api'
+  ApiUrlStaging: 'https://func-scm-prod-weu-staging.azurewebsites.net/api'
+  FrontendUrl: 'https://servicecatalogue.company.com'
+
+  # Database
+  SqlServerName: 'sql-scm-prod-weu'
+  SqlDatabaseName: 'ServiceCatalogueManager'
+
+  # Feature Flags
+  EnableUuBookKitSync: 'true'
+  EnableDetailedLogging: 'false'
+
+  # App Insights
+  ApplicationInsightsName: 'appi-scm-prod-weu'
+
+  # Scaling
+  MinInstances: '2'
+  MaxInstances: '10'

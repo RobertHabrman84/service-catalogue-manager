@@ -1,0 +1,4 @@
+.spinner { @apply animate-spin rounded-full border-2 border-current border-t-transparent; }
+.sm { @apply h-4 w-4; }
+.md { @apply h-6 w-6; }
+.lg { @apply h-8 w-8; }

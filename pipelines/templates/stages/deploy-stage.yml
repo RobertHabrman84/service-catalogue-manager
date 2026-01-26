@@ -1,0 +1,167 @@
+# =============================================================================
+# DEPLOY STAGE TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: environment
+    type: string
+    values:
+      - Development
+      - Staging
+      - Production
+  - name: serviceConnection
+    type: string
+  - name: resourceGroup
+    type: string
+  - name: frontendAppName
+    type: string
+  - name: backendAppName
+    type: string
+  - name: frontendArtifactName
+    type: string
+    default: 'frontend-$(Build.BuildId)'
+  - name: backendArtifactName
+    type: string
+    default: 'backend-$(Build.BuildId)'
+  - name: deployFrontend
+    type: boolean
+    default: true
+  - name: deployBackend
+    type: boolean
+    default: true
+  - name: runDatabaseMigration
+    type: boolean
+    default: false
+  - name: runHealthCheck
+    type: boolean
+    default: true
+  - name: slotName
+    type: string
+    default: ''
+
+stages:
+  - stage: Deploy_${{ parameters.environment }}
+    displayName: 'Deploy to ${{ parameters.environment }}'
+    
+    jobs:
+      # Database Migration (if enabled)
+      - ${{ if eq(parameters.runDatabaseMigration, true) }}:
+        - job: DatabaseMigration
+          displayName: 'Run Database Migration'
+          pool:
+            vmImage: 'ubuntu-latest'
+          
+          steps:
+            - task: AzureCLI@2
+              displayName: 'Run EF Migrations'
+              inputs:
+                azureSubscription: ${{ parameters.serviceConnection }}
+                scriptType: 'pscore'
+                scriptLocation: 'scriptPath'
+                scriptPath: 'pipelines/scripts/run-database-migration.ps1'
+                arguments: '-Environment ${{ parameters.environment }} -ResourceGroup ${{ parameters.resourceGroup }}'
+
+      # Deploy Frontend
+      - ${{ if eq(parameters.deployFrontend, true) }}:
+        - deployment: DeployFrontend
+          displayName: 'Deploy Frontend'
+          dependsOn: 
+            - ${{ if eq(parameters.runDatabaseMigration, true) }}:
+              - DatabaseMigration
+          environment: ${{ parameters.environment }}
+          pool:
+            vmImage: 'ubuntu-latest'
+          
+          strategy:
+            runOnce:
+              deploy:
+                steps:
+                  # Download frontend artifact
+                  - download: current
+                    artifact: ${{ parameters.frontendArtifactName }}
+                    displayName: 'Download Frontend Artifact'
+
+                  # Deploy to Azure Static Web App
+                  - task: AzureStaticWebApp@0
+                    displayName: 'Deploy to Static Web App'
+                    inputs:
+                      azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
+                      app_location: '$(Pipeline.Workspace)/${{ parameters.frontendArtifactName }}'
+                      skip_app_build: true
+                      skip_api_build: true
+
+      # Deploy Backend
+      - ${{ if eq(parameters.deployBackend, true) }}:
+        - deployment: DeployBackend
+          displayName: 'Deploy Backend'
+          dependsOn: 
+            - ${{ if eq(parameters.runDatabaseMigration, true) }}:
+              - DatabaseMigration
+          environment: ${{ parameters.environment }}
+          pool:
+            vmImage: 'ubuntu-latest'
+          
+          strategy:
+            runOnce:
+              deploy:
+                steps:
+                  # Download backend artifact
+                  - download: current
+                    artifact: ${{ parameters.backendArtifactName }}
+                    displayName: 'Download Backend Artifact'
+
+                  # Deploy to Azure Functions
+                  - task: AzureFunctionApp@2
+                    displayName: 'Deploy to Azure Functions'
+                    inputs:
+                      azureSubscription: ${{ parameters.serviceConnection }}
+                      appType: 'functionApp'
+                      appName: ${{ parameters.backendAppName }}
+                      resourceGroupName: ${{ parameters.resourceGroup }}
+                      package: '$(Pipeline.Workspace)/${{ parameters.backendArtifactName }}/**/*.zip'
+                      ${{ if ne(parameters.slotName, '') }}:
+                        deployToSlotOrASE: true
+                        slotName: ${{ parameters.slotName }}
+
+      # Health Check
+      - ${{ if eq(parameters.runHealthCheck, true) }}:
+        - job: HealthCheck
+          displayName: 'Health Check'
+          dependsOn:
+            - ${{ if eq(parameters.deployFrontend, true) }}:
+              - DeployFrontend
+            - ${{ if eq(parameters.deployBackend, true) }}:
+              - DeployBackend
+          pool:
+            vmImage: 'ubuntu-latest'
+          
+          steps:
+            - task: PowerShell@2
+              displayName: 'Run Health Check'
+              inputs:
+                targetType: 'filePath'
+                filePath: 'pipelines/scripts/health-check.ps1'
+                arguments: '-Environment ${{ parameters.environment }} -FrontendUrl $(FrontendUrl) -BackendUrl $(BackendUrl)'
+
+      # Deployment Summary
+      - job: DeploySummary
+        displayName: 'Deployment Summary'
+        dependsOn:
+          - ${{ if eq(parameters.deployFrontend, true) }}:
+            - DeployFrontend
+          - ${{ if eq(parameters.deployBackend, true) }}:
+            - DeployBackend
+          - ${{ if eq(parameters.runHealthCheck, true) }}:
+            - HealthCheck
+        condition: always()
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        steps:
+          - template: ../steps/notify-teams.yml
+            parameters:
+              webhookUrl: $(TeamsWebhookUrl)
+              title: 'Deployment to ${{ parameters.environment }}'
+              message: 'Build $(Build.BuildNumber) deployed to ${{ parameters.environment }}'
+              status: '$(Agent.JobStatus)'

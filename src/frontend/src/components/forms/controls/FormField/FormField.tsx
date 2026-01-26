@@ -1,0 +1,11 @@
+import { FC, ReactNode } from 'react';
+import styles from './FormField.module.css';
+
+interface FormFieldProps { label?: string; error?: string; required?: boolean; children: ReactNode; }
+export const FormField: FC<FormFieldProps> = ({ label, error, required, children }) => (
+  <div className={styles.field}>
+    {label && <label className={styles.label}>{label}{required && <span className={styles.required}>*</span>}</label>}
+    {children}
+    {error && <span className={styles.error}>{error}</span>}
+  </div>
+);

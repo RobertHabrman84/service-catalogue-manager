@@ -1,0 +1,152 @@
+# CD Pipeline - Deploy to Production
+# Manual trigger with approval gates
+
+trigger: none
+
+resources:
+  pipelines:
+    - pipeline: ci
+      source: 'CI Pipeline'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - template: templates/variables/common-variables.yml
+  - template: templates/variables/prod-variables.yml
+
+stages:
+  - stage: Approval
+    displayName: 'Production Approval'
+    jobs:
+      - job: WaitForApproval
+        displayName: 'Wait for Approval'
+        pool: server
+        steps:
+          - task: ManualValidation@0
+            timeoutInMinutes: 1440
+            inputs:
+              notifyUsers: |
+                cloud-architecture-team@company.com
+              instructions: 'Please review and approve the production deployment.'
+              onTimeout: 'reject'
+
+  - stage: DeployProduction
+    displayName: 'Deploy to Production'
+    dependsOn: Approval
+    condition: succeeded()
+    jobs:
+      - deployment: DeployBackendBlueGreen
+        displayName: 'Deploy Backend (Blue-Green)'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: ci
+                  artifact: backend
+
+                # Deploy to staging slot
+                - task: AzureFunctionApp@1
+                  displayName: 'Deploy to Staging Slot'
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    appType: 'functionApp'
+                    appName: '$(backendAppName)'
+                    package: '$(Pipeline.Workspace)/ci/backend/**/*.zip'
+                    deployToSlotOrASE: true
+                    resourceGroupName: '$(resourceGroup)'
+                    slotName: 'staging'
+
+                # Run health check on staging
+                - script: |
+                    for i in {1..10}; do
+                      if curl -f $(ApiUrlStaging)/api/health; then
+                        echo "Staging health check passed"
+                        exit 0
+                      fi
+                      echo "Waiting for staging slot..."
+                      sleep 10
+                    done
+                    echo "Staging health check failed"
+                    exit 1
+                  displayName: 'Verify Staging Slot'
+
+                # Swap slots
+                - task: AzureAppServiceManage@0
+                  displayName: 'Swap to Production'
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    WebAppName: '$(backendAppName)'
+                    ResourceGroupName: '$(resourceGroup)'
+                    SourceSlot: 'staging'
+                    SwapWithProduction: true
+
+      - deployment: DeployFrontend
+        displayName: 'Deploy Frontend'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: ci
+                  artifact: frontend
+
+                - task: AzureStaticWebApp@0
+                  displayName: 'Deploy Static Web App'
+                  inputs:
+                    app_location: '$(Pipeline.Workspace)/ci/frontend'
+                    skip_app_build: true
+                    azure_static_web_apps_api_token: '$(StaticWebAppDeployToken)'
+                    production_branch: 'main'
+
+      - job: PostDeploymentTests
+        displayName: 'Post-Deployment Tests'
+        dependsOn:
+          - DeployBackendBlueGreen
+          - DeployFrontend
+        steps:
+          - script: |
+              curl -f $(ApiUrl)/api/health/detailed || exit 1
+              echo "Production health check passed"
+            displayName: 'Production Health Check'
+
+          - script: |
+              npm install -g newman
+              newman run tests/postman/production-smoke-tests.json \
+                --environment tests/postman/production-env.json \
+                --reporters cli,junit \
+                --reporter-junit-export $(Build.ArtifactStagingDirectory)/newman-results.xml
+            displayName: 'Run API Smoke Tests'
+            continueOnError: true
+
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '$(Build.ArtifactStagingDirectory)/newman-results.xml'
+              testRunTitle: 'Production Smoke Tests'
+
+  - stage: Rollback
+    displayName: 'Rollback (if needed)'
+    dependsOn: DeployProduction
+    condition: failed()
+    jobs:
+      - deployment: RollbackBackend
+        displayName: 'Rollback Backend'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureAppServiceManage@0
+                  displayName: 'Swap Back to Previous'
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    WebAppName: '$(backendAppName)'
+                    ResourceGroupName: '$(resourceGroup)'
+                    SourceSlot: 'staging'
+                    SwapWithProduction: true
+
+                - script: |
+                    echo "Rollback completed - notifying team"
+                  displayName: 'Notify Team'

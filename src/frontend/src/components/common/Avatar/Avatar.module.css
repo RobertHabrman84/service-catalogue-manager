@@ -1,0 +1,5 @@
+.avatar { @apply inline-flex items-center justify-center rounded-full bg-gray-200 font-medium; }
+.sm { @apply h-8 w-8 text-xs; }
+.md { @apply h-10 w-10 text-sm; }
+.lg { @apply h-12 w-12 text-base; }
+.image { @apply h-full w-full rounded-full object-cover; }

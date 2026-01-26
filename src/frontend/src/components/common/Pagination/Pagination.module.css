@@ -1,0 +1,4 @@
+.pagination { @apply flex items-center justify-center space-x-1; }
+.button { @apply px-3 py-2 text-sm rounded-md hover:bg-gray-100; }
+.buttonActive { @apply bg-blue-600 text-white hover:bg-blue-700; }
+.buttonDisabled { @apply opacity-50 cursor-not-allowed; }

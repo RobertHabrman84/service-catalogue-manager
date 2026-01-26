@@ -1,0 +1,41 @@
+# =============================================================================
+# SETUP NODE.JS STEP TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: nodeVersion
+    type: string
+    default: '20.x'
+  - name: checkVersionOnly
+    type: boolean
+    default: false
+
+steps:
+  # Install Node.js
+  - task: NodeTool@0
+    displayName: 'Setup Node.js ${{ parameters.nodeVersion }}'
+    inputs:
+      versionSpec: ${{ parameters.nodeVersion }}
+
+  # Verify installation
+  - script: |
+      echo "=== Node.js Environment ==="
+      echo "Node Version: $(node --version)"
+      echo "NPM Version: $(npm --version)"
+      echo "NPM Config:"
+      npm config list
+      echo "=========================="
+    displayName: 'Verify Node.js Installation'
+
+  # Configure npm (optional optimizations)
+  - ${{ if eq(parameters.checkVersionOnly, false) }}:
+    - script: |
+        # Set npm configurations for CI
+        npm config set audit false
+        npm config set fund false
+        npm config set progress false
+        
+        # Use npm ci for faster, reliable installs
+        echo "NPM configured for CI environment"
+      displayName: 'Configure NPM for CI'

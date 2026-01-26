@@ -1,0 +1,171 @@
+# =============================================================================
+# CODE QUALITY JOB TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: frontendWorkingDirectory
+    type: string
+    default: 'src/frontend'
+  - name: backendWorkingDirectory
+    type: string
+    default: 'src/backend'
+  - name: nodeVersion
+    type: string
+    default: '20.x'
+  - name: dotnetVersion
+    type: string
+    default: '8.x'
+  - name: sonarQubeEnabled
+    type: boolean
+    default: false
+  - name: sonarQubeServiceConnection
+    type: string
+    default: ''
+  - name: sonarQubeProjectKey
+    type: string
+    default: 'service-catalogue-manager'
+  - name: failOnQualityGate
+    type: boolean
+    default: false
+
+jobs:
+  - job: CodeQuality
+    displayName: 'Code Quality Analysis'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+      # Setup Node.js
+      - template: ../steps/setup-node.yml
+        parameters:
+          nodeVersion: ${{ parameters.nodeVersion }}
+
+      # Setup .NET SDK
+      - template: ../steps/setup-dotnet.yml
+        parameters:
+          dotnetVersion: ${{ parameters.dotnetVersion }}
+
+      # ==================== FRONTEND QUALITY ====================
+
+      # Install frontend dependencies
+      - task: Npm@1
+        displayName: 'Install Frontend Dependencies'
+        inputs:
+          command: 'ci'
+          workingDir: ${{ parameters.frontendWorkingDirectory }}
+
+      # ESLint Analysis
+      - script: |
+          cd ${{ parameters.frontendWorkingDirectory }}
+          npm run lint -- --format json --output-file $(Agent.TempDirectory)/eslint-report.json || true
+          npm run lint -- --format stylish
+        displayName: 'ESLint Analysis'
+        continueOnError: true
+
+      # Prettier Check
+      - script: |
+          cd ${{ parameters.frontendWorkingDirectory }}
+          npx prettier --check "src/**/*.{ts,tsx,css,json}" || echo "Formatting issues found"
+        displayName: 'Prettier Check'
+        continueOnError: true
+
+      # TypeScript Strict Mode Check
+      - script: |
+          cd ${{ parameters.frontendWorkingDirectory }}
+          npx tsc --noEmit --strict
+        displayName: 'TypeScript Strict Check'
+        continueOnError: true
+
+      # Bundle Size Analysis
+      - script: |
+          cd ${{ parameters.frontendWorkingDirectory }}
+          npm run build
+          echo "=== Bundle Size Analysis ==="
+          du -sh dist/
+          find dist -name "*.js" -exec ls -lh {} \; | head -20
+        displayName: 'Bundle Size Analysis'
+        continueOnError: true
+
+      # ==================== BACKEND QUALITY ====================
+
+      # Restore backend
+      - task: DotNetCoreCLI@2
+        displayName: 'Restore Backend'
+        inputs:
+          command: 'restore'
+          projects: '${{ parameters.backendWorkingDirectory }}/**/*.csproj'
+
+      # .NET Format Check
+      - script: |
+          dotnet format ${{ parameters.backendWorkingDirectory }} --verify-no-changes --verbosity diagnostic || echo "Formatting issues found"
+        displayName: '.NET Format Check'
+        continueOnError: true
+
+      # Build with warnings as errors
+      - task: DotNetCoreCLI@2
+        displayName: 'Build with Strict Warnings'
+        inputs:
+          command: 'build'
+          projects: '${{ parameters.backendWorkingDirectory }}/**/*.csproj'
+          arguments: '--configuration Release /warnaserror'
+        continueOnError: true
+
+      # ==================== SONARQUBE (OPTIONAL) ====================
+
+      - ${{ if eq(parameters.sonarQubeEnabled, true) }}:
+        # SonarQube Prepare
+        - task: SonarQubePrepare@5
+          displayName: 'Prepare SonarQube Analysis'
+          inputs:
+            SonarQube: ${{ parameters.sonarQubeServiceConnection }}
+            scannerMode: 'MSBuild'
+            projectKey: ${{ parameters.sonarQubeProjectKey }}
+            projectName: 'Service Catalogue Manager'
+            extraProperties: |
+              sonar.sources=src
+              sonar.tests=tests,src/frontend/src/**/*.test.ts,src/frontend/src/**/*.test.tsx
+              sonar.typescript.lcov.reportPaths=src/frontend/coverage/lcov.info
+              sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
+              sonar.exclusions=**/node_modules/**,**/dist/**,**/bin/**,**/obj/**
+
+        # Build for SonarQube
+        - task: DotNetCoreCLI@2
+          displayName: 'Build for SonarQube'
+          inputs:
+            command: 'build'
+            projects: '${{ parameters.backendWorkingDirectory }}/**/*.csproj'
+
+        # SonarQube Analyze
+        - task: SonarQubeAnalyze@5
+          displayName: 'Run SonarQube Analysis'
+
+        # SonarQube Quality Gate
+        - task: SonarQubePublish@5
+          displayName: 'Publish SonarQube Results'
+          inputs:
+            pollingTimeoutSec: '300'
+
+      # ==================== METRICS ====================
+
+      # Code Complexity Analysis
+      - script: |
+          echo "=== Code Metrics Summary ==="
+          echo "Frontend:"
+          echo "  - TypeScript files: $(find ${{ parameters.frontendWorkingDirectory }}/src -name '*.ts' -o -name '*.tsx' | wc -l)"
+          echo "  - Test files: $(find ${{ parameters.frontendWorkingDirectory }}/src -name '*.test.*' | wc -l)"
+          echo ""
+          echo "Backend:"
+          echo "  - C# files: $(find ${{ parameters.backendWorkingDirectory }} -name '*.cs' | wc -l)"
+          echo ""
+          echo "##vso[task.setvariable variable=codeQualityCompleted;isOutput=true]true"
+        displayName: 'Code Metrics Summary'
+        name: metricsOutput
+
+      # Publish quality reports
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Quality Reports'
+        inputs:
+          PathtoPublish: '$(Agent.TempDirectory)'
+          ArtifactName: 'code-quality-reports'
+        condition: always()

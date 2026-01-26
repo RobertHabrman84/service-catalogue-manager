@@ -1,0 +1,66 @@
+/* LoadingSpinner Component Styles */
+
+.spinner {
+  @apply animate-spin rounded-full border-2 border-current border-t-transparent;
+}
+
+.spinnerSm {
+  @apply h-4 w-4;
+}
+
+.spinnerMd {
+  @apply h-8 w-8;
+}
+
+.spinnerLg {
+  @apply h-12 w-12;
+}
+
+.spinnerXl {
+  @apply h-16 w-16;
+}
+
+/* Color variants */
+.spinnerPrimary {
+  @apply text-blue-600;
+}
+
+.spinnerSecondary {
+  @apply text-gray-400;
+}
+
+.spinnerWhite {
+  @apply text-white;
+}
+
+/* Container for centered spinner */
+.spinnerContainer {
+  @apply flex items-center justify-center;
+}
+
+.spinnerContainerFullScreen {
+  @apply fixed inset-0 bg-white/80 backdrop-blur-sm;
+}
+
+.spinnerContainerInline {
+  @apply inline-flex;
+}
+
+/* With text */
+.spinnerWithText {
+  @apply flex flex-col items-center space-y-2;
+}
+
+.spinnerText {
+  @apply text-sm text-gray-500;
+}
+
+/* Overlay variant */
+.overlay {
+  @apply absolute inset-0 flex items-center justify-center bg-white/60;
+}
+
+/* Pulse animation alternative */
+.pulse {
+  @apply animate-pulse rounded-full bg-blue-400;
+}

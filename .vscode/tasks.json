@@ -1,0 +1,233 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ===== FRONTEND TASKS =====
+    {
+      "label": "frontend: install",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}/src/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend: dev",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/src/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*VITE.*$",
+          "endsPattern": "^.*ready in.*$"
+        }
+      }
+    },
+    {
+      "label": "frontend: build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "${workspaceFolder}/src/frontend"
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "frontend: test",
+      "type": "shell",
+      "command": "npm run test",
+      "options": {
+        "cwd": "${workspaceFolder}/src/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend: lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "options": {
+        "cwd": "${workspaceFolder}/src/frontend"
+      },
+      "problemMatcher": ["$eslint-stylish"]
+    },
+
+    // ===== BACKEND TASKS =====
+    {
+      "label": "backend: restore",
+      "type": "shell",
+      "command": "dotnet restore",
+      "options": {
+        "cwd": "${workspaceFolder}/src/backend/ServiceCatalogueManager.Api"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "backend: build",
+      "type": "shell",
+      "command": "dotnet build",
+      "options": {
+        "cwd": "${workspaceFolder}/src/backend/ServiceCatalogueManager.Api"
+      },
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "func: host start",
+      "type": "shell",
+      "command": "func host start",
+      "options": {
+        "cwd": "${workspaceFolder}/src/backend/ServiceCatalogueManager.Api"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Azure Functions Core Tools.*$",
+          "endsPattern": "^.*For detailed output, run func with --verbose flag.*$"
+        }
+      },
+      "dependsOn": "backend: build"
+    },
+    {
+      "label": "build-tests",
+      "type": "shell",
+      "command": "dotnet build",
+      "options": {
+        "cwd": "${workspaceFolder}/src/backend/ServiceCatalogueManager.Api.Tests"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "backend: test",
+      "type": "shell",
+      "command": "dotnet test",
+      "options": {
+        "cwd": "${workspaceFolder}/src/backend/ServiceCatalogueManager.Api.Tests"
+      },
+      "problemMatcher": "$msCompile"
+    },
+
+    // ===== DATABASE TASKS =====
+    {
+      "label": "database: run-migrations",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-File",
+        "${workspaceFolder}/database/scripts/run-migrations.ps1",
+        "-Environment",
+        "Development"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "database: seed",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-File",
+        "${workspaceFolder}/database/scripts/seed-database.ps1",
+        "-Environment",
+        "Development"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "database: reset",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-File",
+        "${workspaceFolder}/database/scripts/reset-database.ps1",
+        "-Environment",
+        "Development"
+      ],
+      "problemMatcher": []
+    },
+
+    // ===== DOCKER TASKS =====
+    {
+      "label": "docker: start",
+      "type": "shell",
+      "command": "docker-compose up -d",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: stop",
+      "type": "shell",
+      "command": "docker-compose down",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: logs",
+      "type": "shell",
+      "command": "docker-compose logs -f",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+
+    // ===== E2E TASKS =====
+    {
+      "label": "e2e: install",
+      "type": "shell",
+      "command": "npm install && npx playwright install",
+      "options": {
+        "cwd": "${workspaceFolder}/tests/e2e"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "e2e: test",
+      "type": "shell",
+      "command": "npx playwright test",
+      "options": {
+        "cwd": "${workspaceFolder}/tests/e2e"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "e2e: test-headed",
+      "type": "shell",
+      "command": "npx playwright test --headed",
+      "options": {
+        "cwd": "${workspaceFolder}/tests/e2e"
+      },
+      "problemMatcher": []
+    },
+
+    // ===== COMPOUND TASKS =====
+    {
+      "label": "setup: full",
+      "dependsOn": [
+        "docker: start",
+        "frontend: install",
+        "backend: restore",
+        "database: run-migrations",
+        "database: seed"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    }
+  ]
+}

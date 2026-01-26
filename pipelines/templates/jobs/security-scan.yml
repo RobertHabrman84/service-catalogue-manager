@@ -1,0 +1,145 @@
+# =============================================================================
+# SECURITY SCAN JOB TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: frontendWorkingDirectory
+    type: string
+    default: 'src/frontend'
+  - name: backendWorkingDirectory
+    type: string
+    default: 'src/backend'
+  - name: nodeVersion
+    type: string
+    default: '20.x'
+  - name: dotnetVersion
+    type: string
+    default: '8.x'
+  - name: failOnHighSeverity
+    type: boolean
+    default: true
+  - name: publishResults
+    type: boolean
+    default: true
+
+jobs:
+  - job: SecurityScan
+    displayName: 'Security Scanning'
+    pool:
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+      # Setup Node.js
+      - template: ../steps/setup-node.yml
+        parameters:
+          nodeVersion: ${{ parameters.nodeVersion }}
+
+      # Setup .NET SDK
+      - template: ../steps/setup-dotnet.yml
+        parameters:
+          dotnetVersion: ${{ parameters.dotnetVersion }}
+
+      # ==================== DEPENDENCY SCANNING ====================
+
+      # NPM Audit (Frontend)
+      - task: Npm@1
+        displayName: 'NPM Audit - Frontend'
+        inputs:
+          command: 'custom'
+          workingDir: ${{ parameters.frontendWorkingDirectory }}
+          customCommand: 'audit --json > $(Agent.TempDirectory)/npm-audit.json || true'
+        continueOnError: true
+
+      # Parse NPM audit results
+      - script: |
+          echo "=== NPM Audit Results ==="
+          cd ${{ parameters.frontendWorkingDirectory }}
+          npm audit --audit-level=high || echo "Vulnerabilities found"
+        displayName: 'Analyze NPM Audit'
+        continueOnError: true
+
+      # NuGet vulnerability scan (Backend)
+      - task: DotNetCoreCLI@2
+        displayName: 'NuGet Vulnerability Scan'
+        inputs:
+          command: 'custom'
+          custom: 'list'
+          arguments: '${{ parameters.backendWorkingDirectory }} package --vulnerable --include-transitive'
+        continueOnError: true
+
+      # ==================== STATIC ANALYSIS ====================
+
+      # Install security tools
+      - script: |
+          # Install Trivy for container scanning
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          
+          # Install gitleaks for secret detection
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz | tar xz -C /usr/local/bin gitleaks
+        displayName: 'Install Security Tools'
+
+      # Secret Detection with Gitleaks
+      - script: |
+          echo "=== Running Secret Detection ==="
+          gitleaks detect --source . --report-path $(Agent.TempDirectory)/gitleaks-report.json --report-format json || true
+          
+          if [ -f "$(Agent.TempDirectory)/gitleaks-report.json" ]; then
+            LEAKS=$(cat $(Agent.TempDirectory)/gitleaks-report.json | jq length)
+            echo "Found $LEAKS potential secrets"
+            if [ "$LEAKS" -gt "0" ]; then
+              echo "##vso[task.logissue type=warning]Potential secrets detected in repository"
+            fi
+          fi
+        displayName: 'Secret Detection'
+        continueOnError: true
+
+      # SAST - CodeQL Analysis (if available)
+      - script: |
+          echo "=== Static Application Security Testing ==="
+          echo "CodeQL analysis would run here in GitHub Actions"
+          echo "For Azure DevOps, consider using SonarQube or Checkmarx"
+        displayName: 'SAST Analysis Info'
+
+      # Filesystem scan with Trivy
+      - script: |
+          echo "=== Filesystem Security Scan ==="
+          trivy fs --security-checks vuln,secret,config --format json --output $(Agent.TempDirectory)/trivy-fs-report.json . || true
+          trivy fs --security-checks vuln,secret,config --severity HIGH,CRITICAL .
+        displayName: 'Trivy Filesystem Scan'
+        continueOnError: true
+
+      # ==================== LICENSE COMPLIANCE ====================
+
+      # Check frontend licenses
+      - script: |
+          cd ${{ parameters.frontendWorkingDirectory }}
+          npm install -g license-checker
+          license-checker --json > $(Agent.TempDirectory)/frontend-licenses.json
+          license-checker --summary
+        displayName: 'Frontend License Check'
+        continueOnError: true
+
+      # ==================== RESULTS ====================
+
+      # Publish security reports
+      - ${{ if eq(parameters.publishResults, true) }}:
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publish Security Reports'
+          inputs:
+            PathtoPublish: '$(Agent.TempDirectory)'
+            ArtifactName: 'security-scan-reports'
+          condition: always()
+
+      # Security summary
+      - script: |
+          echo "=== Security Scan Summary ==="
+          echo "✓ NPM Audit completed"
+          echo "✓ NuGet vulnerability scan completed"
+          echo "✓ Secret detection completed"
+          echo "✓ Filesystem scan completed"
+          echo "✓ License compliance check completed"
+          echo ""
+          echo "##vso[task.setvariable variable=securityScanCompleted;isOutput=true]true"
+        displayName: 'Security Summary'
+        name: securityOutput

@@ -1,0 +1,75 @@
+# =============================================================================
+# SERVICE CATALOGUE MANAGER - MAIN AZURE PIPELINE
+# =============================================================================
+# This is the main entry point for Azure DevOps pipelines.
+# It triggers the CI pipeline on code changes.
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+      - feature/*
+      - release/*
+      - hotfix/*
+  paths:
+    exclude:
+      - docs/*
+      - '**/*.md'
+      - .vscode/*
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    exclude:
+      - docs/*
+      - '**/*.md'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - template: templates/variables/common-variables.yml
+
+stages:
+  # Build Stage
+  - stage: Build
+    displayName: 'Build'
+    jobs:
+      - template: templates/jobs/build-backend.yml
+      - template: templates/jobs/build-frontend.yml
+
+  # Test Stage
+  - stage: Test
+    displayName: 'Test'
+    dependsOn: Build
+    jobs:
+      - template: templates/jobs/run-unit-tests.yml
+      - template: templates/jobs/run-integration-tests.yml
+
+  # Security & Quality Stage
+  - stage: SecurityAndQuality
+    displayName: 'Security & Quality'
+    dependsOn: Build
+    jobs:
+      - template: templates/jobs/security-scan.yml
+      - template: templates/jobs/code-quality.yml
+
+  # Deploy to Dev (only on develop branch)
+  - stage: DeployDev
+    displayName: 'Deploy to Development'
+    dependsOn:
+      - Test
+      - SecurityAndQuality
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    jobs:
+      - deployment: DeployToDev
+        environment: 'development'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: templates/steps/publish-artifacts.yml

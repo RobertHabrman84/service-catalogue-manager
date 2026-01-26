@@ -1,0 +1,5 @@
+.tabs { @apply border-b border-gray-200; }
+.tabList { @apply flex space-x-8; }
+.tab { @apply py-4 px-1 text-sm font-medium border-b-2 border-transparent hover:border-gray-300; }
+.tabActive { @apply border-blue-600 text-blue-600; }
+.tabPanel { @apply py-4; }

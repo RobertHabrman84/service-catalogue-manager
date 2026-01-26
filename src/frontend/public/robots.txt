@@ -1,0 +1,8 @@
+# Service Catalogue Manager - robots.txt
+# This is an internal enterprise application
+
+User-agent: *
+Disallow: /
+
+# Allow only authenticated users through the application
+# Search engines should not index this application

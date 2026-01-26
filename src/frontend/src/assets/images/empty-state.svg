@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F3F4F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E5E7EB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="300" fill="#FAFAFA"/>
+  
+  <!-- Empty box illustration -->
+  <g transform="translate(125, 60)">
+    <!-- Box back -->
+    <path d="M0 60 L75 20 L150 60 L150 140 L75 180 L0 140 Z" fill="#E5E7EB"/>
+    
+    <!-- Box left side -->
+    <path d="M0 60 L75 100 L75 180 L0 140 Z" fill="#D1D5DB"/>
+    
+    <!-- Box right side -->
+    <path d="M150 60 L75 100 L75 180 L150 140 Z" fill="#9CA3AF"/>
+    
+    <!-- Box top -->
+    <path d="M0 60 L75 20 L150 60 L75 100 Z" fill="#F3F4F6"/>
+    
+    <!-- Box opening -->
+    <path d="M20 55 L75 25 L130 55 L75 85 Z" fill="#FAFAFA" stroke="#D1D5DB" stroke-width="2"/>
+    
+    <!-- Dashed lines inside -->
+    <line x1="45" y1="110" x2="105" y2="110" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="5,5"/>
+    <line x1="55" y1="130" x2="95" y2="130" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="5,5"/>
+  </g>
+  
+  <!-- Question marks floating -->
+  <text x="110" y="80" font-family="Arial" font-size="24" fill="#9CA3AF">?</text>
+  <text x="280" y="100" font-family="Arial" font-size="20" fill="#D1D5DB">?</text>
+  <text x="300" y="160" font-family="Arial" font-size="16" fill="#E5E7EB">?</text>
+  
+  <!-- Text -->
+  <text x="200" y="260" font-family="Arial, sans-serif" font-size="16" fill="#6B7280" text-anchor="middle">No items found</text>
+  <text x="200" y="280" font-family="Arial, sans-serif" font-size="12" fill="#9CA3AF" text-anchor="middle">Try adjusting your search or filters</text>
+</svg>

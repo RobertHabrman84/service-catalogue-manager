@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1D4ED8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60A5FA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="90" fill="url(#gradient1)"/>
+  
+  <!-- Book/Catalog icon -->
+  <g transform="translate(50, 45)">
+    <!-- Book cover -->
+    <rect x="10" y="10" width="80" height="100" rx="4" fill="white" opacity="0.95"/>
+    
+    <!-- Book spine -->
+    <rect x="10" y="10" width="12" height="100" rx="2" fill="url(#gradient2)"/>
+    
+    <!-- Page lines -->
+    <line x1="30" y1="35" x2="80" y2="35" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+    <line x1="30" y1="50" x2="80" y2="50" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+    <line x1="30" y1="65" x2="65" y2="65" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+    
+    <!-- Checkmark -->
+    <circle cx="55" cy="85" r="15" fill="#10B981"/>
+    <path d="M47 85 L53 91 L65 79" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  
+  <!-- SCM text -->
+  <text x="100" y="175" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">SCM</text>
+</svg>

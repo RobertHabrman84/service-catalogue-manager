@@ -1,0 +1,73 @@
+# =============================================================================
+# BUILD STAGE TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: nodeVersion
+    type: string
+    default: '20.x'
+  - name: dotnetVersion
+    type: string
+    default: '8.x'
+  - name: buildConfiguration
+    type: string
+    default: 'Release'
+  - name: skipFrontend
+    type: boolean
+    default: false
+  - name: skipBackend
+    type: boolean
+    default: false
+
+stages:
+  - stage: Build
+    displayName: 'Build Stage'
+    
+    jobs:
+      # Build Frontend
+      - ${{ if eq(parameters.skipFrontend, false) }}:
+        - template: ../jobs/build-frontend.yml
+          parameters:
+            nodeVersion: ${{ parameters.nodeVersion }}
+            buildConfiguration: ${{ parameters.buildConfiguration }}
+            publishArtifact: true
+            artifactName: 'frontend-$(Build.BuildId)'
+
+      # Build Backend
+      - ${{ if eq(parameters.skipBackend, false) }}:
+        - template: ../jobs/build-backend.yml
+          parameters:
+            dotnetVersion: ${{ parameters.dotnetVersion }}
+            buildConfiguration: ${{ parameters.buildConfiguration }}
+            publishArtifact: true
+            artifactName: 'backend-$(Build.BuildId)'
+
+      # Build Summary Job
+      - job: BuildSummary
+        displayName: 'Build Summary'
+        dependsOn:
+          - ${{ if eq(parameters.skipFrontend, false) }}:
+            - BuildFrontend
+          - ${{ if eq(parameters.skipBackend, false) }}:
+            - BuildBackend
+        condition: always()
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        steps:
+          - script: |
+              echo "=== BUILD STAGE SUMMARY ==="
+              echo "Build ID: $(Build.BuildId)"
+              echo "Build Number: $(Build.BuildNumber)"
+              echo "Source Branch: $(Build.SourceBranch)"
+              echo "Commit: $(Build.SourceVersion)"
+              echo ""
+              echo "Configuration: ${{ parameters.buildConfiguration }}"
+              echo "Node Version: ${{ parameters.nodeVersion }}"
+              echo ".NET Version: ${{ parameters.dotnetVersion }}"
+              echo ""
+              echo "Frontend Skip: ${{ parameters.skipFrontend }}"
+              echo "Backend Skip: ${{ parameters.skipBackend }}"
+              echo "==========================="
+            displayName: 'Build Summary'

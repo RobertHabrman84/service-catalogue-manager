@@ -1,0 +1,65 @@
+# =============================================================================
+# STAGING ENVIRONMENT VARIABLES
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+variables:
+  # Environment
+  - name: Environment
+    value: 'Staging'
+  - name: EnvironmentShort
+    value: 'stg'
+
+  # Azure Resources
+  - name: AzureSubscription
+    value: 'ServiceCatalogueManager-Staging'
+  - name: ResourceGroup
+    value: 'rg-scm-staging-westeurope'
+  - name: Location
+    value: 'westeurope'
+
+  # Frontend
+  - name: FrontendAppName
+    value: 'swa-scm-staging'
+  - name: FrontendUrl
+    value: 'https://scm-staging.azurestaticapps.net'
+
+  # Backend (Azure Functions)
+  - name: BackendAppName
+    value: 'func-scm-staging'
+  - name: BackendUrl
+    value: 'https://func-scm-staging.azurewebsites.net'
+  - name: FunctionAppSku
+    value: 'EP1'
+
+  # Database
+  - name: SqlServerName
+    value: 'sql-scm-staging'
+  - name: DatabaseName
+    value: 'sqldb-scm-staging'
+
+  # Storage
+  - name: StorageAccountName
+    value: 'stscmstaging'
+
+  # Application Insights
+  - name: AppInsightsName
+    value: 'appi-scm-staging'
+
+  # Key Vault
+  - name: KeyVaultName
+    value: 'kv-scm-staging'
+
+  # Feature Flags
+  - name: EnableDebugMode
+    value: 'true'
+  - name: EnableSwagger
+    value: 'true'
+  - name: EnableDetailedErrors
+    value: 'true'
+
+  # E2E Testing
+  - name: E2E_BASE_URL
+    value: 'https://scm-staging.azurestaticapps.net'
+  - name: RunE2ETests
+    value: 'true'

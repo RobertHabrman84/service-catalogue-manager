@@ -1,0 +1,4 @@
+.layout { @apply min-h-screen bg-gray-50; }
+.main { @apply flex; }
+.content { @apply flex-1 p-6; }
+.contentWithSidebar { @apply ml-64; }

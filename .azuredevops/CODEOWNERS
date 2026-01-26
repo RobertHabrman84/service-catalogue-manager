@@ -1,0 +1,34 @@
+# Service Catalogue Manager - Code Owners
+# These owners will be requested for review when someone opens a pull request
+
+# Default owners for everything in the repo
+* @cloud-architecture-team
+
+# Frontend
+/src/frontend/ @frontend-team @cloud-architecture-team
+
+# Backend
+/src/backend/ @backend-team @cloud-architecture-team
+
+# Database
+/database/ @backend-team @dba-team
+
+# Pipelines and infrastructure
+/pipelines/ @devops-team
+/infrastructure/ @devops-team
+
+# Documentation
+/docs/ @tech-writers @cloud-architecture-team
+
+# Tests
+/tests/ @qa-team
+
+# Security-related files
+SECURITY.md @security-team
+/src/backend/**/Security/ @security-team
+/src/backend/**/Auth/ @security-team
+
+# Configuration files
+*.json @devops-team
+*.yml @devops-team
+*.yaml @devops-team

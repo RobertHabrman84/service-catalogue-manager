@@ -1,0 +1,27 @@
+# Development Environment Variables
+
+variables:
+  # Resource Group
+  resourceGroup: 'rg-service-catalogue-dev'
+  location: 'westeurope'
+
+  # Azure Functions
+  backendAppName: 'func-scm-dev-weu'
+  
+  # Static Web App
+  frontendAppName: 'swa-scm-dev-weu'
+
+  # URLs
+  ApiUrl: 'https://func-scm-dev-weu.azurewebsites.net/api'
+  FrontendUrl: 'https://swa-scm-dev-weu.azurestaticapps.net'
+
+  # Database
+  SqlServerName: 'sql-scm-dev-weu'
+  SqlDatabaseName: 'ServiceCatalogueManager'
+
+  # Feature Flags
+  EnableUuBookKitSync: 'false'
+  EnableDetailedLogging: 'true'
+
+  # App Insights
+  ApplicationInsightsName: 'appi-scm-dev-weu'

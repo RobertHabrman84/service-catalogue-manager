@@ -1,0 +1,6 @@
+.badge { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium; }
+.badgePrimary { @apply bg-blue-100 text-blue-800; }
+.badgeSuccess { @apply bg-green-100 text-green-800; }
+.badgeWarning { @apply bg-yellow-100 text-yellow-800; }
+.badgeDanger { @apply bg-red-100 text-red-800; }
+.badgeGray { @apply bg-gray-100 text-gray-800; }

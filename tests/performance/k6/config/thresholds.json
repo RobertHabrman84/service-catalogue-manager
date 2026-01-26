@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "K6 performance thresholds configuration for Service Catalogue Manager",
+  "version": "1.0.0",
+  
+  "thresholds": {
+    "global": {
+      "http_req_duration": {
+        "p50": 100,
+        "p90": 300,
+        "p95": 500,
+        "p99": 1000,
+        "description": "Response time percentiles in milliseconds"
+      },
+      "http_req_failed": {
+        "rate": 0.01,
+        "description": "Maximum acceptable failure rate (1%)"
+      },
+      "http_reqs": {
+        "rate": 100,
+        "description": "Minimum requests per second"
+      }
+    },
+    
+    "endpoints": {
+      "GET /services": {
+        "p50": 50,
+        "p95": 150,
+        "p99": 300,
+        "rate": 50
+      },
+      "GET /services/{id}": {
+        "p50": 30,
+        "p95": 100,
+        "p99": 200,
+        "rate": 100
+      },
+      "POST /services": {
+        "p50": 100,
+        "p95": 300,
+        "p99": 500,
+        "rate": 20
+      },
+      "PUT /services/{id}": {
+        "p50": 100,
+        "p95": 300,
+        "p99": 500,
+        "rate": 20
+      },
+      "DELETE /services/{id}": {
+        "p50": 50,
+        "p95": 150,
+        "p99": 300,
+        "rate": 10
+      },
+      "GET /lookups": {
+        "p50": 20,
+        "p95": 50,
+        "p99": 100,
+        "rate": 200
+      },
+      "GET /export/pdf/{id}": {
+        "p50": 500,
+        "p95": 2000,
+        "p99": 5000,
+        "rate": 5
+      },
+      "GET /export/markdown/{id}": {
+        "p50": 100,
+        "p95": 300,
+        "p99": 500,
+        "rate": 20
+      },
+      "GET /health": {
+        "p50": 10,
+        "p95": 50,
+        "p99": 100,
+        "rate": 1000
+      }
+    },
+    
+    "testTypes": {
+      "load": {
+        "http_req_duration": ["p(95)<500", "p(99)<1000"],
+        "http_req_failed": ["rate<0.01"],
+        "description": "Standard load test thresholds"
+      },
+      "stress": {
+        "http_req_duration": ["p(95)<2000", "p(99)<5000"],
+        "http_req_failed": ["rate<0.10"],
+        "description": "Relaxed thresholds for stress testing"
+      },
+      "soak": {
+        "http_req_duration": ["p(95)<1000", "p(99)<2000"],
+        "http_req_failed": ["rate<0.02"],
+        "description": "Stability-focused thresholds"
+      },
+      "spike": {
+        "http_req_duration": ["p(95)<3000"],
+        "http_req_failed": ["rate<0.20"],
+        "description": "Lenient thresholds for spike handling"
+      }
+    },
+    
+    "sla": {
+      "availability": {
+        "target": 99.9,
+        "measurement": "percentage",
+        "description": "Service Level Agreement availability target"
+      },
+      "responseTime": {
+        "p95": 500,
+        "measurement": "milliseconds",
+        "description": "95th percentile response time SLA"
+      },
+      "errorRate": {
+        "target": 0.1,
+        "measurement": "percentage",
+        "description": "Maximum acceptable error rate"
+      }
+    }
+  },
+  
+  "alerts": {
+    "critical": {
+      "errorRate": 5,
+      "p99ResponseTime": 5000,
+      "description": "Thresholds that trigger critical alerts"
+    },
+    "warning": {
+      "errorRate": 1,
+      "p95ResponseTime": 1000,
+      "description": "Thresholds that trigger warning alerts"
+    }
+  }
+}

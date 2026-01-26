@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "K6 test scenarios configuration for Service Catalogue Manager",
+  "version": "1.0.0",
+  
+  "scenarios": {
+    "load": {
+      "name": "Standard Load Test",
+      "description": "Simulates normal production traffic patterns",
+      "executor": "ramping-vus",
+      "stages": [
+        { "duration": "2m", "target": 20 },
+        { "duration": "5m", "target": 50 },
+        { "duration": "3m", "target": 100 },
+        { "duration": "5m", "target": 100 },
+        { "duration": "3m", "target": 50 },
+        { "duration": "2m", "target": 0 }
+      ],
+      "gracefulRampDown": "30s",
+      "env": {
+        "SCENARIO": "load"
+      }
+    },
+    
+    "stress": {
+      "name": "Stress Test",
+      "description": "Push system to find breaking points",
+      "executor": "ramping-vus",
+      "stages": [
+        { "duration": "2m", "target": 100 },
+        { "duration": "3m", "target": 200 },
+        { "duration": "3m", "target": 300 },
+        { "duration": "3m", "target": 400 },
+        { "duration": "3m", "target": 500 },
+        { "duration": "2m", "target": 500 },
+        { "duration": "3m", "target": 200 },
+        { "duration": "2m", "target": 0 }
+      ],
+      "gracefulRampDown": "1m",
+      "env": {
+        "SCENARIO": "stress"
+      }
+    },
+    
+    "soak": {
+      "name": "Soak Test",
+      "description": "Extended duration test for stability",
+      "executor": "ramping-vus",
+      "stages": [
+        { "duration": "5m", "target": 50 },
+        { "duration": "60m", "target": 50 },
+        { "duration": "5m", "target": 0 }
+      ],
+      "gracefulRampDown": "2m",
+      "env": {
+        "SCENARIO": "soak"
+      }
+    },
+    
+    "spike": {
+      "name": "Spike Test",
+      "description": "Sudden traffic bursts to test auto-scaling",
+      "executor": "ramping-vus",
+      "stages": [
+        { "duration": "30s", "target": 10 },
+        { "duration": "10s", "target": 200 },
+        { "duration": "30s", "target": 10 },
+        { "duration": "10s", "target": 250 },
+        { "duration": "30s", "target": 10 },
+        { "duration": "10s", "target": 300 },
+        { "duration": "1m", "target": 10 },
+        { "duration": "30s", "target": 0 }
+      ],
+      "gracefulRampDown": "30s",
+      "env": {
+        "SCENARIO": "spike"
+      }
+    },
+    
+    "smoke": {
+      "name": "Smoke Test",
+      "description": "Quick sanity check with minimal load",
+      "executor": "constant-vus",
+      "vus": 1,
+      "duration": "1m",
+      "env": {
+        "SCENARIO": "smoke"
+      }
+    },
+    
+    "breakpoint": {
+      "name": "Breakpoint Test",
+      "description": "Find exact system capacity limits",
+      "executor": "ramping-arrival-rate",
+      "startRate": 10,
+      "timeUnit": "1s",
+      "preAllocatedVUs": 50,
+      "maxVUs": 1000,
+      "stages": [
+        { "duration": "2m", "target": 50 },
+        { "duration": "2m", "target": 100 },
+        { "duration": "2m", "target": 200 },
+        { "duration": "2m", "target": 400 },
+        { "duration": "2m", "target": 600 },
+        { "duration": "2m", "target": 800 },
+        { "duration": "2m", "target": 1000 }
+      ],
+      "env": {
+        "SCENARIO": "breakpoint"
+      }
+    }
+  },
+  
+  "trafficPatterns": {
+    "standard": {
+      "description": "Normal business hours traffic distribution",
+      "weights": {
+        "GET /services": 40,
+        "GET /services/{id}": 30,
+        "GET /lookups": 15,
+        "POST /services": 5,
+        "PUT /services/{id}": 5,
+        "DELETE /services/{id}": 2,
+        "GET /export/*": 3
+      }
+    },
+    "readHeavy": {
+      "description": "Read-heavy traffic (reporting scenarios)",
+      "weights": {
+        "GET /services": 50,
+        "GET /services/{id}": 35,
+        "GET /lookups": 10,
+        "GET /export/*": 5
+      }
+    },
+    "writeHeavy": {
+      "description": "Write-heavy traffic (data import scenarios)",
+      "weights": {
+        "POST /services": 40,
+        "PUT /services/{id}": 30,
+        "GET /services": 20,
+        "DELETE /services/{id}": 10
+      }
+    }
+  },
+  
+  "environments": {
+    "development": {
+      "baseUrl": "http://localhost:7071/api",
+      "maxVUs": 50,
+      "description": "Local development environment"
+    },
+    "staging": {
+      "baseUrl": "https://api.staging.servicecatalogue.example.com",
+      "maxVUs": 200,
+      "description": "Staging environment"
+    },
+    "production": {
+      "baseUrl": "https://api.servicecatalogue.example.com",
+      "maxVUs": 100,
+      "description": "Production environment (use with caution)"
+    }
+  },
+  
+  "scheduling": {
+    "daily": {
+      "scenarios": ["smoke"],
+      "time": "06:00",
+      "timezone": "UTC"
+    },
+    "weekly": {
+      "scenarios": ["load", "stress"],
+      "dayOfWeek": "Sunday",
+      "time": "02:00",
+      "timezone": "UTC"
+    },
+    "monthly": {
+      "scenarios": ["soak", "breakpoint"],
+      "dayOfMonth": 1,
+      "time": "00:00",
+      "timezone": "UTC"
+    }
+  }
+}

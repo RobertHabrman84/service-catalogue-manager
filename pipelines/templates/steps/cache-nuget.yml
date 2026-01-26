@@ -1,0 +1,51 @@
+# =============================================================================
+# CACHE NUGET PACKAGES STEP TEMPLATE
+# Service Catalogue Manager - Azure DevOps Pipeline
+# =============================================================================
+
+parameters:
+  - name: workingDirectory
+    type: string
+    default: 'src/backend'
+  - name: cacheKey
+    type: string
+    default: 'nuget'
+
+steps:
+  # Get NuGet packages folder
+  - script: |
+      echo "##vso[task.setvariable variable=NUGET_PACKAGES]$(Agent.TempDirectory)/.nuget/packages"
+    displayName: 'Set NuGet Packages Path'
+
+  # Cache NuGet packages
+  - task: Cache@2
+    displayName: 'Cache NuGet Packages'
+    inputs:
+      key: '${{ parameters.cacheKey }} | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/**/packages.lock.json'
+      restoreKeys: |
+        ${{ parameters.cacheKey }} | "$(Agent.OS)"
+        ${{ parameters.cacheKey }}
+      path: '$(NUGET_PACKAGES)'
+      cacheHitVar: 'NUGET_CACHE_RESTORED'
+
+  # Alternative: Cache based on csproj files if no lock file
+  - task: Cache@2
+    displayName: 'Cache NuGet (fallback)'
+    condition: and(succeeded(), ne(variables['NUGET_CACHE_RESTORED'], 'true'))
+    inputs:
+      key: '${{ parameters.cacheKey }}-fallback | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/**/*.csproj'
+      restoreKeys: |
+        ${{ parameters.cacheKey }}-fallback | "$(Agent.OS)"
+      path: '$(NUGET_PACKAGES)'
+      cacheHitVar: 'NUGET_CACHE_RESTORED_FALLBACK'
+
+  # Log cache status
+  - script: |
+      if [ "$(NUGET_CACHE_RESTORED)" == "true" ] || [ "$(NUGET_CACHE_RESTORED_FALLBACK)" == "true" ]; then
+        echo "✓ NuGet cache restored successfully"
+        echo "Cached packages location: $(NUGET_PACKAGES)"
+        ls -la $(NUGET_PACKAGES) 2>/dev/null | head -20 || echo "Cache directory contents not available"
+      else
+        echo "✗ NuGet cache not found - will restore fresh"
+      fi
+    displayName: 'NuGet Cache Status'
