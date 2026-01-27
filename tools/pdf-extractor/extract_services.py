@@ -189,9 +189,14 @@ The output must conform to the service import JSON schema with the following str
 
 8. **Stakeholder Interaction:**
    - Extract interactionLevel (LOW/MEDIUM/HIGH)
-   - Extract "Customer Must Provide" list
+   - Extract "Customer Must Provide" list (array of objects with itemName, itemDescription)
    - Extract workshop participation roles with involvementLevel
-   - Extract access requirements
+   - Extract access requirements as array of OBJECTS (NOT strings):
+     * Each access requirement MUST be an object with:
+       - requirementType: string (e.g., "Azure Subscription", "Network Access")
+       - description: string (detailed description)
+       - isMandatory: boolean (true/false)
+     * Example: {{ "requirementType": "Network Access", "description": "VPN or ExpressRoute", "isMandatory": true }}
 
 9. **Service Inputs:**
    - Extract ALL input parameters
