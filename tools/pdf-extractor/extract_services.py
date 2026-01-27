@@ -200,8 +200,11 @@ The output must conform to the service import JSON schema with the following str
     - Each item should have itemName and itemDescription
 
 11. **Timeline:**
+    - IMPORTANT: Timeline is an OBJECT with a "phases" property (not a direct array)
+    - Structure: {{ "phases": [ phase1, phase2, ... ] }}
     - Extract all phases with phaseNumber, phaseName, description
     - Include durationBySize (small, medium, large) if provided
+    - Example: {{ "phases": [{{ "phaseNumber": 1, "phaseName": "Discovery", ... }}] }}
 
 12. **Size Options (CRITICAL - Most Complex Section):**
     - Extract ALL size options (S, M, L, typically 3)
