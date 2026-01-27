@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import anthropic
 from jsonschema import validate, ValidationError
+from json_repair import repair_json
 
 
 class ServicePdfExtractor:
@@ -25,18 +26,20 @@ class ServicePdfExtractor:
     using Claude API.
     """
     
-    def __init__(self, api_key: str, schema_path: str):
+    def __init__(self, api_key: str, schema_path: str, output_dir: Path = None):
         """
         Initialize the PDF extractor.
         
         Args:
             api_key: Anthropic API key
             schema_path: Path to JSON schema file
+            output_dir: Directory for output files (for debug logging)
         """
         self.client = anthropic.Anthropic(api_key=api_key)
         self.schema = self._load_schema(schema_path)
         self.model = "claude-sonnet-4-20250514"
-        self.max_tokens = 16000
+        self.max_tokens = 32000  # Increased from 16000 for larger PDFs
+        self.output_dir = output_dir
     
     def _load_schema(self, path: str) -> Dict:
         """Load JSON schema from file."""
@@ -99,8 +102,8 @@ class ServicePdfExtractor:
             # Extract JSON from response
             json_text = self._extract_json_from_response(message.content)
             
-            # Parse JSON
-            service_data = json.loads(json_text)
+            # Parse JSON with automatic repair
+            service_data = self._parse_json_safely(json_text)
             
             print("✅ Extraction successful")
             
@@ -259,6 +262,59 @@ Begin extraction now. Return only the JSON object:"""
         
         return text.strip()
     
+    def _parse_json_safely(self, json_text: str) -> Dict:
+        """
+        Parse JSON with automatic repair for common issues.
+        
+        Args:
+            json_text: JSON string to parse
+            
+        Returns:
+            Parsed JSON dictionary
+        """
+        try:
+            # First try: standard parse
+            return json.loads(json_text)
+        except json.JSONDecodeError as e:
+            print(f"⚠️  JSON parse error at line {e.lineno}, col {e.colno}")
+            print(f"   Message: {e.msg}")
+            print("🔧 Attempting automatic repair...")
+            
+            try:
+                # Second try: repair and parse
+                repaired = repair_json(json_text)
+                result = json.loads(repaired)
+                print("✅ JSON repaired successfully")
+                return result
+            except Exception as repair_error:
+                print(f"❌ JSON repair failed: {str(repair_error)}")
+                if self.output_dir:
+                    self._save_debug_json(json_text, e)
+                raise
+    
+    def _save_debug_json(self, json_text: str, error: Exception) -> None:
+        """
+        Save problematic JSON for debugging.
+        
+        Args:
+            json_text: The problematic JSON string
+            error: The exception that occurred
+        """
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        debug_file = self.output_dir / f"debug_failed_{timestamp}.txt"
+        
+        with open(debug_file, 'w', encoding='utf-8') as f:
+            f.write(f"Timestamp: {timestamp}\n")
+            f.write(f"Error: {str(error)}\n")
+            f.write(f"Error Type: {type(error).__name__}\n")
+            if hasattr(error, 'lineno'):
+                f.write(f"Line: {error.lineno}, Column: {error.colno}\n")
+            f.write("=" * 80 + "\n\n")
+            f.write(json_text)
+        
+        print(f"🐛 Debug JSON saved to: {debug_file}")
+    
     def _validate_against_schema(self, data: Dict) -> None:
         """Validate extracted JSON against schema."""
         try:
@@ -357,7 +413,7 @@ def main():
     print()
     
     # Initialize extractor
-    extractor = ServicePdfExtractor(API_KEY, str(schema_path))
+    extractor = ServicePdfExtractor(API_KEY, str(schema_path), output_dir)
     
     # Process each PDF
     success_count = 0

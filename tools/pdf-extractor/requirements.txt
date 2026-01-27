@@ -7,5 +7,8 @@ anthropic==0.40.0
 # JSON Schema validation
 jsonschema==4.21.1
 
+# JSON repair for handling malformed JSON
+json-repair==0.25.0
+
 # Type hints support
 typing-extensions==4.9.0
