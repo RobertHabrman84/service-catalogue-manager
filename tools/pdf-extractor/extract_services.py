@@ -26,7 +26,7 @@ class ServicePdfExtractor:
     using Claude API.
     """
     
-    def __init__(self, api_key: str, schema_path: str, output_dir: Path = None):
+    def __init__(self, api_key: str, schema_path: str, output_dir: Path = None, relaxed_mode: bool = False):
         """
         Initialize the PDF extractor.
         
@@ -34,12 +34,14 @@ class ServicePdfExtractor:
             api_key: Anthropic API key
             schema_path: Path to JSON schema file
             output_dir: Directory for output files (for debug logging)
+            relaxed_mode: If True, skip strict schema validation and save raw extractions
         """
         self.client = anthropic.Anthropic(api_key=api_key)
         self.schema = self._load_schema(schema_path)
         self.model = "claude-sonnet-4-20250514"
         self.max_tokens = 32000  # Increased from 16000 for larger PDFs
         self.output_dir = output_dir
+        self.relaxed_mode = relaxed_mode
     
     def _load_schema(self, path: str) -> Dict:
         """Load JSON schema from file."""
@@ -108,8 +110,15 @@ class ServicePdfExtractor:
             
             print("✅ Extraction successful")
             
-            # Validate against schema
-            self._validate_against_schema(service_data)
+            # Validate against schema (unless relaxed mode)
+            if not self.relaxed_mode:
+                self._validate_against_schema(service_data)
+            else:
+                print("⚠️  Relaxed mode: Skipping strict schema validation")
+                # Still try to detect obvious issues
+                issues = self._detect_type_issues(service_data)
+                if issues:
+                    print(f"⚠️  Detected {len(issues)} potential schema issues (will be analyzed later)")
             
             return service_data
             
@@ -341,6 +350,91 @@ Begin extraction now. Return only the JSON object:"""
         
         print(f"🐛 Debug JSON saved to: {debug_file}")
     
+    def _detect_type_issues(self, data: Dict, path: str = "") -> List[Dict]:
+        """
+        Detect potential type mismatches between data and schema.
+        
+        Args:
+            data: Extracted data to analyze
+            path: Current JSON path (for nested structures)
+            
+        Returns:
+            List of detected issues with details
+        """
+        issues = []
+        
+        def check_value(value, schema_def, current_path):
+            """Recursively check value against schema."""
+            if schema_def is None:
+                return
+            
+            expected_type = schema_def.get('type')
+            if not expected_type:
+                return
+            
+            # Handle type as array (e.g., ['string', 'null'])
+            if isinstance(expected_type, list):
+                expected_type = expected_type[0]  # Use first type for checking
+            
+            actual_type = type(value).__name__
+            
+            # Map Python types to JSON schema types
+            type_map = {
+                'str': 'string',
+                'int': 'integer',
+                'float': 'number',
+                'bool': 'boolean',
+                'list': 'array',
+                'dict': 'object',
+                'NoneType': 'null'
+            }
+            actual_json_type = type_map.get(actual_type, actual_type)
+            
+            # Check type mismatch
+            if expected_type != actual_json_type and expected_type != 'null':
+                issues.append({
+                    'path': current_path,
+                    'expected_type': expected_type,
+                    'actual_type': actual_json_type,
+                    'value': str(value)[:100],  # Truncate long values
+                    'fix_suggestion': self._suggest_fix(expected_type, actual_json_type, value)
+                })
+            
+            # Recursively check nested structures
+            if actual_json_type == 'object' and expected_type == 'object':
+                properties = schema_def.get('properties', {})
+                for key, nested_value in value.items():
+                    if key in properties:
+                        check_value(nested_value, properties[key], f"{current_path}.{key}")
+            
+            elif actual_json_type == 'array' and expected_type == 'array':
+                items_schema = schema_def.get('items', {})
+                for i, item in enumerate(value):
+                    check_value(item, items_schema, f"{current_path}[{i}]")
+        
+        # Start checking from root
+        if 'properties' in self.schema:
+            for key, value in data.items():
+                if key in self.schema['properties']:
+                    check_value(value, self.schema['properties'][key], key)
+        
+        return issues
+    
+    def _suggest_fix(self, expected: str, actual: str, value) -> str:
+        """Suggest how to fix a type mismatch."""
+        if expected == 'array' and actual == 'string':
+            return f"Change schema to allow string, or split string into array"
+        elif expected == 'string' and actual == 'array':
+            return f"Change schema to array, or join array into string"
+        elif expected == 'string' and actual == 'integer':
+            return f"Convert number to string: \"{value}\""
+        elif expected == 'integer' and actual == 'string':
+            return f"Change schema to string"
+        elif expected == 'object' and actual == 'string':
+            return f"Change schema to string, or parse string into object"
+        else:
+            return f"Schema expects {expected}, got {actual}"
+    
     def _validate_against_schema(self, data: Dict) -> None:
         """Validate extracted JSON against schema."""
         try:
@@ -393,6 +487,9 @@ def process_pdf_file(
 def main():
     """Main execution function."""
     
+    # Parse command line arguments
+    relaxed_mode = '--relaxed' in sys.argv or '--no-validation' in sys.argv
+    
     # Configuration
     API_KEY = os.environ.get('ANTHROPIC_API_KEY')
     if not API_KEY:
@@ -435,11 +532,14 @@ def main():
     print(f"PDF Directory: {pdf_dir}")
     print(f"Output Directory: {output_dir}")
     print(f"Found {len(pdf_files)} PDF file(s)")
+    if relaxed_mode:
+        print(f"⚠️  RELAXED MODE: Schema validation disabled")
+        print(f"   Run 'python analyze_extractions.py' after extraction")
     print(f"=" * 60)
     print()
     
     # Initialize extractor
-    extractor = ServicePdfExtractor(API_KEY, str(schema_path), output_dir)
+    extractor = ServicePdfExtractor(API_KEY, str(schema_path), output_dir, relaxed_mode=relaxed_mode)
     
     # Process each PDF
     success_count = 0
@@ -466,10 +566,18 @@ def main():
     print()
     
     if success_count > 0:
-        print("✅ Extraction complete! JSON files are ready for import.")
+        print("✅ Extraction complete! JSON files are ready")
+        if relaxed_mode:
+            print()
+            print("📊 Next step: Analyze extractions for schema issues")
+            print(f"   Run: python {script_dir / 'analyze_extractions.py'}")
+        else:
+            print("   JSON files are ready for import.")
     
     if failure_count > 0:
         print("⚠️  Some files failed to process. Check error messages above.")
+        if not relaxed_mode:
+            print("💡 Tip: Try running with --relaxed flag to skip validation")
         sys.exit(1)
 
 
