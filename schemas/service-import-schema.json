@@ -7,8 +7,8 @@
   "properties": {
     "serviceCode": {
       "type": "string",
-      "pattern": "^ID[0-9]{3}$",
-      "description": "Unique service identifier (e.g., ID001)"
+      "minLength": 1,
+      "description": "Unique service identifier (e.g., ID001, ID0XX, or any format)"
     },
     "serviceName": {
       "type": "string",
