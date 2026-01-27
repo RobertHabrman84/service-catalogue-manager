@@ -74,10 +74,11 @@ class ServicePdfExtractor:
         print("🤖 Calling Claude API...")
         
         try:
-            # Call Claude API
+            # Call Claude API with extended timeout for large PDFs
             message = self.client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
+                timeout=900.0,  # 15 minutes timeout for large PDFs
                 messages=[
                     {
                         "role": "user",
