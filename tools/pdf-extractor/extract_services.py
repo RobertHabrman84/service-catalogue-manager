@@ -189,7 +189,9 @@ The output must conform to the service import JSON schema with the following str
 
 8. **Stakeholder Interaction:**
    - Extract interactionLevel (LOW/MEDIUM/HIGH)
-   - Extract "Customer Must Provide" list (array of objects with itemName, itemDescription)
+   - Extract "Customer Must Provide" list as array of STRINGS (NOT objects)
+     * Each item should be a simple string describing what customer must provide
+     * Example: ["Azure subscription access", "Business requirements documentation", "Stakeholder availability"]
    - Extract workshop participation roles with involvementLevel
    - Extract access requirements as array of OBJECTS (NOT strings):
      * Each access requirement MUST be an object with:
