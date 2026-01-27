@@ -10,6 +10,7 @@ using ServiceCatalogueManager.Api.Mappers;
 using ServiceCatalogueManager.Api.Middleware;
 using ServiceCatalogueManager.Api.Services.Implementations;
 using ServiceCatalogueManager.Api.Services.Interfaces;
+using ServiceCatalogueManager.Api.Services.Import;
 using FluentValidation;
 using Azure.Storage.Blobs;
 using ServiceCatalogueManager.Api.Configuration;
@@ -83,6 +84,11 @@ var host = new HostBuilder()
         services.AddScoped<IServiceCatalogService, ServiceCatalogService>();
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IExportService, ExportService>();
+        
+        // Import Services
+        services.AddScoped<IImportOrchestrationService, ImportOrchestrationService>();
+        services.AddScoped<IImportValidationService, ImportValidationService>();
+        
         // Cache Service
         services.AddSingleton<ICacheService, InMemoryCacheService>();
 
