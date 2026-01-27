@@ -63,14 +63,14 @@ public static class ServiceOverview
                 {
                     row.RelativeItem().Column(leftCol =>
                     {
-                        leftCol.Item().LabelValue("Category", data.CategoryName);
+                        leftCol.Item().LabelValue("Category", data.CategoryName ?? "-");
                         leftCol.Item().PaddingTop(PdfStyles.Spacing.Small)
-                            .LabelValue("Subcategory", data.SubcategoryName);
+                            .LabelValue("Subcategory", data.SubcategoryName ?? "-");
                     });
 
                     row.RelativeItem().Column(rightCol =>
                     {
-                        rightCol.Item().LabelValue("Owner", data.OwnerName);
+                        rightCol.Item().LabelValue("Owner", data.OwnerName ?? "-");
                         rightCol.Item().PaddingTop(PdfStyles.Spacing.Small)
                             .LabelValue("Last Updated", data.ModifiedDate?.ToString("MMM dd, yyyy") ?? "-");
                     });

@@ -36,6 +36,14 @@ public class UuBookKitFunctions
         _logger.LogInformation("Publishing service {ServiceId} to UuBookKit", id);
 
         var publishRequest = await req.ReadFromJsonAsync<UuBookKitPublishRequestDto>(cancellationToken);
+        if (publishRequest == null)
+        {
+            var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+            await errorResponse.WriteAsJsonAsync(
+                ApiResponse<string>.Fail("Invalid request body"),
+                cancellationToken);
+            return errorResponse;
+        }
         publishRequest = publishRequest with { ServiceId = id };
 
         var result = await _uuBookKitService.PublishServiceAsync(publishRequest, cancellationToken);

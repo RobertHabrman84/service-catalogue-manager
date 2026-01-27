@@ -134,13 +134,14 @@ public class CorrelationIdMiddleware : IFunctionsWorkerMiddleware
         return Guid.NewGuid().ToString();
     }
 
-    private static async Task AddCorrelationIdToResponse(FunctionContext context, string correlationId)
+    private static Task AddCorrelationIdToResponse(FunctionContext context, string correlationId)
     {
         var result = context.GetInvocationResult();
         if (result.Value is HttpResponseData response)
         {
             response.Headers.Add(CorrelationIdHeader, correlationId);
         }
+        return Task.CompletedTask;
     }
 }
 

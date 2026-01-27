@@ -31,7 +31,7 @@
     <PackageReference Include="Microsoft.Extensions.Azure" Version="1.8.0" />
 
     <!-- Authentication -->
-    <PackageReference Include="Microsoft.Identity.Web" Version="3.6.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.7.0" />
 
     <!-- Validation -->
     <PackageReference Include="FluentValidation" Version="11.11.0" />

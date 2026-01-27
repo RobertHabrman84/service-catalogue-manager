@@ -35,7 +35,7 @@ public class ImportValidationService : IImportValidationService
             : ValidationResult.Invalid(errors);
     }
 
-    public async Task<List<ValidationError>> ValidateBusinessRulesAsync(ImportServiceModel model)
+    public Task<List<ValidationError>> ValidateBusinessRulesAsync(ImportServiceModel model)
     {
         var errors = new List<ValidationError>();
 
@@ -59,13 +59,13 @@ public class ImportValidationService : IImportValidationService
             ));
         }
 
-        return errors;
+        return Task.FromResult(errors);
     }
 
-    public async Task<List<ValidationError>> ValidateLookupsAsync(ImportServiceModel model)
+    public Task<List<ValidationError>> ValidateLookupsAsync(ImportServiceModel model)
     {
         // v3.3.0: Simplified - skip lookup validation for now
-        return new List<ValidationError>();
+        return Task.FromResult(new List<ValidationError>());
     }
 
     public async Task<List<ValidationError>> ValidateDuplicatesAsync(ImportServiceModel model)
@@ -86,10 +86,10 @@ public class ImportValidationService : IImportValidationService
         return errors;
     }
 
-    public async Task<List<ValidationError>> ValidateReferencesAsync(ImportServiceModel model)
+    public Task<List<ValidationError>> ValidateReferencesAsync(ImportServiceModel model)
     {
         // v3.3.0: Simplified - no complex reference validation yet
-        return new List<ValidationError>();
+        return Task.FromResult(new List<ValidationError>());
     }
 
     private List<ValidationError> ValidateRequiredFields(ImportServiceModel model)
