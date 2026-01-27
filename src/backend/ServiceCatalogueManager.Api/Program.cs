@@ -109,10 +109,7 @@ var host = new HostBuilder()
             client.DefaultRequestHeaders.Add("Accept", "application/json");
             client.Timeout = TimeSpan.FromSeconds(30);
         })
-        .AddPolicyHandler(Polly.Extensions.Http.HttpPolicyExtensions
-            .HandleTransientHttpError()
-            .WaitAndRetryAsync(3, retryAttempt => 
-                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+        .AddStandardResilienceHandler(); // .NET 8+ standard resilience with retry
 
         // Memory Cache
         services.AddMemoryCache();

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using AutoMapper;
 using Microsoft.Extensions.Options;
 using ServiceCatalogueManager.Api.Configuration;
 using ServiceCatalogueManager.Api.Data.Repositories;
@@ -17,6 +18,7 @@ public class UuBookKitService : IUuBookKitService
     private readonly UuBookKitOptions _options;
     private readonly IMarkdownGeneratorService _markdownGenerator;
     private readonly IServiceCatalogRepository _repository;
+    private readonly IMapper _mapper;
     private readonly ILogger<UuBookKitService> _logger;
 
     public UuBookKitService(
@@ -24,12 +26,14 @@ public class UuBookKitService : IUuBookKitService
         IOptions<UuBookKitOptions> options,
         IMarkdownGeneratorService markdownGenerator,
         IServiceCatalogRepository repository,
+        IMapper mapper,
         ILogger<UuBookKitService> logger)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _markdownGenerator = markdownGenerator ?? throw new ArgumentNullException(nameof(markdownGenerator));
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -56,18 +60,21 @@ public class UuBookKitService : IUuBookKitService
                 };
             }
 
+            // Map entity to DTO
+            var serviceDto = _mapper.Map<ServiceCatalogFullDto>(service);
+
             // Generate markdown content
-            var markdown = await _markdownGenerator.GenerateServiceMarkdownAsync(service, cancellationToken);
+            var markdown = await _markdownGenerator.GenerateServiceMarkdownAsync(serviceDto, cancellationToken);
 
             var httpClient = _httpClientFactory.CreateClient("UuBookKit");
 
             var publishRequest = new
             {
-                title = service.ServiceName,
+                title = serviceDto.ServiceName,
                 content = markdown,
-                code = service.ServiceCode,
-                category = service.CategoryName,
-                tags = new[] { service.CategoryName ?? "Uncategorized", "service-catalog" },
+                code = serviceDto.ServiceCode,
+                category = serviceDto.CategoryName,
+                tags = new[] { serviceDto.CategoryName ?? "Uncategorized", "service-catalog" },
                 targetBookUri = request.TargetBookUri,
                 targetPageCode = request.TargetPageCode,
                 forceUpdate = request.ForceUpdate
