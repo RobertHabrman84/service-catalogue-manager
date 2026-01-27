@@ -151,7 +151,11 @@ The output must conform to the service import JSON schema with the following str
 **Critical Instructions:**
 
 1. **Service Code & Basic Info:**
-   - Extract the ID code (e.g., ID001, ID002)
+   - Extract the ID code from the PDF (e.g., ID001, ID002, ID003, etc.)
+   - IMPORTANT: serviceCode MUST be exactly 5 characters: ID followed by 3 digits (pattern: ^ID[0-9]{{3}}$)
+   - NEVER use placeholder like "ID0XX" or "IDXXX" - extract the ACTUAL service code from the document
+   - If no service code is visible in the PDF, look for it in headers, footers, or title pages
+   - If truly not found, use ID999 as a last resort (but this should be rare)
    - Extract full service name
    - Extract version (default to v1.0 if not specified)
    - Extract category path (e.g., "Services/Architecture/Technical Architecture")
