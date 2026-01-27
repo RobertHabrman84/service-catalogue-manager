@@ -171,7 +171,10 @@ export const ExportPage: React.FC = () => {
     queryKey: ['services', 'export-list'],
     queryFn: () => serviceCatalogApi.getServices({ isPublished: true }, 1, 100),
   });
-  const { data: exportHistory = [], isLoading: historyLoading } = useExportHistory();
+  const { data: exportHistoryData, isLoading: historyLoading } = useExportHistory();
+  
+  // Ensure exportHistory is always an array
+  const exportHistory = Array.isArray(exportHistoryData) ? exportHistoryData : [];
 
   // Mutations
   const pdfMutation = useExportToPdf();

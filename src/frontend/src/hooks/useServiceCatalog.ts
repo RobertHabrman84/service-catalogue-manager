@@ -282,8 +282,16 @@ export const useExportToMarkdown = () => {
 export const useExportHistory = () => {
   return useQuery({
     queryKey: queryKeys.exports.history(),
-    queryFn: () => exportService.getExportHistory(),
+    queryFn: async () => {
+      try {
+        return await exportService.getExportHistory();
+      } catch (error) {
+        console.warn('Failed to fetch export history:', error);
+        return []; // Return empty array on error
+      }
+    },
     staleTime: 60 * 1000, // 1 minute
+    retry: false, // Don't retry on failure
   });
 };
 
