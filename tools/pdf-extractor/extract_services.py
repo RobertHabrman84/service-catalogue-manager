@@ -241,6 +241,13 @@ The output must conform to the service import JSON schema with the following str
 - Use empty arrays [] for missing array fields
 - Ensure all required fields are present
 
+**CRITICAL: Service Code Validation:**
+- serviceCode must match pattern: ^ID[0-9]{{3}}$
+- VALID examples: "ID001", "ID002", "ID123"
+- INVALID examples: "ID0XX", "IDXXX", "ID01", "ID1234"
+- Extract the ACTUAL service code from the PDF - look in headers, title, first page
+- If not found in PDF, use "ID999" but this should be VERY RARE
+
 **Data Type Rules:**
 - Strings: Use quotes
 - Numbers: No quotes (e.g., 160, 240, 0.5)
