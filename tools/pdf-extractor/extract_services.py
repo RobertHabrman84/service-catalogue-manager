@@ -222,7 +222,7 @@ The output must conform to the service import JSON schema with the following str
     - For EACH size option extract:
       a) Basic info: sizeCode, description, duration, durationInDays
       b) Effort: hours (or hoursMin/hoursMax range), currency
-      c) teamSize, complexity (LOW/MEDIUM/HIGH)
+      c) teamSize (STRING, e.g. "2-3 people", "4-5 FTE"), complexity (LOW/MEDIUM/HIGH)
       d) sizingCriteria: array of criteria with criteriaName and values
       e) effortBreakdown: array with scopeArea, baseHours, notes
       f) complexityAdditions: array with factor, condition, additionalHours
