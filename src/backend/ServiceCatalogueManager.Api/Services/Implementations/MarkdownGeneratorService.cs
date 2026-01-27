@@ -36,9 +36,9 @@ public class MarkdownGeneratorService : IMarkdownGeneratorService
         sb.AppendLine($"| **Version** | {service.Version} |");
         sb.AppendLine($"| **Status** | {(service.IsActive ? "✅ Active" : "❌ Inactive")} |");
         
-        if (service.CreatedDate.HasValue)
+        if (service.CreatedDate != default(DateTime))
         {
-            sb.AppendLine($"| **Created** | {service.CreatedDate.Value:yyyy-MM-dd} |");
+            sb.AppendLine($"| **Created** | {service.CreatedDate:yyyy-MM-dd} |");
         }
         
         sb.AppendLine();
@@ -79,7 +79,7 @@ public class MarkdownGeneratorService : IMarkdownGeneratorService
             
             foreach (var prereq in service.Prerequisites)
             {
-                sb.AppendLine($"- **{prereq.PrerequisiteName}**");
+                sb.AppendLine($"- **{prereq.PrerequisiteCategoryName ?? "Prerequisite"}**");
                 
                 if (!string.IsNullOrEmpty(prereq.PrerequisiteDescription))
                 {
@@ -141,8 +141,8 @@ public class MarkdownGeneratorService : IMarkdownGeneratorService
             
             foreach (var size in service.SizeOptions)
             {
-                var desc = string.IsNullOrEmpty(size.SizeDescription) ? "-" : size.SizeDescription;
-                sb.AppendLine($"| {size.SizeName} | {size.EstimatedDays} | {desc} |");
+                var desc = string.IsNullOrEmpty(size.ScopeDescription) ? "-" : size.ScopeDescription;
+                sb.AppendLine($"| {size.SizeName} | N/A | {desc} |");
             }
             
             sb.AppendLine();
@@ -154,9 +154,9 @@ public class MarkdownGeneratorService : IMarkdownGeneratorService
             sb.AppendLine("## Timeline");
             sb.AppendLine();
             
-            foreach (var phase in service.TimelinePhases.OrderBy(p => p.PhaseOrder))
+            foreach (var phase in service.TimelinePhases.OrderBy(p => p.SortOrder))
             {
-                sb.AppendLine($"### {phase.PhaseOrder}. {phase.PhaseName}");
+                sb.AppendLine($"### {phase.SortOrder}. {phase.PhaseName}");
                 sb.AppendLine();
                 
                 if (!string.IsNullOrEmpty(phase.PhaseDescription))
@@ -165,14 +165,14 @@ public class MarkdownGeneratorService : IMarkdownGeneratorService
                     sb.AppendLine();
                 }
                 
-                if (phase.DurationsBySize?.Any() == true)
+                if (phase.Durations?.Any() == true)
                 {
                     sb.AppendLine("**Duration by size:**");
                     sb.AppendLine();
                     
-                    foreach (var duration in phase.DurationsBySize)
+                    foreach (var duration in phase.Durations)
                     {
-                        sb.AppendLine($"- {duration.SizeName}: {duration.DurationDays} days");
+                        sb.AppendLine($"- {duration.SizeOptionCode}: {duration.DurationDays} days");
                     }
                     
                     sb.AppendLine();
@@ -229,7 +229,7 @@ public class MarkdownGeneratorService : IMarkdownGeneratorService
             
             foreach (var role in service.ResponsibleRoles)
             {
-                sb.AppendLine($"- **{role.RoleName}**: {role.ResponsibilityDescription}");
+                sb.AppendLine($"- **{role.RoleName}**: {role.Responsibilities ?? "No description"}");
             }
             
             sb.AppendLine();
@@ -297,7 +297,7 @@ public class MarkdownGeneratorService : IMarkdownGeneratorService
                 
                 foreach (var size in service.SizeOptions)
                 {
-                    sb.AppendLine($"- **{size.SizeName}**: {size.EstimatedDays} days");
+                    sb.AppendLine($"- **{size.SizeName}**: {size.SizeCode ?? "N/A"}");
                 }
                 
                 sb.AppendLine();
