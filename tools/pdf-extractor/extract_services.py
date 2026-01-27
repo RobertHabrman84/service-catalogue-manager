@@ -237,7 +237,13 @@ The output must conform to the service import JSON schema with the following str
 
 13. **Responsible Roles:**
     - Extract all roles
-    - For each: roleName, isPrimaryOwner (true for primary, false otherwise), responsibilities
+    - For each role extract:
+      * roleName: string (e.g., "Project Manager", "Solutions Architect")
+      * isPrimaryOwner: boolean (true for primary owner, false otherwise)
+      * responsibilities: ARRAY of strings (NOT comma-separated string)
+        - Each responsibility as separate array item
+        - Example: ["Timeline management", "Resource coordination", "Stakeholder communication"]
+        - NOT: "Timeline management, resource coordination, stakeholder communication"
 
 14. **Multi-Cloud Considerations:**
     - Extract all considerations as array
