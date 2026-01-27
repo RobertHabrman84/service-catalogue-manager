@@ -349,10 +349,10 @@
           "type": "string"
         },
         "defaultValue": {
-          "type": "string"
+          "type": ["string", "null"]
         },
         "exampleValue": {
-          "type": "string"
+          "type": ["string", "null"]
         }
       }
     },
