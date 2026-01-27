@@ -610,7 +610,10 @@
           "type": "boolean"
         },
         "responsibilities": {
-          "type": "string"
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
