@@ -153,8 +153,27 @@ public class ImportFunction
                     "Invalid request body");
             }
 
+            _logger.LogInformation("Validating service: {ServiceCode}", model.ServiceCode);
+
             // Validate only (dry-run)
-            var result = await _importService.ValidateImportAsync(model);
+            ValidationResult result;
+            try
+            {
+                result = await _importService.ValidateImportAsync(model);
+                
+                if (result == null)
+                {
+                    _logger.LogError("ValidateImportAsync returned null result");
+                    return await CreateErrorResponse(req, HttpStatusCode.InternalServerError, 
+                        "Validation service returned null result");
+                }
+            }
+            catch (Exception validationEx)
+            {
+                _logger.LogError(validationEx, "Error during validation for service: {ServiceCode}", model.ServiceCode);
+                return await CreateErrorResponse(req, HttpStatusCode.InternalServerError, 
+                    $"Validation error: {validationEx.Message}");
+            }
 
             // Return response
             if (result.IsValid)
@@ -172,19 +191,20 @@ public class ImportFunction
             }
             else
             {
-                _logger.LogWarning("Validation failed for service: {ServiceCode}", model.ServiceCode);
+                _logger.LogWarning("Validation failed for service: {ServiceCode} with {ErrorCount} errors", 
+                    model.ServiceCode, result.Errors?.Count ?? 0);
                 
                 var response = req.CreateResponse(HttpStatusCode.BadRequest);
                 await response.WriteAsJsonAsync(new
                 {
                     isValid = false,
                     message = "Validation failed",
-                    errors = result.Errors.Select(e => new
+                    errors = result.Errors?.Select(e => new
                     {
                         field = e.Field,
                         message = e.Message,
                         code = e.Code
-                    })
+                    }) ?? Array.Empty<object>()
                 });
                 return response;
             }
@@ -199,7 +219,7 @@ public class ImportFunction
         {
             _logger.LogError(ex, "Unexpected error validating service");
             return await CreateErrorResponse(req, HttpStatusCode.InternalServerError, 
-                "An unexpected error occurred");
+                $"An unexpected error occurred: {ex.Message}");
         }
     }
 
