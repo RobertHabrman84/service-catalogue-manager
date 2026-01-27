@@ -192,7 +192,11 @@ The output must conform to the service import JSON schema with the following str
    - Extract "Customer Must Provide" list as array of STRINGS (NOT objects)
      * Each item should be a simple string describing what customer must provide
      * Example: ["Azure subscription access", "Business requirements documentation", "Stakeholder availability"]
-   - Extract workshop participation roles with involvementLevel
+   - Extract workshop participation as array of OBJECTS with:
+     * roleName: string (e.g., "Solutions Architect", "Business Analyst")
+     * involvementLevel: ENUM - MUST be one of: REQUIRED, RECOMMENDED, OPTIONAL, AS_NEEDED
+     * CRITICAL: involvementLevel must be EXACT enum value, NOT descriptive text
+     * Example: {{ "roleName": "Solutions Architect", "involvementLevel": "REQUIRED" }}
    - Extract access requirements as array of OBJECTS (NOT strings):
      * Each access requirement MUST be an object with:
        - requirementType: string (e.g., "Azure Subscription", "Network Access")
