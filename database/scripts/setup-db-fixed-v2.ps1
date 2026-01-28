@@ -140,28 +140,60 @@ try {
     $efAvailable = $null -ne (Get-Command "dotnet-ef" -ErrorAction SilentlyContinue)
     if (-not $efAvailable) {
         Write-Host "ℹ️  Installing EF Core tools..." -ForegroundColor Cyan
-        dotnet tool install --global dotnet-ef 2>$null | Out-Null
+        dotnet tool install --global dotnet-ef --version 8.* 2>$null | Out-Null
+    }
+    
+    # Zkontrolovat, zda projekt existuje
+    $projectFile = Join-Path $backendDir "ServiceCatalogueManager.Api.csproj"
+    if (-not (Test-Path $projectFile)) {
+        Write-Host "⚠️  EF Core project not found at $projectFile" -ForegroundColor Yellow
+        Write-Host "Falling back to SQL scripts..." -ForegroundColor Yellow
+        throw "EF Core project not found"
     }
     
     # Set environment variable for EF Core to find the connection string
-    $env:AzureSQL__ConnectionString = "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True"
-    $env:ConnectionStrings__AzureSQL = $env:AzureSQL__ConnectionString
+    $connectionString = "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True"
+    $env:AzureSQL__ConnectionString = $connectionString
+    $env:ConnectionStrings__AzureSQL = $connectionString
+    $env:ConnectionStrings__DefaultConnection = $connectionString
     
     Write-Host "ℹ️  Applying EF Core migrations..." -ForegroundColor Cyan
-    Write-Host "Connection String: $env:AzureSQL__ConnectionString" -ForegroundColor Gray
+    Write-Host "Connection String: $connectionString" -ForegroundColor Gray
     
     # Try to run EF Core migrations with explicit project specification
+    Write-Host "ℹ️  Running: dotnet ef database update --connection \"$env:AzureSQL__ConnectionString\"" -ForegroundColor Gray
     $migrationResult = dotnet ef database update --connection "$env:AzureSQL__ConnectionString" 2>&1
     Write-Host "EF Core output: $migrationResult" -ForegroundColor Gray
     
+    # Kontrola na chybu s '*' (wildcard expansion error)
+    if ($migrationResult -like "*'*' is not recognized*" -or $migrationResult -like "*wildcard*") {
+        Write-Host "⚠️  EF Core migrace selhala kvůli syntaktické chybě, zkouším alternativní přístup..." -ForegroundColor Yellow
+        
+        # Alternativní přístup - použití příkazu bez problémových parametrů
+        $env:DOTNET_ENVIRONMENT = "Docker"
+        $migrationResult = dotnet ef database update 2>&1
+        Write-Host "Alternative EF Core output: $migrationResult" -ForegroundColor Gray
+    }
+    
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ EF Core migrations applied successfully
-
-# Ověření EF Core migrací
-Write-Host "ℹ️  Verifying EF Core migration tables..." -ForegroundColor Cyan
-$efCountQuery = "SELECT COUNT(*) FROM [__EFMigrationsHistory]"
-$efCountResult = Invoke-SqlCommand -Query $efCountQuery
-Write-Host "ℹ️  EF Core migrations in history: $efCountResult" -ForegroundColor White" -ForegroundColor Green
+        Write-Host "✅ EF Core migrations applied successfully" -ForegroundColor Green
+        
+        # Ověření EF Core migrací
+        Write-Host "ℹ️  Verifying EF Core migration tables..." -ForegroundColor Cyan
+        
+        # Zkontrolovat, zda existuje tabulka migrací
+        $efTableExistsQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory' AND TABLE_CATALOG = '$DbName'"
+        $efTableExistsResult = Invoke-SqlCommand -Query $efTableExistsQuery
+        $efTableExists = ($efTableExistsResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
+        
+        if ($efTableExists -eq "1") {
+            $efCountQuery = "SELECT COUNT(*) FROM [$DbName].[__EFMigrationsHistory]"
+            $efCountResult = Invoke-SqlCommand -Query $efCountQuery
+            $efMigrationCount = ($efCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
+            Write-Host "✅ EF Core migrations table exists with $efMigrationCount migrations" -ForegroundColor Green
+        } else {
+            Write-Host "⚠️  EF Core migrations table not found" -ForegroundColor Yellow
+        }
         
         # Verify tables
         Write-Host "ℹ️  Verifying tables..." -ForegroundColor Cyan
