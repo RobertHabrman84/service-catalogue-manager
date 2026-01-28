@@ -61,9 +61,27 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
+// Response interceptor for unwrapping ApiResponse wrapper and error handling
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Unwrap ApiResponse<T> wrapper from backend
+    // Backend returns: { success: true, data: T, message: null, errors: [], timestamp: ... }
+    // We extract the 'data' field to match frontend expectations
+    if (response.data && typeof response.data === 'object') {
+      if ('success' in response.data && 'data' in response.data) {
+        // This is an ApiResponse wrapper - unwrap it
+        if (response.data.success && response.data.data !== undefined) {
+          response.data = response.data.data;
+        } else if (!response.data.success) {
+          // Handle API-level errors
+          const errorMessage = response.data.message || 'API request failed';
+          const errors = response.data.errors || [];
+          throw new Error(`${errorMessage}${errors.length > 0 ? ': ' + errors.join(', ') : ''}`);
+        }
+      }
+    }
+    return response;
+  },
   async (error: AxiosError<ApiResponse<unknown>>) => {
     if (error.response?.status === 401) {
       // Try to refresh token
