@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, CheckCircle, XCircle, AlertCircle, Loader } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import importService, { ImportResult, ValidationError } from '../../services/importService';
+import { queryKeys } from '../../hooks/useServiceCatalog';
 import ValidationResults from './ValidationResults';
 import ImportResults from './ImportResults';
 
@@ -9,6 +11,7 @@ type ImportStep = 'upload' | 'validating' | 'validated' | 'importing' | 'complet
 
 const ImportPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [serviceData, setServiceData] = useState<any>(null);
@@ -86,7 +89,13 @@ const ImportPage: React.FC = () => {
       setImportResult(result);
       setStep('complete');
 
-      if (!result.success) {
+      // Invalidate service queries cache on successful import
+      // This ensures Dashboard and Catalog show the newly imported service
+      if (result.success) {
+        await queryClient.invalidateQueries({ 
+          queryKey: queryKeys.services.all 
+        });
+      } else {
         setError('Import failed. See details below.');
       }
     } catch (err: any) {

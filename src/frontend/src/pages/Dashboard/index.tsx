@@ -3,7 +3,6 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import {
   FolderIcon,
   DocumentPlusIcon,
@@ -14,7 +13,7 @@ import {
   ArrowRightIcon,
   DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
-import { serviceCatalogApi } from '../../services/api';
+import { useServices } from '../../hooks/useServiceCatalog';
 import { ServiceCatalogItem } from '../../types';
 import { Spinner, Badge, StatusBadge, SizeBadge, EmptyState } from '../../components/common';
 import clsx from 'clsx';
@@ -184,11 +183,13 @@ const QuickAction: React.FC<QuickActionProps> = ({ title, description, icon, hre
 
 // Main Dashboard component
 export const DashboardPage: React.FC = () => {
-  // Fetch services for statistics
-  const { data: servicesData, isLoading } = useQuery({
-    queryKey: ['services', 'dashboard'],
-    queryFn: () => serviceCatalogApi.getServices({}, 1, 10),
-  });
+  // Fetch services for statistics using standard useServices hook
+  // This ensures query key consistency across the app and proper cache invalidation
+  const { data: servicesData, isLoading } = useServices(
+    {}, // No filters
+    1,  // First page
+    10  // 10 items for dashboard preview
+  );
 
   const services = servicesData?.items || [];
   const totalServices = servicesData?.totalCount || 0;
