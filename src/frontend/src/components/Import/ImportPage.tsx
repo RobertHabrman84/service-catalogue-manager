@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Upload, CheckCircle, XCircle, AlertCircle, Loader } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import importService, { ImportResult, ValidationError } from '../../services/importService';
@@ -9,6 +10,7 @@ import ImportResults from './ImportResults';
 type ImportStep = 'upload' | 'validating' | 'validated' | 'importing' | 'complete';
 
 const ImportPage: React.FC = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -16,6 +18,25 @@ const ImportPage: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number>(5);
+
+  // Auto-redirect after successful import
+  useEffect(() => {
+    if (step === 'complete' && importResult?.success) {
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate('/catalog');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [step, importResult, navigate]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -271,22 +292,71 @@ const ImportPage: React.FC = () => {
           <div>
             <ImportResults result={importResult} />
 
+            {/* Auto-redirect notification for successful imports */}
+            {importResult.success && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-green-800 font-medium">
+                      ✅ Import Successful!
+                    </p>
+                    <p className="text-green-700 text-sm mt-1">
+                      Redirecting to catalog in <span className="font-bold">{countdown}</span> seconds...
+                    </p>
+                    <p className="text-green-600 text-xs mt-2">
+                      Your service is now available in the catalog and dashboard.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-6 flex gap-4">
-              <button
-                onClick={handleReset}
-                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Import Another Service
-              </button>
-              {importResult.success && importResult.serviceId && (
-                <a
-                  href={`/services/${importResult.serviceId}`}
-                  className="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors text-center"
+              {importResult.success ? (
+                <>
+                  <button
+                    onClick={() => navigate('/catalog')}
+                    className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Go to Catalog Now
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  >
+                    View Dashboard
+                  </button>
+                  {importResult.serviceId && (
+                    <button
+                      onClick={() => navigate(`/services/${importResult.serviceId}`)}
+                      className="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                    >
+                      View Service Details
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  onClick={handleReset}
+                  className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                 >
-                  View Service
-                </a>
+                  Try Again
+                </button>
               )}
             </div>
+
+            {/* Secondary action for successful imports */}
+            {importResult.success && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={handleReset}
+                  className="text-sm text-gray-600 hover:text-gray-800 underline"
+                >
+                  Import Another Service
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
