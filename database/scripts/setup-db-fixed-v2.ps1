@@ -155,7 +155,13 @@ try {
     Write-Host "EF Core output: $migrationResult" -ForegroundColor Gray
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ EF Core migrations applied successfully" -ForegroundColor Green
+        Write-Host "✅ EF Core migrations applied successfully
+
+# Ověření EF Core migrací
+Write-Host "ℹ️  Verifying EF Core migration tables..." -ForegroundColor Cyan
+$efCountQuery = "SELECT COUNT(*) FROM [__EFMigrationsHistory]"
+$efCountResult = Invoke-SqlCommand -Query $efCountQuery
+Write-Host "ℹ️  EF Core migrations in history: $efCountResult" -ForegroundColor White" -ForegroundColor Green
         
         # Verify tables
         Write-Host "ℹ️  Verifying tables..." -ForegroundColor Cyan
@@ -226,12 +232,33 @@ if (Test-Path $mainSchemaFile) {
 
 # Verify tables
 Write-Host "ℹ️  Verifying tables..." -ForegroundColor Cyan
+
+# Kontrola EF Core tabulek
+$efTablesQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory'"
+$efTablesResult = Invoke-SqlCommand -Query $efTablesQuery
+
+# Hlavní kontrola všech tabulek
 $countQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = '$DbName'"
 $tableCountResult = Invoke-SqlCommand -Query $countQuery
-$tableCount = ($tableCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
+
+# Lepší extrakce čísla z výsledku
+try {
+    if ($tableCountResult -match '(\d+)') {
+        $tableCount = $matches[1]
+    } else {
+        $tableCount = 0
+    }
+} catch {
+    $tableCount = 0
+}
+
+# Speciální kontrola EF Core tabulek
+$efCoreTablesQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME IN ('ServiceCatalogItem', 'LU_ServiceCategory', 'LU_CloudProvider')"
+$efCoreCountResult = Invoke-SqlCommand -Query $efCoreTablesQuery
 
 Write-Host "✅ Database setup complete!" -ForegroundColor Green
-Write-Host "   Tables created: $tableCount" -ForegroundColor Green
+Write-Host "   EF Core tables detected: $efCoreCountResult" -ForegroundColor Green
+Write-Host "   Total tables: $tableCount" -ForegroundColor Green
 Write-Host ""
 Write-Host "Connection String:" -ForegroundColor Cyan
 Write-Host "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" -ForegroundColor White
