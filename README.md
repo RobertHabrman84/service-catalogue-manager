@@ -32,12 +32,56 @@ This version includes ALL previous fixes PLUS:
 
 **📖 Documentation:**
 - [JSON-IMPORT-FIX-v1.5-FINAL.md](JSON-IMPORT-FIX-v1.5-FINAL.md) - **v1.5 GUARANTEED FIX** ⭐
+- [docs/IMPORT-TO-MSSQL-VERIFICATION.md](docs/IMPORT-TO-MSSQL-VERIFICATION.md) - **VERIFY DATA SAVED TO MSSQL** ⭐⭐⭐
+- [docs/IMPORT-DATABASE-VERIFICATION.md](docs/IMPORT-DATABASE-VERIFICATION.md) - Detailed import verification guide
+- [scripts/README.md](scripts/README.md) - Test scripts documentation
 - [SCRIPT-AND-JSON-FIXES-v1.4.md](SCRIPT-AND-JSON-FIXES-v1.4.md) - v1.4 improvements
 - [SIGNATURE-FIXES-v1.3.md](SIGNATURE-FIXES-v1.3.md) - v1.3 method signatures
 - [BUILD-FIXES-v1.2.md](BUILD-FIXES-v1.2.md) - v1.2 syntax fixes  
 - [RUNTIME-FIXES-v1.1.md](RUNTIME-FIXES-v1.1.md) - v1.1 runtime fixes
 - [OPRAVY-CHANGELOG.md](OPRAVY-CHANGELOG.md) - v1.0 initial fixes  
 - [examples/](examples/) - **PERFECT** validated JSON ready for import ⭐
+
+## ✅ Import Database Verification
+
+**Question: Are JSON import data actually saved to MSSQL database?**
+
+**Answer: YES!** ✅ Data from JSON import are persistently saved to MSSQL database.
+
+**Quick Verification:**
+```powershell
+# 1. Start backend API (Terminal 1)
+cd src/backend/ServiceCatalogueManager.Api
+func start
+
+# 2. Run verification test (Terminal 2)
+./scripts/test-import-to-database.ps1
+```
+
+**What this test does:**
+- ✅ Tests SQL Server connection
+- ✅ Imports JSON via API
+- ✅ **Verifies data in MSSQL database with direct SQL query**
+- ✅ Shows detailed report with all related records
+
+**Expected result:**
+```
+✅ SUCCESS: Data from JSON was successfully saved to MSSQL database!
+
+Database Verification Details:
+  Service ID:         123
+  Service Code:       TEST-SERVICE-001
+  Related Data:
+    - Usage Scenarios:  2
+    - Inputs:           3
+    - Output Categories: 1
+```
+
+**See detailed documentation:**
+- [docs/IMPORT-TO-MSSQL-VERIFICATION.md](docs/IMPORT-TO-MSSQL-VERIFICATION.md) - Complete verification guide
+- [scripts/test-import-to-database.ps1](scripts/test-import-to-database.ps1) - PowerShell test script
+- [scripts/test-import-to-database.sh](scripts/test-import-to-database.sh) - Bash test script
+- [scripts/verify-import-data.sql](scripts/verify-import-data.sql) - SQL verification script
 
 ## 🎯 Overview
 
