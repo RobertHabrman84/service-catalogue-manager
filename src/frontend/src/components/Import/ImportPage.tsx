@@ -93,7 +93,7 @@ const ImportPage: React.FC = () => {
       // This ensures Dashboard and Catalog show the newly imported service
       if (result.success) {
         await queryClient.invalidateQueries({ 
-          queryKey: queryKeys.services.all 
+          queryKey: queryKeys.services.lists() 
         });
       } else {
         setError('Import failed. See details below.');
