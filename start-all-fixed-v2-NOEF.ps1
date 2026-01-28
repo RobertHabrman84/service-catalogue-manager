@@ -261,7 +261,7 @@ function Setup-DockerDatabase {
         Write-Info "This will create all 42 tables including 11 lookup tables from db_structure.sql"
         Write-Info "NO ENTITY FRAMEWORK MIGRATIONS ARE USED - PURE SQL ONLY!"
         
-        & $setupScript -DbName $DB_NAME -ContainerName $DB_CONTAINER -Force:$RecreateDb
+        & $setupScript -DbName $DB_NAME -ContainerName $DB_CONTAINER -Force:$RecreateDb -NoEFCore:$true
         
         if ($LASTEXITCODE -eq 0) {
             Write-Success "Database setup complete using db_structure.sql - NO EF CORE USED!"
@@ -292,11 +292,14 @@ function Verify-DatabaseStructure {
     try {
         if (Test-Command "sqlcmd") {
             $result = sqlcmd -S "localhost,1433" -U sa -P $SA_PASSWORD -Q $checkQuery -h -1 2>$null
-            $tableCount = [int]$result.Trim()
         } else {
             $result = docker exec $DB_CONTAINER /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -Q $checkQuery -h -1 2>$null
-            $tableCount = [int]$result.Trim()
         }
+        
+        # Normalize output and safely parse integer
+        if ($result -is [array]) { $result = ($result | Where-Object { $_ -match '\d' } | Select-Object -First 1) }
+        $result = "$result".Trim()
+        if ($result -match '(\d+)') { $tableCount = [int]$matches[1] } else { $tableCount = 0 }
         
         if ($tableCount -ge 40) {
             Write-Success "SUCCESS: $tableCount tables found in database!"
@@ -449,7 +452,7 @@ function Start-Backend {
     Write-Info "Starting Azure Functions backend..."
     Write-Info "Backend will be available at: http://localhost:$BACKEND_PORT"
     
-    Start-Process -FilePath "func" -ArgumentList "start", "--port", $BACKEND_PORT -NoNewWindow -PassThru | Out-Null
+    Start-Process -FilePath "func" -ArgumentList "start", "--port", $BACKEND_PORT -WorkingDirectory $BACKEND_DIR -NoNewWindow -PassThru | Out-Null
     
     Write-Success "Backend process started!"
 }
@@ -462,7 +465,10 @@ function Start-Frontend {
     Write-Info "Starting React frontend..."
     Write-Info "Frontend will be available at: http://localhost:$FRONTEND_PORT"
     
-    Start-Process -FilePath "npm" -ArgumentList "run", "dev", "--", "--port", $FRONTEND_PORT -NoNewWindow -PassThru | Out-Null
+    # Use npm.cmd on Windows to avoid Win32 application error
+    $npmCmd = $(if (Get-Command "npm.cmd" -ErrorAction SilentlyContinue) { "npm.cmd" } elseif (Get-Command "npm" -ErrorAction SilentlyContinue) { "npm" } else { $null })
+    if (-not $npmCmd) { Write-ErrorMessage "npm not found!"; exit 1 }
+    Start-Process -FilePath $npmCmd -ArgumentList @("run", "dev", "--", "--port", $FRONTEND_PORT) -WorkingDirectory $FRONTEND_DIR -NoNewWindow -PassThru | Out-Null
     
     Write-Success "Frontend process started!"
 }
