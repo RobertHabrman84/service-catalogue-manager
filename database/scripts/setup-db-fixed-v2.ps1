@@ -8,14 +8,19 @@
 param(
     [switch]$Force = $false,
     [string]$DbName = "ServiceCatalogueManager",
-    [string]$ContainerName = "scm-sqlserver"
+    [string]$ContainerName = "scm-sqlserver",
+    [switch]$NoEFCore = $false
 )
 
 $ErrorActionPreference = "Stop"
 
+$NoEFCoreMode = $NoEFCore.IsPresent -or ($PSBoundParameters.ContainsKey('NoEFCore') -and [bool]$NoEFCore)
+
 $SA_PASSWORD = "YourStrong@Passw0rd"
 $SERVER = "localhost,1433"
 $SCHEMA_DIR = Join-Path $PSScriptRoot "..\schema"
+# Optional: echo explicit NO EF mode for tracing
+if ($NoEFCoreMode) { Write-Host "Mode: NO EF CORE (pure SQL)" -ForegroundColor Cyan }
 
 Write-Host "🗄️  Service Catalogue Database Setup (FIXED V2)" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
@@ -130,93 +135,97 @@ try {
 # Wait a moment for database to be ready
 Start-Sleep -Seconds 2
 
-# Try EF Core migrations first (preferred method)
-Write-Host "ℹ️  Attempting EF Core migrations..." -ForegroundColor Cyan
-$backendDir = Join-Path $PSScriptRoot "..\..\src\backend\ServiceCatalogueManager.Api"
-try {
-    Push-Location $backendDir
-    
-    # Check if EF Core tools are available
-    $efAvailable = $null -ne (Get-Command "dotnet-ef" -ErrorAction SilentlyContinue)
-    if (-not $efAvailable) {
-        Write-Host "ℹ️  Installing EF Core tools..." -ForegroundColor Cyan
-        dotnet tool install --global dotnet-ef --version 8.* 2>$null | Out-Null
-    }
-    
-    # Zkontrolovat, zda projekt existuje
-    $projectFile = Join-Path $backendDir "ServiceCatalogueManager.Api.csproj"
-    if (-not (Test-Path $projectFile)) {
-        Write-Host "⚠️  EF Core project not found at $projectFile" -ForegroundColor Yellow
-        Write-Host "Falling back to SQL scripts..." -ForegroundColor Yellow
-        throw "EF Core project not found"
-    }
-    
-    # Set environment variable for EF Core to find the connection string
-    $connectionString = "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True"
-    $env:AzureSQL__ConnectionString = $connectionString
-    $env:ConnectionStrings__AzureSQL = $connectionString
-    $env:ConnectionStrings__DefaultConnection = $connectionString
-    
-    Write-Host "ℹ️  Applying EF Core migrations..." -ForegroundColor Cyan
-    Write-Host "Connection String: $connectionString" -ForegroundColor Gray
-    
-    # Try to run EF Core migrations with explicit project specification
-    Write-Host "ℹ️  Running: dotnet ef database update --connection \"$env:AzureSQL__ConnectionString\"" -ForegroundColor Gray
-    $migrationResult = dotnet ef database update --connection "$env:AzureSQL__ConnectionString" 2>&1
-    Write-Host "EF Core output: $migrationResult" -ForegroundColor Gray
-    
-    # Kontrola na chybu s '*' (wildcard expansion error)
-    if ($migrationResult -like "*'*' is not recognized*" -or $migrationResult -like "*wildcard*") {
-        Write-Host "⚠️  EF Core migrace selhala kvůli syntaktické chybě, zkouším alternativní přístup..." -ForegroundColor Yellow
+if (-not $NoEFCoreMode) {
+    # Try EF Core migrations first (preferred method)
+    Write-Host "ℹ️  Attempting EF Core migrations..." -ForegroundColor Cyan
+    $backendDir = Join-Path $PSScriptRoot "..\..\src\backend\ServiceCatalogueManager.Api"
+    try {
+        Push-Location $backendDir
         
-        # Alternativní přístup - použití příkazu bez problémových parametrů
-        $env:DOTNET_ENVIRONMENT = "Docker"
-        $migrationResult = dotnet ef database update 2>&1
-        Write-Host "Alternative EF Core output: $migrationResult" -ForegroundColor Gray
-    }
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ EF Core migrations applied successfully" -ForegroundColor Green
-        
-        # Ověření EF Core migrací
-        Write-Host "ℹ️  Verifying EF Core migration tables..." -ForegroundColor Cyan
-        
-        # Zkontrolovat, zda existuje tabulka migrací
-        $efTableExistsQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory' AND TABLE_CATALOG = '$DbName'"
-        $efTableExistsResult = Invoke-SqlCommand -Query $efTableExistsQuery
-        $efTableExists = ($efTableExistsResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
-        
-        if ($efTableExists -eq "1") {
-            $efCountQuery = "SELECT COUNT(*) FROM [$DbName].[__EFMigrationsHistory]"
-            $efCountResult = Invoke-SqlCommand -Query $efCountQuery
-            $efMigrationCount = ($efCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
-            Write-Host "✅ EF Core migrations table exists with $efMigrationCount migrations" -ForegroundColor Green
-        } else {
-            Write-Host "⚠️  EF Core migrations table not found" -ForegroundColor Yellow
+        # Check if EF Core tools are available
+        $efAvailable = $null -ne (Get-Command "dotnet-ef" -ErrorAction SilentlyContinue)
+        if (-not $efAvailable) {
+            Write-Host "ℹ️  Installing EF Core tools..." -ForegroundColor Cyan
+            dotnet tool install --global dotnet-ef --version 8.* 2>$null | Out-Null
         }
         
-        # Verify tables
-        Write-Host "ℹ️  Verifying tables..." -ForegroundColor Cyan
-        $countQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = '$DbName'"
-        $tableCountResult = Invoke-SqlCommand -Query $countQuery
-        $tableCount = ($tableCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
+        # Zkontrolovat, zda projekt existuje
+        $projectFile = Join-Path $backendDir "ServiceCatalogueManager.Api.csproj"
+        if (-not (Test-Path $projectFile)) {
+            Write-Host "⚠️  EF Core project not found at $projectFile" -ForegroundColor Yellow
+            Write-Host "Falling back to SQL scripts..." -ForegroundColor Yellow
+            throw "EF Core project not found"
+        }
         
-        Write-Host "✅ Database setup complete!" -ForegroundColor Green
-        Write-Host "   Tables created: $tableCount" -ForegroundColor Green
-        Write-Host ""
-        Write-Host "Connection String:" -ForegroundColor Cyan
-        Write-Host "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" -ForegroundColor White
-        Write-Host ""
-        exit 0
-    } else {
-        Write-Host "⚠️  EF Core migrations failed, falling back to SQL script..." -ForegroundColor Yellow
-        Write-Host "EF Core error: $migrationResult" -ForegroundColor Red
+        # Set environment variable for EF Core to find the connection string
+        $connectionString = "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True"
+        $env:AzureSQL__ConnectionString = $connectionString
+        $env:ConnectionStrings__AzureSQL = $connectionString
+        $env:ConnectionStrings__DefaultConnection = $connectionString
+        
+        Write-Host "ℹ️  Applying EF Core migrations..." -ForegroundColor Cyan
+        Write-Host "Connection String: $connectionString" -ForegroundColor Gray
+        
+        # Try to run EF Core migrations with explicit project specification
+        Write-Host "ℹ️  Running: dotnet ef database update --connection \"$env:AzureSQL__ConnectionString\"" -ForegroundColor Gray
+        $migrationResult = dotnet ef database update --connection "$env:AzureSQL__ConnectionString" 2>&1
+        Write-Host "EF Core output: $migrationResult" -ForegroundColor Gray
+        
+        # Kontrola na chybu s '*' (wildcard expansion error)
+        if ($migrationResult -like "*'*' is not recognized*" -or $migrationResult -like "*wildcard*") {
+            Write-Host "⚠️  EF Core migrace selhala kvůli syntaktické chybě, zkouším alternativní přístup..." -ForegroundColor Yellow
+            
+            # Alternativní přístup - použití příkazu bez problémových parametrů
+            $env:DOTNET_ENVIRONMENT = "Docker"
+            $migrationResult = dotnet ef database update 2>&1
+            Write-Host "Alternative EF Core output: $migrationResult" -ForegroundColor Gray
+        }
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ EF Core migrations applied successfully" -ForegroundColor Green
+            
+            # Ověření EF Core migrací
+            Write-Host "ℹ️  Verifying EF Core migration tables..." -ForegroundColor Cyan
+            
+            # Zkontrolovat, zda existuje tabulka migrací
+            $efTableExistsQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory' AND TABLE_CATALOG = '$DbName'"
+            $efTableExistsResult = Invoke-SqlCommand -Query $efTableExistsQuery
+            $efTableExists = ($efTableExistsResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
+            
+            if ($efTableExists -eq "1") {
+                $efCountQuery = "SELECT COUNT(*) FROM [$DbName].[__EFMigrationsHistory]"
+                $efCountResult = Invoke-SqlCommand -Query $efCountQuery
+                $efMigrationCount = ($efCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
+                Write-Host "✅ EF Core migrations table exists with $efMigrationCount migrations" -ForegroundColor Green
+            } else {
+                Write-Host "⚠️  EF Core migrations table not found" -ForegroundColor Yellow
+            }
+            
+            # Verify tables
+            Write-Host "ℹ️  Verifying tables..." -ForegroundColor Cyan
+            $countQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = '$DbName'"
+            $tableCountResult = Invoke-SqlCommand -Query $countQuery
+            $tableCount = ($tableCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
+            
+            Write-Host "✅ Database setup complete!" -ForegroundColor Green
+            Write-Host "   Tables created: $tableCount" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "Connection String:" -ForegroundColor Cyan
+            Write-Host "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" -ForegroundColor White
+            Write-Host ""
+            exit 0
+        } else {
+            Write-Host "⚠️  EF Core migrations failed, falling back to SQL script..." -ForegroundColor Yellow
+            Write-Host "EF Core error: $migrationResult" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "⚠️  EF Core migrations failed: $_" -ForegroundColor Yellow
+        Write-Host "Falling back to SQL script..." -ForegroundColor Yellow
+    } finally {
+        Pop-Location
     }
-} catch {
-    Write-Host "⚠️  EF Core migrations failed: $_" -ForegroundColor Yellow
-    Write-Host "Falling back to SQL script..." -ForegroundColor Yellow
-} finally {
-    Pop-Location
+} else {
+    Write-Host "ℹ️  NO EF CORE mode: skipping EF Core migrations, using pure SQL scripts" -ForegroundColor Cyan
 }
 
 # Fallback to SQL scripts - nová struktura z db_structure.sql
@@ -293,10 +302,25 @@ $tableCountResult = Invoke-SqlCommand -Query $countQuery
 
 # Lepší extrakce čísla z výsledku
 try {
-    if ($tableCountResult -match '(\d+)') {
-        $tableCount = $matches[1]
-    } else {
-        $tableCount = 0
+    $tableCount = 0
+    $tableCountLines = @()
+    if ($null -ne $tableCountResult) {
+        if ($tableCountResult -is [array]) {
+            $tableCountLines = $tableCountResult
+        } else {
+            $tableCountLines = @($tableCountResult)
+        }
+    }
+    $numericLine = $tableCountLines |
+        ForEach-Object { $_.ToString().Trim() } |
+        Where-Object { $_ -match '^\d+$' } |
+        Select-Object -First 1
+    if (-not [int]::TryParse($numericLine, [ref]$tableCount)) {
+        $joined = ($tableCountLines | ForEach-Object { $_.ToString() }) -join ' '
+        $match = [regex]::Match($joined, '\d+')
+        if ($match.Success) {
+            [void][int]::TryParse($match.Value, [ref]$tableCount)
+        }
     }
 } catch {
     $tableCount = 0
@@ -355,10 +379,25 @@ $tableCountResult = Invoke-SqlCommand -Query $countQuery
 
 # Lepší extrakce čísla z výsledku
 try {
-    if ($tableCountResult -match '(\d+)') {
-        $tableCount = $matches[1]
-    } else {
-        $tableCount = 0
+    $tableCount = 0
+    $tableCountLines = @()
+    if ($null -ne $tableCountResult) {
+        if ($tableCountResult -is [array]) {
+            $tableCountLines = $tableCountResult
+        } else {
+            $tableCountLines = @($tableCountResult)
+        }
+    }
+    $numericLine = $tableCountLines |
+        ForEach-Object { $_.ToString().Trim() } |
+        Where-Object { $_ -match '^\d+$' } |
+        Select-Object -First 1
+    if (-not [int]::TryParse($numericLine, [ref]$tableCount)) {
+        $joined = ($tableCountLines | ForEach-Object { $_.ToString() }) -join ' '
+        $match = [regex]::Match($joined, '\d+')
+        if ($match.Success) {
+            [void][int]::TryParse($match.Value, [ref]$tableCount)
+        }
     }
 } catch {
     $tableCount = 0

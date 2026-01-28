@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
 # ============================================================================
-# Service Catalogue Manager - START ALL
+# Service Catalogue Manager - START ALL (NO EF CORE)
 # ============================================================================
-# Version: 3.3.0
-# Description: Starts Docker DB, builds and runs backend and frontend
-# Based on: START-ALL-V14.ps1 (working version)
+# Version: 4.1.0
+# Description: Starts DB with db_structure.sql ONLY - NO EF Core migrations
+# Používá VÝHRADNĚ db_structure.sql pro vytvoření kompletní databázové struktury
 # ============================================================================
 
 param(
@@ -16,6 +16,8 @@ param(
     [switch]$BackendOnly = $false,
     [switch]$FrontendOnly = $false,
     [switch]$DbOnly = $false,
+    [switch]$UseSQLite = $false,  # SQLite pouze explicitně
+    [switch]$UseDocker = $true,  # Docker jako výchozí pro kompletní strukturu
     [switch]$RecreateDb = $false,
     [switch]$SeedData = $false,
     [switch]$SkipHealthCheck = $false,
@@ -33,8 +35,8 @@ $ProgressPreference = "SilentlyContinue"
 $SCRIPT_DIR = $PSScriptRoot
 $BACKEND_DIR = Join-Path $SCRIPT_DIR "src\backend\ServiceCatalogueManager.Api"
 $FRONTEND_DIR = Join-Path $SCRIPT_DIR "src\frontend"
-$DB_SETUP_SCRIPT = Join-Path $SCRIPT_DIR "database\scripts\setup-db.ps1"
-$DB_MIGRATION_SCRIPT = Join-Path $SCRIPT_DIR "database\scripts\run-migrations.ps1"
+$DB_SETUP_SCRIPT = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed-v2.ps1"
+$DB_SQLITE_SCRIPT = Join-Path $SCRIPT_DIR "database\scripts\setup-sqlite.ps1"
 
 $BACKEND_PORT = 7071
 $FRONTEND_PORT = 3000
@@ -84,105 +86,133 @@ function Write-ErrorMessage {
 }
 
 function Show-Help {
-    Write-Header "SERVICE CATALOGUE MANAGER - START SCRIPT v3.0.0"
+    Write-Header "SERVICE CATALOGUE MANAGER - START SCRIPT v4.1.0 (NO EF CORE)"
     
     Write-Host "USAGE:" -ForegroundColor $COLOR_INFO
     Write-Host "  .\start-all.ps1 [OPTIONS]"
     Write-Host ""
     
-    Write-Host "OPTIONS:" -ForegroundColor $COLOR_INFO
-    Write-Host "  -DbOnly                  Start only the database"
-    Write-Host "  -BackendOnly             Start database + backend API"
-    Write-Host "  -FrontendOnly            Start only the frontend"
-    Write-Host "  -SkipDb                  Skip database startup"
-    Write-Host "  -SkipBuild               Skip the build step"
-    Write-Host "  -CleanBuild              Clean before building"
-    Write-Host "  -RecreateDb              Recreate database (drops existing)"
-    Write-Host "  -SeedData                Seed database with sample data"
-    Write-Host "  -SkipHealthCheck         Skip backend health check (not recommended)"
-    Write-Host "  -HealthCheckTimeout <s>  Health check timeout in seconds (default: 120)"
-    Write-Host "  -Help                    Show this help message"
+    Write-Host "POPIS:" -ForegroundColor $COLOR_INFO
+    Write-Host "  Tento skript spustí kompletní Service Catalogue Manager VÝHRADNĚ s db_structure.sql."
+    Write-Host "  NEPOUŽÍVÁ ŽÁDNÉ EF Core migrace - pouze SQL skripty pro vytvoření databáze."
+    Write-Host "  Používá kompletní strukturu 42 tabulek včetně 11 lookup tabulek z db_structure.sql."
     Write-Host ""
     
-    Write-Host "EXAMPLES:" -ForegroundColor $COLOR_INFO
-    Write-Host "  .\start-all.ps1                    # Start DB + Backend + Frontend"
-    Write-Host "  .\start-all.ps1 -DbOnly            # Start only database"
-    Write-Host "  .\start-all.ps1 -BackendOnly       # Start DB + Backend"
-    Write-Host "  .\start-all.ps1 -RecreateDb        # Recreate DB from scratch"
+    Write-Host "MOŽNOSTI:" -ForegroundColor $COLOR_INFO
+    Write-Host "  -SkipBuild         Přeskočit build aplikací"
+    Write-Host "  -SkipFrontend      Přeskočit frontend"
+    Write-Host "  -SkipBackend       Přeskočit backend" 
+    Write-Host "  -SkipDb            Přeskočit databázi"
+    Write-Host "  -CleanBuild        Vyčistit a buildovat znovu"
+    Write-Host "  -BackendOnly       Pouze backend"
+    Write-Host "  -FrontendOnly      Pouze frontend"
+    Write-Host "  -DbOnly            Pouze databáze"
+    Write-Host "  -UseSQLite         Použít SQLite (výchozí je Docker)"
+    Write-Host "  -UseDocker         Použít Docker SQL Server (výchozí)"
+    Write-Host "  -RecreateDb        Znovu vytvořit databázi"
+    Write-Host "  -SeedData          Naplnit testovacími daty"
+    Write-Host "  -SkipHealthCheck   Přeskočit kontrolu zdraví"
+    Write-Host "  -HealthCheckTimeout Nastavit timeout pro kontrolu zdraví (v sekundách)"
+    Write-Host "  -Help              Zobrazit tuto nápovědu"
     Write-Host ""
     
-    Write-Host "ENDPOINTS:" -ForegroundColor $COLOR_INFO
-    Write-Host "  Database:     Server=localhost,1433;Database=$DB_NAME"
-    Write-Host "  Backend API:  http://localhost:$BACKEND_PORT/api"
-    Write-Host "  Frontend:     http://localhost:$FRONTEND_PORT"
+    Write-Host "PŘÍKLADY:" -ForegroundColor $COLOR_INFO
+    Write-Host "  # Standardní spuštění s Dockerem a kompletní strukturou"
+    Write-Host "  .\start-all.ps1 -UseDocker -RecreateDb"
     Write-Host ""
+    Write-Host "  # Pouze databáze s kompletní strukturou"
+    Write-Host "  .\start-all.ps1 -UseDocker -RecreateDb -DbOnly"
+    Write-Host ""
+    Write-Host "  # SQLite pro sandbox režim"
+    Write-Host "  .\start-all.ps1 -UseSQLite -RecreateDb"
+    Write-Host ""
+    
+    Write-Host "DŮLEŽITÉ:" -ForegroundColor $COLOR_WARNING
+    Write-Host "  Tento skript NIKDY nepoužívá EF Core migrace!"
+    Write-Host "  Vždy používá pouze SQL skripty (db_structure.sql) pro vytvoření databáze."
+    Write-Host "  Pro Docker je vyžadován SQL Server container s kompletní strukturou."
+    Write-Host ""
+    exit 0
 }
 
 function Test-Command {
     param([string]$Command)
-    $null = Get-Command $Command -ErrorAction SilentlyContinue
-    return $?
-}
-
-function Test-DockerRunning {
     try {
-        docker info 2>&1 | Out-Null
-        return $?
+        Get-Command $Command -ErrorAction Stop | Out-Null
+        return $true
     } catch {
         return $false
     }
 }
 
-function Test-DatabaseConnection {
+function Resolve-Executable {
     param(
-        [string]$Server = "localhost",
-        [int]$Port = 1433,
-        [string]$Database = "ServiceCatalogueManager",
-        [string]$User = "sa",
-        [string]$Password = "YourStrong@Passw0rd",
+        [Parameter(Mandatory = $true)][string]$Command,
+        [string[]]$Fallbacks = @()
+    )
+
+    $candidates = @($Command) + $Fallbacks
+    foreach ($candidate in $candidates) {
+        $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($cmd) {
+            if ($cmd.Path) { return $cmd.Path }
+            if ($cmd.Source) { return $cmd.Source }
+        }
+    }
+    return $null
+}
+
+function Test-DockerAvailable {
+    try {
+        docker info 2>$null | Out-Null
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Test-BackendConnection {
+    param(
+        [int]$Port = 7071,
         [int]$TimeoutSeconds = 10
     )
     
     try {
-        $connectionString = "Server=$Server,$Port;Database=$Database;User Id=$User;Password=$Password;TrustServerCertificate=True;Connection Timeout=$TimeoutSeconds;"
-        $query = "SELECT 1"
-        
-        # Použijeme sqlcmd pokud je k dispozici
-        if (Test-Command "sqlcmd") {
-            $result = sqlcmd -S "$Server,$Port" -U $User -P $Password -d $Database -Q $query -b -o 2>$null
-            return $LASTEXITCODE -eq 0
-        }
-        
-        # Alternativně použijeme docker exec
-        $containerExists = docker ps --filter "name=$DB_CONTAINER" --format "{{.Names}}" 2>$null
-        if ($containerExists -eq $DB_CONTAINER) {
-            $testScript = "SELECT 1 as TestResult"
-            $result = docker exec $DB_CONTAINER /opt/mssql-tools18/bin/sqlcmd `
-                -S localhost -U $User -P $Password -d $Database `
-                -C -Q $testScript -h -1 -W 2>$null
-            return $LASTEXITCODE -eq 0 -and ($result -and $result.Contains("1"))
-        }
-        
-        return $false
+        $uri = "http://localhost:$Port/api/health"
+        $response = Invoke-WebRequest -Uri $uri -Method GET -TimeoutSec $TimeoutSeconds -UseBasicParsing -ErrorAction Stop
+        return $true
     } catch {
         return $false
     }
 }
 
 function Start-Database {
-    Write-Header "STARTING DATABASE"
+    Write-Header "STARTING DATABASE (NO EF CORE - PURE SQL)"
+    
+    Write-Info "🗄️  Používá se VÝHRADNĚ SQL skripty - žádné EF Core migrace!"
+    
+    # Rozhodnout se mezi Docker a SQLite
+    if ($UseDocker -and (Test-DockerAvailable)) {
+        Start-DockerDatabase
+    } else {
+        Start-SqliteDatabase
+    }
+}
+
+function Start-DockerDatabase {
+    Write-Info "Docker detected, starting SQL Server container..."
     
     # Check Docker
     if (-not (Test-Command "docker")) {
-        Write-ErrorMessage "Docker is not installed!"
-        Write-Warning "Please install Docker Desktop: https://www.docker.com/products/docker-desktop"
-        exit 1
+        Write-Warning "Docker is not installed! Using SQLite fallback..."
+        Start-SqliteDatabase
+        return
     }
     
-    if (-not (Test-DockerRunning)) {
-        Write-ErrorMessage "Docker is not running!"
-        Write-Warning "Please start Docker Desktop"
-        exit 1
+    if (-not (Test-DockerAvailable)) {
+        Write-Warning "Docker is not running! Using SQLite fallback..."
+        Start-SqliteDatabase
+        return
     }
     
     Write-Success "Docker is available"
@@ -193,17 +223,8 @@ function Start-Database {
         if ($container -eq $DB_CONTAINER) {
             Write-Info "SQL Server container is already running"
             Write-Success "Database: localhost,$DB_PORT"
-            
-            # Test database connection and create if needed
-            $testDbScript = "SELECT name FROM sys.databases WHERE name = '$DB_NAME'"
-            $dbExists = docker exec $DB_CONTAINER /opt/mssql-tools18/bin/sqlcmd `
-                -S localhost -U sa -P $SA_PASSWORD -C -Q $testDbScript -h -1 -W 2>$null
-            
-            if (-not $dbExists -or -not $dbExists.Contains($DB_NAME)) {
-                Write-Info "Database does not exist, creating..."
-                Create-Database
-            }
-            
+            # Setup database if not exists
+            Setup-DockerDatabase
             return
         }
     } catch {}
@@ -229,125 +250,143 @@ function Start-Database {
     }
     
     Write-Success "SQL Server container started"
-    Write-Info "Waiting 20 seconds for SQL Server initialization..."
-    Start-Sleep -Seconds 20
+    Write-Info "Waiting 25 seconds for SQL Server initialization..."
+    Start-Sleep -Seconds 25
     
-    # Create database
-    Create-Database
+    # Setup database
+    Setup-DockerDatabase
 }
 
-function Create-Database {
-    Write-Info "Setting up database..."
+function Setup-DockerDatabase {
+    Write-Info "Setting up database schema using PURE SQL (NO EF CORE)..."
+    Write-Info "Using db_structure.sql for complete database structure (42 tables)"
     
-    # Create database with proper setup
-    $createDbScript = @"
-USE master;
-GO
-
--- Drop database if exists and recreate
-IF EXISTS (SELECT name FROM sys.databases WHERE name = '$DB_NAME')
-BEGIN
-    ALTER DATABASE $DB_NAME SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE $DB_NAME;
-END
-GO
-
-CREATE DATABASE $DB_NAME
-    COLLATE Czech_CI_AS;
-GO
-
--- Ensure SA user has proper access
-USE $DB_NAME;
-GO
-EXEC sp_changedbowner 'sa';
-GO
-
--- Create migration history table
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '__EFMigrationsHistory')
-BEGIN
-    CREATE TABLE [dbo].[__EFMigrationsHistory](
-        [MigrationId] [nvarchar](150) NOT NULL,
-        [ProductVersion] [nvarchar](32) NOT NULL,
-     CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY CLUSTERED 
-    (
-        [MigrationId] ASC
-    )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-    ) ON [PRIMARY]
-END
-GO
-"@
+    # Use Docker configuration for backend
+    $dockerConfig = Join-Path $BACKEND_DIR "local.settings.docker.json"
+    $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
     
-    try {
-        docker exec $DB_CONTAINER /opt/mssql-tools18/bin/sqlcmd `
-            -S localhost -U sa -P $SA_PASSWORD `
-            -C -Q $createDbScript -b 2>$null | Out-Null
-        
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "Database created: $DB_NAME"
-        } else {
-            Write-Warning "Database creation had issues"
-        }
-    } catch {
-        Write-Warning "Database setup error: $_"
+    if (Test-Path $dockerConfig) {
+        Write-Info "Using Docker configuration for backend..."
+        Copy-Item -Path $dockerConfig -Destination $targetConfig -Force
+        Write-Success "Backend configuration updated for Docker"
     }
     
-    # Wait for database to be fully ready
-    Write-Info "Waiting for database to be fully ready..."
-    Start-Sleep -Seconds 5
-    
-    # Run EF Core migrations
-    Run-EFCoreMigrations
-    
-    Write-Host ""
-    Write-Success "Database is ready!"
-    Write-Info "Connection: Server=localhost,$DB_PORT;Database=$DB_NAME;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True"
-}
-
-function Run-EFCoreMigrations {
-    Write-Info "Running EF Core migrations..."
-    
-    Push-Location $BACKEND_DIR
-    try {
-        # Check if EF Core tools are available
-        $efInstalled = dotnet tool list --global | Select-String "dotnet-ef"
-        if (-not $efInstalled) {
-            Write-Info "Installing EF Core tools..."
-            dotnet tool install --global dotnet-ef --version 8.0.0
-        }
+    # Použít výhradně setup-db-fixed-v2.ps1 - žádné EF Core migrace!
+    $setupScript = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed-v2.ps1"
+    if (Test-Path $setupScript) {
+        Write-Info "Running database setup script with db_structure.sql (NO EF CORE!)..."
+        Write-Info "This will create all 42 tables including 11 lookup tables from db_structure.sql"
+        Write-Info "NO ENTITY FRAMEWORK MIGRATIONS ARE USED - PURE SQL ONLY!"
         
-        # Update database using EF Core
-        Write-Info "Applying EF Core migrations..."
-        dotnet ef database update --project . --startup-project . --verbose
+        $setupParams = @{
+            DbName        = $DB_NAME
+            ContainerName = $DB_CONTAINER
+            NoEFCore      = $true
+        }
+        if ($RecreateDb) {
+            $setupParams.Force = $true
+        }
+
+        & $setupScript @setupParams
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "EF Core migrations applied successfully"
+            Write-Success "Database setup complete using db_structure.sql - NO EF CORE USED!"
+            
+            Write-Info "Verifying database structure..."
+            Verify-DatabaseStructure
+            
         } else {
-            Write-Warning "EF Core migrations had issues, trying alternative approach..."
-            
-            # Alternative: use script migrations
-            $migrationScript = Join-Path $SCRIPT_DIR "temp-migration.sql"
-            dotnet ef migrations script --project . --startup-project . --output $migrationScript
-            
-            if (Test-Path $migrationScript) {
-                Write-Info "Running migration script..."
-                docker exec -i $DB_CONTAINER /opt/mssql-tools18/bin/sqlcmd `
-                    -S localhost -U sa -P $SA_PASSWORD -C -d $DB_NAME `
-                    -i $migrationScript 2>$null | Out-Null
-                
-                Remove-Item $migrationScript -Force -ErrorAction SilentlyContinue
-                Write-Success "Migration script executed"
+            Write-ErrorMessage "Database setup FAILED using db_structure.sql!"
+            Write-ErrorMessage "Check the logs above for SQL errors."
+            exit 1
+        }
+    } else {
+        Write-ErrorMessage "CRITICAL: Database setup script not found: $setupScript"
+        Write-ErrorMessage "Database CANNOT be initialized without setup-db-fixed-v2.ps1"
+        Write-ErrorMessage "This script REQUIRES db_structure.sql implementation!"
+        exit 1
+    }
+}
+
+function Verify-DatabaseStructure {
+    Write-Info "Verifying that database tables were created successfully..."
+    
+    $checkQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_TYPE = 'BASE TABLE'"
+    
+    try {
+        $resultLines = @()
+        if (Test-Command "sqlcmd") {
+            $resultLines = sqlcmd -S "localhost,1433" -U sa -P $SA_PASSWORD -Q $checkQuery -h -1 2>$null
+        } else {
+            $resultLines = docker exec $DB_CONTAINER /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -Q $checkQuery -h -1 2>$null
+        }
+        
+        if ($null -eq $resultLines) {
+            $resultLines = @()
+        } elseif ($resultLines -isnot [array]) {
+            $resultLines = @($resultLines)
+        }
+        
+        $numericLine = $resultLines |
+            ForEach-Object { $_.ToString().Trim() } |
+            Where-Object { $_ -match '^\d+$' } |
+            Select-Object -First 1
+        
+        $tableCount = 0
+        if (-not [int]::TryParse($numericLine, [ref]$tableCount)) {
+            $joinedResult = ($resultLines | ForEach-Object { $_.ToString() }) -join " "
+            $match = [regex]::Match($joinedResult, "\d+")
+            if ($match.Success) {
+                [void][int]::TryParse($match.Value, [ref]$tableCount)
             }
         }
+        
+        if ($tableCount -ge 40) {
+            Write-Success "SUCCESS: $tableCount tables found in database!"
+            Write-Success "Database structure verified - db_structure.sql applied correctly!"
+        } else {
+            Write-Warning "WARNING: Only $tableCount tables found (expected 42+)"
+            Write-Warning "Database structure may be incomplete."
+        }
     } catch {
-        Write-Warning "EF Core migrations failed: $_"
-        Write-Warning "Database may still work with existing schema"
-    } finally {
-        Pop-Location
+        Write-Warning "Could not verify table count: $($_.Exception.Message)"
+    }
+}
+
+function Start-SqliteDatabase {
+    Write-Info "Using SQLite database (sandbox mode) - NO EF CORE..."
+    Write-Info "SQLite používá alternativní přístup bez db_structure.sql"
+    
+    # Spustit SQLite setup skript
+    if (Test-Path $DB_SQLITE_SCRIPT) {
+        Write-Info "Setting up SQLite database (NO EF CORE)..."
+        & $DB_SQLITE_SCRIPT -Force:$RecreateDb
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "SQLite database setup complete (NO EF CORE USED)!"
+        } else {
+            Write-ErrorMessage "SQLite setup FAILED!"
+            exit 1
+        }
+    } else {
+        Write-ErrorMessage "CRITICAL: SQLite setup script not found: $DB_SQLITE_SCRIPT"
+        Write-ErrorMessage "Database CANNOT be initialized!"
+        exit 1
+    }
+    
+    # Zkopírovat SQLite config do local.settings.json
+    $sqliteConfig = Join-Path $BACKEND_DIR "local.settings.sqlite.json"
+    $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
+    
+    if (Test-Path $sqliteConfig) {
+        Write-Info "Using SQLite configuration..."
+        Copy-Item -Path $sqliteConfig -Destination $targetConfig -Force
+        Write-Success "Configuration updated for SQLite"
     }
 }
 
 function Test-Prerequisites {
-    Write-Header "CHECKING PREREQUISITES"
+    Write-Header "CHECKING PREREQUISITES (NO EF CORE VERIFICATION)"
     
     # .NET SDK
     Write-Info "Checking .NET SDK..."
@@ -356,62 +395,73 @@ function Test-Prerequisites {
         Write-Success ".NET SDK v$dotnetVersion"
     } else {
         Write-ErrorMessage ".NET SDK not found!"
-        Write-Warning "Install from: https://dotnet.microsoft.com/download"
         exit 1
     }
     
-    # Azure Functions Core Tools
+    # Functions Core Tools
     Write-Info "Checking Azure Functions Core Tools..."
     if (Test-Command "func") {
-        $funcVersion = func --version
-        Write-Success "Azure Functions Core Tools v$funcVersion"
+        Write-Success "Functions Core Tools available"
     } else {
-        Write-ErrorMessage "Azure Functions Core Tools not found!"
-        Write-Warning "Install from: https://docs.microsoft.com/azure/azure-functions/functions-run-local"
-        exit 1
+        Write-Warning "Functions Core Tools not found"
     }
     
     # Node.js
-    if (-not $BackendOnly -and -not $DbOnly) {
-        Write-Info "Checking Node.js..."
-        if (Test-Command "node") {
-            $nodeVersion = node --version
-            Write-Success "Node.js $nodeVersion"
+    Write-Info "Checking Node.js..."
+    if (Test-Command "node") {
+        $nodeVersion = node --version
+        Write-Success "Node.js $nodeVersion"
+    } else {
+        Write-ErrorMessage "Node.js not found!"
+        exit 1
+    }
+    
+    # npm
+    Write-Info "Checking npm..."
+    if (Test-Command "npm") {
+        $npmVersion = npm --version
+        Write-Success "npm v$npmVersion"
+    } else {
+        Write-ErrorMessage "npm not found!"
+        exit 1
+    }
+    
+    # Docker (volitelné)
+    if ($UseDocker) {
+        Write-Info "Checking Docker (optional)..."
+        if (Test-DockerAvailable) {
+            Write-Success "Docker is available"
         } else {
-            Write-ErrorMessage "Node.js not found!"
-            Write-Warning "Install from: https://nodejs.org/"
-            exit 1
+            Write-Warning "Docker not available - will use SQLite fallback"
         }
     }
     
-    Write-Success "All required prerequisites satisfied!"
+    Write-Success "All prerequisites checked!"
 }
 
 function Build-Backend {
-    Write-Header "BUILDING BACKEND API"
+    Write-Header "BUILDING BACKEND"
     
+    if (-not (Test-Path $BACKEND_DIR)) {
+        Write-ErrorMessage "Backend directory not found: $BACKEND_DIR"
+        exit 1
+    }
+    
+    Write-Info "Building backend..."
     Push-Location $BACKEND_DIR
-    
     try {
         if ($CleanBuild) {
             Write-Info "Cleaning previous build..."
-            dotnet clean --configuration Release --nologo -v q
-            Write-Success "Clean complete"
+            dotnet clean --verbosity quiet
         }
         
-        Write-Info "Restoring NuGet packages..."
-        dotnet restore --nologo -v q
-        Write-Success "Packages restored"
-        
-        Write-Info "Building backend..."
-        dotnet build --configuration Release --no-restore --nologo -v q
-        
+        dotnet build --verbosity quiet
         if ($LASTEXITCODE -ne 0) {
             Write-ErrorMessage "Backend build failed!"
             exit 1
         }
         
-        Write-Success "Backend built successfully"
+        Write-Success "Backend build complete!"
     } finally {
         Pop-Location
     }
@@ -420,405 +470,196 @@ function Build-Backend {
 function Build-Frontend {
     Write-Header "BUILDING FRONTEND"
     
-    Push-Location $FRONTEND_DIR
+    if (-not (Test-Path $FRONTEND_DIR)) {
+        Write-ErrorMessage "Frontend directory not found: $FRONTEND_DIR"
+        exit 1
+    }
     
+    Write-Info "Installing frontend dependencies..."
+    Push-Location $FRONTEND_DIR
     try {
-        # Check for node_modules
-        if (-not (Test-Path "node_modules")) {
-            Write-Info "Installing dependencies..."
-            npm install --silent
-            Write-Success "Dependencies installed"
-        } else {
-            Write-Info "Dependencies already installed"
+        npm install --silent
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "npm install had issues, continuing..."
         }
         
-        if ($CleanBuild) {
-            Write-Info "Cleaning previous build..."
-            if (Test-Path ".next") {
-                Remove-Item -Recurse -Force ".next"
-            }
-            Write-Success "Clean complete"
-        }
-        
-        Write-Success "Frontend ready"
+        Write-Success "Frontend dependencies installed!"
     } finally {
         Pop-Location
     }
 }
 
 function Start-Backend {
-    Write-Header "STARTING BACKEND API"
+    Write-Header "STARTING BACKEND"
     
-    $logFile = Join-Path $SCRIPT_DIR "logs\backend-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
-    $logsDir = Join-Path $SCRIPT_DIR "logs"
-    
-    if (-not (Test-Path $logsDir)) {
-        New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
-    }
-    
-    Write-Info "Starting Azure Functions in new window..."
-    Write-Info "Backend will be available at: http://localhost:$BACKEND_PORT"
-    Write-Info "Logs: $logFile"
-    Write-Host ""
-    
-    # Create startup script for backend
-    # Find func.cmd location in parent process before creating script
-    $funcCommand = $null
-    $funcLocations = @(
-        "$env:APPDATA\npm\func.cmd",
-        "$env:ProgramFiles\nodejs\func.cmd",
-        "${env:ProgramFiles(x86)}\Microsoft SDKs\Azure\Azure Functions Core Tools\func.cmd"
-    )
-    
-    foreach ($loc in $funcLocations) {
-        if (Test-Path $loc) {
-            $funcCommand = $loc
-            break
+    Push-Location $BACKEND_DIR
+    try {
+        Write-Info "Starting Azure Functions backend..."
+        Write-Info "Backend will be available at: http://localhost:$BACKEND_PORT"
+        
+        $funcPath = Resolve-Executable -Command "func" -Fallbacks @("func.cmd", "func.exe")
+        if (-not $funcPath) {
+            Write-ErrorMessage "Azure Functions Core Tools (func) not found!"
+            Write-Warning "Install via: npm install -g azure-functions-core-tools@4"
+            exit 1
         }
-    }
-    
-    if (-not $funcCommand) {
-        # Try Get-Command as last resort
-        $cmd = Get-Command func -ErrorAction SilentlyContinue
-        if ($cmd) {
-            $funcCommand = $cmd.Source
+        
+        $arguments = @("start", "--port", $BACKEND_PORT)
+        $backendProcess = Start-Process -FilePath $funcPath -ArgumentList $arguments -WorkingDirectory $BACKEND_DIR -PassThru
+        
+        if ($backendProcess) {
+            $script:BackendProcessId = $backendProcess.Id
+            Write-Success "Backend process started!"
+            Write-Info "Backend PID: $($backendProcess.Id)"
         } else {
-            Write-Error "Azure Functions Core Tools (func) not found!"
-            Write-Warning "Please install it: npm install -g azure-functions-core-tools@4"
-            return
+            Write-Warning "Backend process may not have started correctly. Check logs."
         }
+    } finally {
+        Pop-Location
     }
-    
-    Write-Info "func.cmd found at: $funcCommand"
-    
-    # Create backend startup script with absolute path to func
-    $backendScript = @"
-`$ErrorActionPreference = 'Continue'
-`$Host.UI.RawUI.WindowTitle = 'Backend API - Port $BACKEND_PORT'
-
-Set-Location '$BACKEND_DIR'
-Write-Host '========================================' -ForegroundColor Cyan
-Write-Host 'BACKEND API STARTING' -ForegroundColor Cyan
-Write-Host '========================================' -ForegroundColor Cyan
-Write-Host 'Port: $BACKEND_PORT' -ForegroundColor Yellow
-Write-Host 'Directory: $BACKEND_DIR' -ForegroundColor Yellow
-Write-Host 'Log File: $logFile' -ForegroundColor Yellow
-Write-Host 'func Command: $funcCommand' -ForegroundColor Green
-Write-Host '========================================' -ForegroundColor Cyan
-Write-Host ''
-
-# Use absolute path to func.cmd
-& '$funcCommand' start --port $BACKEND_PORT 2>&1 | Tee-Object -FilePath '$logFile'
-"@
-    
-    $tempScript = Join-Path $env:TEMP "start-backend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
-    $backendScript | Out-File -FilePath $tempScript -Encoding UTF8
-    
-    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $tempScript
-    
-    Write-Success "Backend started in new window"
 }
 
 function Start-Frontend {
     Write-Header "STARTING FRONTEND"
     
-    # CRITICAL: Ensure dependencies are installed before starting
     Push-Location $FRONTEND_DIR
     try {
-        if (-not (Test-Path "node_modules")) {
-            Write-Warning "Frontend dependencies not found!"
-            Write-Info "Installing dependencies (this may take a few minutes)..."
-            npm install
-            Write-Success "Dependencies installed"
-        } elseif (-not (Test-Path "node_modules\vite")) {
-            Write-Warning "Vite not found in node_modules!"
-            Write-Info "Reinstalling dependencies..."
-            npm install
-            Write-Success "Dependencies reinstalled"
+        Write-Info "Starting React frontend..."
+        Write-Info "Frontend will be available at: http://localhost:$FRONTEND_PORT"
+        
+        $npmPath = Resolve-Executable -Command "npm.cmd" -Fallbacks @("npm", "npx.cmd", "npx")
+        if (-not $npmPath) {
+            Write-ErrorMessage "npm executable not found!"
+            Write-Warning "Install Node.js from https://nodejs.org/ and ensure npm is on PATH."
+            exit 1
+        }
+        
+        $arguments = @("run", "dev", "--", "--port", $FRONTEND_PORT)
+        $frontendProcess = Start-Process -FilePath $npmPath -ArgumentList $arguments -WorkingDirectory $FRONTEND_DIR -PassThru
+        
+        if ($frontendProcess) {
+            $script:FrontendProcessId = $frontendProcess.Id
+            Write-Success "Frontend process started!"
+            Write-Info "Frontend PID: $($frontendProcess.Id)"
         } else {
-            Write-Success "Frontend dependencies verified"
+            Write-Warning "Frontend process may not have started correctly. Check logs."
         }
     } finally {
         Pop-Location
     }
-    
-    $logFile = Join-Path $SCRIPT_DIR "logs\frontend-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
-    $logsDir = Join-Path $SCRIPT_DIR "logs"
-    
-    if (-not (Test-Path $logsDir)) {
-        New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
-    }
-    
-    Write-Info "Starting Vite development server in new window..."
-    Write-Info "Frontend will be available at: http://localhost:$FRONTEND_PORT"
-    Write-Info "Logs: $logFile"
-    Write-Host ""
-    
-    # Create startup script for frontend
-    $frontendScript = @"
-`$ErrorActionPreference = 'Continue'
-`$Host.UI.RawUI.WindowTitle = 'Frontend - Port $FRONTEND_PORT'
-`$env:PORT = '$FRONTEND_PORT'
-Set-Location '$FRONTEND_DIR'
-Write-Host '========================================' -ForegroundColor Cyan
-Write-Host 'FRONTEND STARTING' -ForegroundColor Cyan
-Write-Host '========================================' -ForegroundColor Cyan
-Write-Host 'Port: $FRONTEND_PORT' -ForegroundColor Yellow
-Write-Host 'Directory: $FRONTEND_DIR' -ForegroundColor Yellow
-Write-Host 'Log File: $logFile' -ForegroundColor Yellow
-Write-Host '========================================' -ForegroundColor Cyan
-Write-Host ''
-
-# Double-check node_modules in the new window
-if (-not (Test-Path 'node_modules')) {
-    Write-Host 'ERROR: node_modules not found!' -ForegroundColor Red
-    Write-Host 'Please run: npm install' -ForegroundColor Yellow
-    Write-Host 'Press any key to exit...'
-    `$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-    exit 1
-}
-
-# Clean Vite cache to avoid stale dependency optimization issues
-Write-Host 'Cleaning Vite cache...' -ForegroundColor Yellow
-if (Test-Path 'node_modules\.vite') {
-    Remove-Item -Recurse -Force 'node_modules\.vite' -ErrorAction SilentlyContinue
-    Write-Host 'Vite cache cleared' -ForegroundColor Green
-}
-
-# Use npm run dev which properly resolves vite from node_modules
-npm run dev 2>&1 | Tee-Object -FilePath '$logFile'
-"@
-    
-    $tempScript = Join-Path $env:TEMP "start-frontend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
-    $frontendScript | Out-File -FilePath $tempScript -Encoding UTF8
-    
-    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $tempScript
-    
-    Write-Success "Frontend started in new window"
-}
-
-function Wait-ForBackend {
-    param(
-        [int]$Port = 7071,
-        [int]$TimeoutSeconds = 30
-    )
-    
-    Write-Host ""
-    Write-Info "Waiting for backend health check on http://localhost:$Port..."
-    Write-Host "  Timeout: $TimeoutSeconds seconds" -ForegroundColor Gray
-    Write-Host ""
-    
-    $startTime = Get-Date
-    $timeout = (Get-Date).AddSeconds($TimeoutSeconds)
-    $attempt = 0
-    $maxAttempts = [Math]::Ceiling($TimeoutSeconds / 2)
-    
-    # Priority order: health endpoint first, then fallbacks
-    $endpoints = @(
-        @{Path="/api/health"; IsHealth=$true},
-        @{Path="/api/health/detailed"; IsHealth=$true},
-        @{Path="/api"; IsHealth=$false},
-        @{Path="/"; IsHealth=$false}
-    )
-    
-    while ((Get-Date) -lt $timeout) {
-        $attempt++
-        $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-        
-        # Progress indicator
-        Write-Host "`r  Attempt $attempt/$maxAttempts... [" -NoNewline -ForegroundColor Gray
-        Write-Host "${elapsed}s" -NoNewline -ForegroundColor Cyan
-        Write-Host "]" -NoNewline -ForegroundColor Gray
-        
-        foreach ($ep in $endpoints) {
-            try {
-                $uri = "http://localhost:$Port$($ep.Path)"
-                $response = Invoke-WebRequest -Uri $uri -Method GET -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
-                
-                # Success!
-                Write-Host ""  # New line after progress
-                Write-Host ""
-                Write-Success "Backend is HEALTHY!"
-                Write-Host "  Endpoint: $uri" -ForegroundColor Gray
-                Write-Host "  Status: $($response.StatusCode)" -ForegroundColor Gray
-                Write-Host "  Response time: ${elapsed}s" -ForegroundColor Gray
-                
-                # Try to parse JSON health response
-                if ($ep.IsHealth -and $response.Content) {
-                    try {
-                        $healthData = $response.Content | ConvertFrom-Json
-                        if ($healthData.status) {
-                            Write-Host "  Health Status: $($healthData.status)" -ForegroundColor Green
-                        }
-                        if ($healthData.timestamp) {
-                            Write-Host "  Timestamp: $($healthData.timestamp)" -ForegroundColor Gray
-                        }
-                    } catch {
-                        # JSON parsing failed, ignore
-                    }
-                }
-                
-                return $true
-                
-            } catch [System.Net.WebException] {
-                # Check if we got any HTTP response (even error codes)
-                if ($_.Exception.Response) {
-                    $statusCode = [int]$_.Exception.Response.StatusCode
-                    if ($statusCode -ge 200 -and $statusCode -lt 600) {
-                        # Any HTTP response means server is listening
-                        Write-Host ""  # New line
-                        Write-Host ""
-                        Write-Success "Backend is responding! (HTTP $statusCode)"
-                        Write-Host "  Endpoint: $uri" -ForegroundColor Gray
-                        Write-Host "  Response time: ${elapsed}s" -ForegroundColor Gray
-                        return $true
-                    }
-                }
-            } catch {
-                # Connection refused, timeout, etc. - continue
-            }
-        }
-        
-        # Calculate exponential backoff: 1s, 2s, 3s, 4s, 5s (max)
-        $sleepTime = [Math]::Min(5, $attempt)
-        Start-Sleep -Seconds $sleepTime
-    }
-    
-    # Timeout reached
-    Write-Host ""  # New line after progress
-    Write-Host ""
-    Write-Warning "Backend health check TIMEOUT after $TimeoutSeconds seconds"
-    Write-Warning "Backend may still be starting. Check backend window for errors."
-    Write-Host ""
-    Write-Host "To diagnose:" -ForegroundColor Cyan
-    Write-Host "  1. Check backend window for compilation errors" -ForegroundColor Gray
-    Write-Host "  2. Try manual health check:" -ForegroundColor Gray
-    Write-Host "     Invoke-WebRequest http://localhost:$Port/api/health" -ForegroundColor White
-    Write-Host "  3. Check port availability:" -ForegroundColor Gray
-    Write-Host "     netstat -ano | findstr :$Port" -ForegroundColor White
-    Write-Host ""
-    Write-Warning "Frontend will start anyway, but may not work correctly."
-    Write-Host ""
-    Write-Host "Press Enter to continue or Ctrl+C to abort..." -ForegroundColor Yellow
-    Read-Host
-    
-    return $false
 }
 
 function Start-All {
-    Write-Header "STARTING ALL SERVICES"
+    Write-Header "STARTING ALL SERVICES (NO EF CORE MODE)"
     
-    Write-Info "Starting services in separate windows..."
+    Write-Info "🚀 Spouštím Service Catalogue Manager v režimu BEZ EF Core migrací!"
+    Write-Info "Databáze bude vytvořena POUZE pomocí db_structure.sql"
     Write-Host ""
     
-    # Start backend in new window
-    Start-Backend
-    
-    # Wait for backend to be ready before starting frontend
-    if ($script:SkipHealthCheck) {
-        Write-Warning "Skipping backend health check (not recommended)"
-        Write-Info "Waiting 5 seconds before starting frontend..."
-        Start-Sleep -Seconds 5
-    } else {
-        $backendReady = Wait-ForBackend -Port $BACKEND_PORT -TimeoutSeconds $script:HealthCheckTimeout
-        
-        if ($backendReady) {
-            Write-Host ""
-            Write-Info "Backend is ready, now starting frontend..."
-        } else {
-            Write-Host ""
-            Write-Warning "Starting frontend anyway..."
-        }
+    # Start services based on parameters
+    if ($DbOnly) {
+        Start-Database
+        return
     }
     
+    if ($BackendOnly) {
+        if (-not $SkipDb) { Start-Database }
+        if (-not $SkipBuild) { Build-Backend }
+        Start-Backend
+        return
+    }
+    
+    if ($FrontendOnly) {
+        if (-not $SkipBuild) { Build-Frontend }
+        Start-Frontend
+        return
+    }
+    
+    # Default: start everything
+    if (-not $SkipDb) { Start-Database }
+    if (-not $SkipBuild) { 
+        Build-Backend 
+        Build-Frontend 
+    }
+    if (-not $SkipBackend) { Start-Backend }
+    if (-not $SkipFrontend) { Start-Frontend }
+    
+    Write-Header "ALL SERVICES STARTED SUCCESSFULLY!"
+    Write-Success "✅ Service Catalogue Manager běží BEZ EF Core migrací!"
+    Write-Success "✅ Databáze používá kompletní strukturu z db_structure.sql"
+    Write-Success "✅ Backend: http://localhost:$BACKEND_PORT"
+    if ($script:BackendProcessId) {
+        Write-Info "Backend PID: $script:BackendProcessId"
+    }
+    Write-Success "✅ Frontend: http://localhost:$FRONTEND_PORT"
+    if ($script:FrontendProcessId) {
+        Write-Info "Frontend PID: $script:FrontendProcessId"
+    }
+    Write-Success "✅ Database: localhost,$DB_PORT (SQL Server)"
+    Write-Host ""
+    Write-Info "Pro zastavení všech služeb použijte: Ctrl+C"
     Write-Host ""
     
-    # Start frontend in new window
-    Start-Frontend
-    
-    Write-Host ""
-    Write-Success "All services started!"
-    Write-Host ""
-    Write-Info "Backend: http://localhost:$BACKEND_PORT"
-    Write-Info "Frontend: http://localhost:$FRONTEND_PORT"
-    Write-Info "Logs: $(Join-Path $SCRIPT_DIR 'logs')"
-    Write-Host ""
-    Write-Warning "Keep this window open. Close service windows to stop services."
-    Write-Host ""
-    Write-Host "Press any key to exit..."
-    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+    # Health check
+    if (-not $SkipHealthCheck) {
+        Write-Info "Čekám na inicializaci služeb..."
+        Start-Sleep -Seconds 5
+        
+        Write-Info "Kontroluji zdraví backendu..."
+        $retries = 0
+        $maxRetries = $HealthCheckTimeout
+        
+        while ($retries -lt $maxRetries) {
+            if (Test-BackendConnection -Port $BACKEND_PORT -TimeoutSeconds 2) {
+                Write-Success "Backend je zdravý! ✅"
+                break
+            }
+            $retries++
+            Write-Info "Pokus $retries/$maxRetries - čekám 1 sekundu..."
+            Start-Sleep -Seconds 1
+        }
+        
+        if ($retries -ge $maxRetries) {
+            Write-Warning "Backend neodpovídá po $maxRetries pokusech"
+            Write-Warning "Zkuste otevřít: http://localhost:$BACKEND_PORT/api/health"
+        }
+    }
 }
 
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 
-try {
-    if ($Help) {
-        Show-Help
-        exit 0
-    }
-    
-    Write-Header "SERVICE CATALOGUE MANAGER v3.3.0"
-    
-    # Handle mode flags
-    if ($DbOnly) {
-        Test-Prerequisites
-        Start-Database
-        Write-Host ""
-        Write-Success "Database is running!"
-        Write-Info "Connection String:"
-        Write-Host "Server=localhost,$DB_PORT;Database=$DB_NAME;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" -ForegroundColor White
-        Write-Host ""
-        Write-Info "Connect with:"
-        Write-Host "docker exec -it $DB_CONTAINER /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -d $DB_NAME" -ForegroundColor White
-        exit 0
-    }
-    
-    if ($FrontendOnly) {
-        $SkipDb = $true
-        $SkipBackend = $true
-    }
-    
-    if ($BackendOnly) {
-        $SkipFrontend = $true
-    }
-    
-    # Check prerequisites
-    Test-Prerequisites
-    
-    # Start database
-    if (-not $SkipDb -and -not $FrontendOnly) {
-        Start-Database
-    }
-    
-    # Build phase
-    if (-not $SkipBuild) {
-        if (-not $SkipBackend -and -not $FrontendOnly) {
-            Build-Backend
-        }
-        
-        if (-not $SkipFrontend -and -not $BackendOnly) {
-            Build-Frontend
-        }
-    }
-    
-    # Start phase
-    Write-Host ""
-    Write-Info "All services ready to start!"
-    Write-Host ""
-    
-    if ($BackendOnly) {
-        Start-Backend
-    } elseif ($FrontendOnly) {
-        Start-Frontend
-    } else {
-        Start-All
-    }
-    
-} catch {
-    Write-Host ""
-    Write-ErrorMessage "An error occurred: $_"
-    Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+# Show help if requested
+if ($Help) {
+    Show-Help
+}
+
+# Check for parameter conflicts
+if ($UseSQLite -and $UseDocker) {
+    Write-ErrorMessage "Chyba: Nemůžete použít současně -UseSQLite a -UseDocker"
     exit 1
+}
+
+# Show startup header
+Write-Header "SERVICE CATALOGUE MANAGER - STARTUP v4.1.0 (NO EF CORE)"
+Write-Info "POUŽÍVÁ VÝHRADNĚ db_structure.sql - ŽÁDNÉ EF CORE MIGRACE!"
+Write-Info "Verze: 4.1.0 - Kompletní odstranění EF Core migrací"
+Write-Host ""
+
+# Execute based on parameters
+if ($DbOnly) {
+    Start-Database
+} elseif ($BackendOnly) {
+    Test-Prerequisites
+    if (-not $SkipDb) { Start-Database }
+    if (-not $SkipBuild) { Build-Backend }
+    if (-not $SkipBackend) { Start-Backend }
+} elseif ($FrontendOnly) {
+    Test-Prerequisites
+    if (-not $SkipBuild) { Build-Frontend }
+    if (-not $SkipFrontend) { Start-Frontend }
+} else {
+    Test-Prerequisites
+    Start-All
 }
