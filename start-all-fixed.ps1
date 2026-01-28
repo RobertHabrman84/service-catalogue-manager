@@ -188,6 +188,8 @@ function Start-DockerDatabase {
         if ($container -eq $DB_CONTAINER) {
             Write-Info "SQL Server container is already running"
             Write-Success "Database: localhost,$DB_PORT"
+            # Setup database if not exists
+            Setup-DockerDatabase
             return
         }
     } catch {}
@@ -213,10 +215,69 @@ function Start-DockerDatabase {
     }
     
     Write-Success "SQL Server container started"
-    Write-Info "Waiting 20 seconds for SQL Server initialization..."
-    Start-Sleep -Seconds 20
+    Write-Info "Waiting 25 seconds for SQL Server initialization..."
+    Start-Sleep -Seconds 25
     
-    Write-Success "Database is ready!"
+    # Setup database
+    Setup-DockerDatabase
+}
+
+function Setup-DockerDatabase {
+    Write-Info "Setting up database schema..."
+    
+    # Use Docker configuration for backend
+    $dockerConfig = Join-Path $BACKEND_DIR "local.settings.docker.json"
+    $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
+    
+    if (Test-Path $dockerConfig) {
+        Write-Info "Using Docker configuration for backend..."
+        Copy-Item -Path $dockerConfig -Destination $targetConfig -Force
+        Write-Success "Backend configuration updated for Docker"
+    }
+    
+    $setupScript = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed.ps1"
+    if (Test-Path $setupScript) {
+        Write-Info "Running database setup script..."
+        & $setupScript -DbName $DB_NAME -ContainerName $DB_CONTAINER -Force:$RecreateDb
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Database setup complete!"
+        } else {
+            Write-Warning "Database setup had issues"
+        }
+    } else {
+        Write-Warning "Database setup script not found: $setupScript"
+        Write-Warning "Database may not be properly initialized"
+    }
+}
+
+function Setup-DockerDatabase {
+    Write-Info "Setting up database schema..."
+    
+    # Use Docker configuration for backend
+    $dockerConfig = Join-Path $BACKEND_DIR "local.settings.docker.json"
+    $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
+    
+    if (Test-Path $dockerConfig) {
+        Write-Info "Using Docker configuration for backend..."
+        Copy-Item -Path $dockerConfig -Destination $targetConfig -Force
+        Write-Success "Backend configuration updated for Docker"
+    }
+    
+    $setupScript = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed.ps1"
+    if (Test-Path $setupScript) {
+        Write-Info "Running database setup script..."
+        & $setupScript -DbName $DB_NAME -ContainerName $DB_CONTAINER -Force:$RecreateDb
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Database setup complete!"
+        } else {
+            Write-Warning "Database setup had issues"
+        }
+    } else {
+        Write-Warning "Database setup script not found: $setupScript"
+        Write-Warning "Database may not be properly initialized"
+    }
 }
 
 function Start-SqliteDatabase {
