@@ -330,47 +330,58 @@ try {
 Write-Host "ℹ️  Kontrola integrity nové struktury..." -ForegroundColor Cyan
 
 # Načtení a kontrola všech tabulek ze souboru
-try {
-    $dbStructureContent = Get-Content -Path $mainSchemaFile -Raw -ErrorAction SilentlyContinue
-    if ($dbStructureContent) {
-        # Extrakce názvů tabulek ze souboru
-        $tableMatches = [regex]::Matches($dbStructureContent, "CREATE TABLE \\[(\w+)\\]\")
-        $expectedTables = $tableMatches | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-        
-        Write-Host "ℹ️  V souboru nalezeno $($expectedTables.Count) tabulek:" -ForegroundColor Cyan
-        Write-Host "   $($expectedTables -join ', ')" -ForegroundColor Gray
-        
-        # Kontrola každé tabulky
-        $foundTables = @()
-        $missingTables = @()
-        
-        foreach ($table in $expectedTables) {
-            $checkQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '$table' AND TABLE_CATALOG = '$DbName'"
-            $checkResult = Invoke-SqlCommand -Query $checkQuery
-            $exists = ($checkResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
-            
-            if ($exists -eq "1") {
-                $foundTables += $table
+$expectedTables = @()
+$foundTables = @()
+$missingTables = @()
+
+if ($mainSchemaFile -and (Test-Path $mainSchemaFile)) {
+    try {
+        $dbStructureContent = Get-Content -Path $mainSchemaFile -Raw -ErrorAction Stop
+        if ($dbStructureContent) {
+            $tableMatches = [regex]::Matches(
+                $dbStructureContent,
+                'CREATE\s+TABLE\s+(?:\[\s*(?<schema>\w+)\s*\]\.|(?<schema>\w+)\.)?\[?(?<name>\w+)\]?'
+            )
+            $expectedTables = $tableMatches |
+                ForEach-Object { $_.Groups['name'].Value } |
+                Where-Object { $_ } |
+                Sort-Object -Unique
+
+            if ($expectedTables.Count -gt 0) {
+                Write-Host "ℹ️  V souboru nalezeno $($expectedTables.Count) tabulek:" -ForegroundColor Cyan
+                Write-Host "   $($expectedTables -join ', ')" -ForegroundColor Gray
             } else {
-                $missingTables += $table
+                Write-Host "⚠️  Ve struktuře nebyly nalezeny žádné tabulky" -ForegroundColor Yellow
+            }
+
+            foreach ($table in $expectedTables) {
+                $checkQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '$table' AND TABLE_CATALOG = '$DbName'"
+                $checkResult = Invoke-SqlCommand -Query $checkQuery
+                $exists = ($checkResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
+
+                if ($exists -eq '1') {
+                    $foundTables += $table
+                } else {
+                    $missingTables += $table
+                }
+            }
+
+            Write-Host "✅ Vytvořeno tabulek: $($foundTables.Count)" -ForegroundColor Green
+
+            if ($missingTables.Count -gt 0) {
+                Write-Host "⚠️  Chybějící tabulky: $($missingTables.Count)" -ForegroundColor Yellow
+                Write-Host "   $($missingTables -join ', ')" -ForegroundColor Gray
+                Write-Host "ℹ️  Kontrola detailů pro chybějící tabulky..." -ForegroundColor Cyan
+                foreach ($table in $missingTables) {
+                    Write-Host "   - $table" -ForegroundColor Gray
+                }
             }
         }
-        
-        Write-Host "✅ Vytvořeno tabulek: $($foundTables.Count)" -ForegroundColor Green
-        
-        if ($missingTables.Count -gt 0) {
-            Write-Host "⚠️  Chybějící tabulky: $($missingTables.Count)" -ForegroundColor Yellow
-            Write-Host "   $($missingTables -join ', ')" -ForegroundColor Gray
-            
-            # Detailní kontrola chybějících tabulek
-            Write-Host "ℹ️  Kontrola detailů pro chybějící tabulky..." -ForegroundColor Cyan
-            foreach ($table in $missingTables) {
-                Write-Host "   - $table" -ForegroundColor Gray
-            }
-        }
+    } catch {
+        Write-Host "⚠️  Nepodařilo se načíst soubor pro kontrolu integrity: $_" -ForegroundColor Yellow
     }
-} catch {
-    Write-Host "⚠️  Nepodařilo se načíst soubor pro kontrolu integrity: $_" -ForegroundColor Yellow
+} else {
+    Write-Host "⚠️  Soubor se strukturou databáze nebyl nalezen, přeskočena kontrola integrity souboru" -ForegroundColor Yellow
 }
 
 # Základní kontrola pomocí INFORMATION_SCHEMA
@@ -403,10 +414,10 @@ try {
     $tableCount = 0
 }
 
-Write-Host "✅ Databáze úspěšně nastavena!" -ForegroundColor Green
-Write-Host "   Celkový počet tabulek: $tableCount" -ForegroundColor Green
+Write-Host "📊 Souhrn struktury databáze" -ForegroundColor Cyan
+Write-Host "   Celkový počet tabulek: $tableCount" -ForegroundColor Gray
 if ($foundTables.Count -gt 0) {
-    Write-Host "   Úspěšně vytvořeno: $($foundTables.Count) tabulek ze struktury" -ForegroundColor Green
+    Write-Host "   Úspěšně vytvořeno: $($foundTables.Count) tabulek ze struktury" -ForegroundColor Gray
 }
 if ($missingTables.Count -gt 0) {
     Write-Host "   ⚠️  Chybí: $($missingTables.Count) tabulek" -ForegroundColor Yellow
@@ -445,10 +456,16 @@ if ($foundTables.Count -eq 0) {
     }
 }
 
-if ($missingTables.Count -eq 0) {
+$structureSuccess = ($missingTables.Count -eq 0 -and $tableCount -ge 40)
+
+if ($structureSuccess) {
     Write-Host "✅ Všechny klíčové tabulky nové struktury byly úspěšně vytvořeny!" -ForegroundColor Green
 } else {
-    Write-Host "⚠️  Chybějící tabulky: $($missingTables -join ', ')" -ForegroundColor Yellow
+    if ($missingTables.Count -gt 0) {
+        Write-Host "⚠️  Chybějící tabulky: $($missingTables -join ', ')" -ForegroundColor Yellow
+    } else {
+        Write-Host "⚠️  Databáze obsahuje pouze $tableCount tabulek (očekáváno 40+)" -ForegroundColor Yellow
+    }
     Write-Host "   To může znamenat, že struktura nebyla kompletně aplikována." -ForegroundColor Yellow
     Write-Host "   Doporučení:" -ForegroundColor Cyan
     Write-Host "   1. Zkontrolujte, zda soubor db_structure.sql obsahuje všechny tabulky" -ForegroundColor Cyan
@@ -485,3 +502,9 @@ if (-not $useSqlCmd) {
     Write-Host "💡 Tip: To connect from outside Docker, install SQL Server Command Line Utilities" -ForegroundColor Cyan
     Write-Host "   Download: https://aka.ms/sqlcmd" -ForegroundColor Cyan
 }
+
+if ($structureSuccess) {
+    exit 0
+}
+
+exit 2
