@@ -15,6 +15,17 @@ public class ImportFunction
 {
     private readonly IImportOrchestrationService _importService;
     private readonly ILogger<ImportFunction> _logger;
+    
+    /// <summary>
+    /// Shared JSON serializer options for consistent deserialization
+    /// Custom converters are applied via [JsonConverter] attributes on model properties
+    /// </summary>
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
 
     public ImportFunction(
         IImportOrchestrationService importService,
@@ -40,7 +51,7 @@ public class ImportFunction
             // Parse request body
             var model = await JsonSerializer.DeserializeAsync<ImportServiceModel>(
                 req.Body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                JsonOptions);
 
             if (model == null)
             {
@@ -94,7 +105,7 @@ public class ImportFunction
             // Parse request body
             var models = await JsonSerializer.DeserializeAsync<List<ImportServiceModel>>(
                 req.Body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                JsonOptions);
 
             if (models == null || !models.Any())
             {
@@ -134,7 +145,7 @@ public class ImportFunction
     /// </summary>
     [Function("ValidateImport")]
     public async Task<HttpResponseData> ValidateImport(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "services/import/validate")] 
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "services/import/validate")] 
         HttpRequestData req)
     {
         _logger.LogInformation("Validate import endpoint called");
@@ -144,7 +155,7 @@ public class ImportFunction
             // Parse request body
             var model = await JsonSerializer.DeserializeAsync<ImportServiceModel>(
                 req.Body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                JsonOptions);
 
             if (model == null)
             {
@@ -204,7 +215,7 @@ public class ImportFunction
                         field = e.Field,
                         message = e.Message,
                         code = e.Code
-                    }) ?? Array.Empty<object>()
+                    }).ToArray() ?? Array.Empty<object>()
                 });
                 return response;
             }

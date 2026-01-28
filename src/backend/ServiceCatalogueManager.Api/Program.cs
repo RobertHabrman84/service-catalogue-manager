@@ -42,22 +42,25 @@ var host = new HostBuilder()
             var connectionString = configuration.GetConnectionString("AzureSQL")
                 ?? configuration["AzureSQL__ConnectionString"];
             
-            // Validate connection string
-            if (string.IsNullOrEmpty(connectionString))
+            // Use In-Memory database fallback for development
+            if (string.IsNullOrEmpty(connectionString) || 
+                connectionString.Contains("localhost") || 
+                context.HostingEnvironment.IsDevelopment())
             {
-                throw new InvalidOperationException(
-                    "AzureSQL connection string is not configured. " +
-                    "Please set ConnectionStrings:AzureSQL or AzureSQL__ConnectionString.");
+                Console.WriteLine("⚠️  Using IN-MEMORY database for development");
+                options.UseInMemoryDatabase("ServiceCatalogueDevDb");
             }
-            
-            options.UseSqlServer(connectionString, sqlOptions =>
+            else
             {
-                sqlOptions.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(30),
-                    errorNumbersToAdd: null);
-                sqlOptions.CommandTimeout(30);
-            });
+                options.UseSqlServer(connectionString, sqlOptions =>
+                {
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(30),
+                        errorNumbersToAdd: null);
+                    sqlOptions.CommandTimeout(30);
+                });
+            }
         });
 
         // Blob Storage

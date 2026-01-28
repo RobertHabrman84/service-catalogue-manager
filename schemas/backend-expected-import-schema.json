@@ -1,0 +1,232 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Service Catalog Import Schema - Backend Expected Format",
+  "description": "EXACT schema that backend API expects for importing service catalog items",
+  "type": "object",
+  "required": [
+    "serviceCode",
+    "serviceName",
+    "version",
+    "category",
+    "description"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "serviceCode": {
+      "type": "string",
+      "pattern": "^ID\\d{3}$",
+      "description": "Service identifier - MUST be 'ID' followed by exactly 3 digits (e.g., ID001, ID123)",
+      "examples": [
+        "ID001",
+        "ID002",
+        "ID999"
+      ]
+    },
+    "serviceName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Service name"
+    },
+    "version": {
+      "type": "string",
+      "default": "v1.0",
+      "description": "Service version"
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Service category"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Detailed service description"
+    },
+    "notes": {
+      "type": [
+        "string",
+        null
+      ],
+      "description": "Additional notes"
+    },
+    "toolsAndEnvironment": {
+      "type": [
+        "object",
+        null
+      ],
+      "description": "⚠️ CRITICAL: All tool arrays MUST be arrays (not null)",
+      "required": [
+        "cloudPlatforms",
+        "designTools",
+        "automationTools",
+        "collaborationTools",
+        "other"
+      ],
+      "properties": {
+        "cloudPlatforms": {
+          "type": "array",
+          "description": "MUST be array - even if empty",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  null
+                ]
+              }
+            }
+          }
+        },
+        "designTools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  null
+                ]
+              }
+            }
+          }
+        },
+        "automationTools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  null
+                ]
+              }
+            }
+          }
+        },
+        "collaborationTools": {
+          "type": "array",
+          "description": "⚠️ MUST be array (not null) - this caused v1.4 bug",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  null
+                ]
+              }
+            }
+          }
+        },
+        "other": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  null
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  null
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

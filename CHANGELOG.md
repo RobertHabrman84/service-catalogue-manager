@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-01-28
+
+### Added - Flexible JSON Import Support
+- **Custom JSON Converters** for backward-compatible import
+  - `ScopeItemsFlexibleConverter` - accepts both string arrays and object arrays for scope items
+  - `ResponsibilitiesFlexibleConverter` - accepts both string and string array for responsibilities
+  - `CharacteristicsFlexibleConverter` - accepts both old and new format for characteristics
+
+- **Extended Import Models**
+  - `SizeOptionImportModel` - added support for new JSON fields (`sizeCode`, `effort`, `teamAllocation`, `effortBreakdown`, `complexityAdditions`, `sizingCriteria`, `scopeDependencies`)
+  - `SizingExampleImportModel` - added `exampleName`, `scenario`, `deliverables` fields
+  - Helper methods for format normalization (`GetEffectiveSizeName()`, `GetTeamAllocationsNormalized()`, etc.)
+
+- **Null-safe Helper Methods**
+  - `ToolsAndEnvironmentImportModel` - added `GetCollaborationToolsSafe()` and other safe accessors
+
+### Changed
+- `ImportOrchestrationService.ImportSizeOptionsAsync()` - now uses normalized helper methods for both old and new formats
+- `ImportFunction` - centralized `JsonSerializerOptions` for consistent deserialization
+- All import models now support both legacy and new JSON structures
+
+### Fixed
+- Import now accepts JSON files with `items` as string arrays (not just object arrays)
+- Import now accepts JSON files with `responsibilities` as string arrays
+- Import now accepts JSON files missing `collaborationTools` field
+- Import now accepts JSON files with `sizeCode` instead of `sizeName`
+- Import now accepts JSON files with `effort` object instead of `effortRange` string
+- Import now accepts JSON files with array-based `teamAllocation` instead of object-based
+
+### Technical Details
+- No database schema changes required
+- Full backward compatibility with existing JSON format
+- All conversions happen at deserialization/import layer
+
 ## [Unreleased]
 
 ### Added

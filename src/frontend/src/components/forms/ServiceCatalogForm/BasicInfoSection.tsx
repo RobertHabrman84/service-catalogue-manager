@@ -16,10 +16,12 @@ export const BasicInfoSection: React.FC = () => {
     queryFn: () => lookupService.getServiceCategories(),
   });
 
-  const categoryOptions = categories.map(cat => ({
-    value: cat.categoryId,
-    label: cat.categoryPath || cat.categoryName,
-  }));
+  const categoryOptions = Array.isArray(categories) 
+    ? categories.map(cat => ({
+        value: cat.categoryId,
+        label: cat.categoryPath || cat.categoryName,
+      }))
+    : [];
 
   return (
     <div className="space-y-6">

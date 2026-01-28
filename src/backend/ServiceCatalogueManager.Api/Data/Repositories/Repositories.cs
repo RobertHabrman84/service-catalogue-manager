@@ -52,6 +52,28 @@ public interface IUnitOfWork : IDisposable
     IRepository<EffortEstimationItem> EffortEstimations { get; }
     IRepository<ServiceResponsibleRole> ResponsibleRoles { get; }
     
+    // NEW: Import functionality repositories
+    IRepository<LU_ServiceCategory> ServiceCategories { get; }
+    IRepository<ServiceToolFramework> ServiceTools { get; }
+    IRepository<LU_ToolCategory> ToolCategories { get; }
+    IRepository<ServiceOutputCategory> OutputCategories { get; }
+    IRepository<ServiceOutputItem> OutputItems { get; }
+    IRepository<ServiceScopeItem> ScopeItems { get; }
+    IRepository<ServiceLicense> ServiceLicenses { get; }
+    IRepository<LU_LicenseType> LicenseTypes { get; }
+    IRepository<StakeholderInvolvement> StakeholderInvolvements { get; }
+    IRepository<ServiceSizeOption> ServiceSizeOptions { get; }
+    IRepository<LU_SizeOption> SizeOptions { get; }
+    IRepository<ServiceMultiCloudConsideration> MultiCloudConsiderations { get; }
+    IRepository<LU_RequirementLevel> RequirementLevels { get; }
+    IRepository<LU_DependencyType> DependencyTypes { get; }
+    IRepository<LU_ScopeType> ScopeTypes { get; }
+    IRepository<LU_InteractionLevel> InteractionLevels { get; }
+    IRepository<LU_PrerequisiteCategory> PrerequisiteCategories { get; }
+    IRepository<CustomerRequirement> CustomerRequirements { get; }
+    IRepository<AccessRequirement> AccessRequirements { get; }
+    IRepository<PhaseDurationBySize> PhaseDurations { get; }
+    
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);
     Task CommitTransactionAsync(CancellationToken cancellationToken = default);
@@ -253,6 +275,28 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<TimelinePhase>? _timelinePhases;
     private IRepository<EffortEstimationItem>? _effortEstimations;
     private IRepository<ServiceResponsibleRole>? _responsibleRoles;
+
+    // NEW: Import functionality repository fields
+    private IRepository<LU_ServiceCategory>? _serviceCategories;
+    private IRepository<ServiceToolFramework>? _serviceTools;
+    private IRepository<LU_ToolCategory>? _toolCategories;
+    private IRepository<ServiceOutputCategory>? _outputCategories;
+    private IRepository<ServiceOutputItem>? _outputItems;
+    private IRepository<ServiceScopeItem>? _scopeItems;
+    private IRepository<ServiceLicense>? _serviceLicenses;
+    private IRepository<LU_LicenseType>? _licenseTypes;
+    private IRepository<StakeholderInvolvement>? _stakeholderInvolvements;
+    private IRepository<ServiceSizeOption>? _serviceSizeOptions;
+    private IRepository<LU_SizeOption>? _sizeOptions;
+    private IRepository<ServiceMultiCloudConsideration>? _multiCloudConsiderations;
+    private IRepository<LU_RequirementLevel>? _requirementLevels;
+    private IRepository<LU_DependencyType>? _dependencyTypes;
+    private IRepository<LU_ScopeType>? _scopeTypes;
+    private IRepository<LU_InteractionLevel>? _interactionLevels;
+    private IRepository<LU_PrerequisiteCategory>? _prerequisiteCategories;
+    private IRepository<CustomerRequirement>? _customerRequirements;
+    private IRepository<AccessRequirement>? _accessRequirements;
+    private IRepository<PhaseDurationBySize>? _phaseDurations;
     private Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? _transaction;
 
     public UnitOfWork(ServiceCatalogDbContext context)
@@ -289,6 +333,67 @@ public class UnitOfWork : IUnitOfWork
 
     public IRepository<ServiceResponsibleRole> ResponsibleRoles => 
         _responsibleRoles ??= new Repository<ServiceResponsibleRole>(_context);
+
+    // NEW: Import functionality repositories
+    public IRepository<LU_ServiceCategory> ServiceCategories => 
+        _serviceCategories ??= new Repository<LU_ServiceCategory>(_context);
+
+    public IRepository<ServiceToolFramework> ServiceTools => 
+        _serviceTools ??= new Repository<ServiceToolFramework>(_context);
+
+    public IRepository<LU_ToolCategory> ToolCategories => 
+        _toolCategories ??= new Repository<LU_ToolCategory>(_context);
+
+    public IRepository<ServiceOutputCategory> OutputCategories => 
+        _outputCategories ??= new Repository<ServiceOutputCategory>(_context);
+
+    public IRepository<ServiceOutputItem> OutputItems => 
+        _outputItems ??= new Repository<ServiceOutputItem>(_context);
+
+    public IRepository<ServiceScopeItem> ScopeItems => 
+        _scopeItems ??= new Repository<ServiceScopeItem>(_context);
+
+    public IRepository<ServiceLicense> ServiceLicenses => 
+        _serviceLicenses ??= new Repository<ServiceLicense>(_context);
+
+    public IRepository<LU_LicenseType> LicenseTypes => 
+        _licenseTypes ??= new Repository<LU_LicenseType>(_context);
+
+    public IRepository<StakeholderInvolvement> StakeholderInvolvements => 
+        _stakeholderInvolvements ??= new Repository<StakeholderInvolvement>(_context);
+
+    public IRepository<ServiceSizeOption> ServiceSizeOptions => 
+        _serviceSizeOptions ??= new Repository<ServiceSizeOption>(_context);
+
+    public IRepository<LU_SizeOption> SizeOptions => 
+        _sizeOptions ??= new Repository<LU_SizeOption>(_context);
+
+    public IRepository<ServiceMultiCloudConsideration> MultiCloudConsiderations => 
+        _multiCloudConsiderations ??= new Repository<ServiceMultiCloudConsideration>(_context);
+
+    public IRepository<LU_RequirementLevel> RequirementLevels => 
+        _requirementLevels ??= new Repository<LU_RequirementLevel>(_context);
+
+    public IRepository<LU_DependencyType> DependencyTypes => 
+        _dependencyTypes ??= new Repository<LU_DependencyType>(_context);
+
+    public IRepository<LU_ScopeType> ScopeTypes => 
+        _scopeTypes ??= new Repository<LU_ScopeType>(_context);
+
+    public IRepository<LU_InteractionLevel> InteractionLevels => 
+        _interactionLevels ??= new Repository<LU_InteractionLevel>(_context);
+
+    public IRepository<LU_PrerequisiteCategory> PrerequisiteCategories => 
+        _prerequisiteCategories ??= new Repository<LU_PrerequisiteCategory>(_context);
+
+    public IRepository<CustomerRequirement> CustomerRequirements => 
+        _customerRequirements ??= new Repository<CustomerRequirement>(_context);
+
+    public IRepository<AccessRequirement> AccessRequirements => 
+        _accessRequirements ??= new Repository<AccessRequirement>(_context);
+
+    public IRepository<PhaseDurationBySize> PhaseDurations => 
+        _phaseDurations ??= new Repository<PhaseDurationBySize>(_context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

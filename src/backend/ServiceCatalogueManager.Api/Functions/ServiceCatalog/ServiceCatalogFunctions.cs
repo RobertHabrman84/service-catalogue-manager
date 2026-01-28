@@ -33,14 +33,26 @@ public class ServiceCatalogFunctions
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "services")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Getting services list");
+        try
+        {
+            _logger.LogInformation("Getting services list");
 
-        var request = ParseGetServicesRequest(req);
-        var result = await _serviceCatalogService.GetServicesAsync(request, cancellationToken);
+            var request = ParseGetServicesRequest(req);
+            var result = await _serviceCatalogService.GetServicesAsync(request, cancellationToken);
 
-        var response = req.CreateResponse(HttpStatusCode.OK);
-        await response.WriteAsJsonAsync(ApiResponse<PagedResponse<ServiceCatalogListItemDto>>.Ok(result), cancellationToken);
-        return response;
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(ApiResponse<PagedResponse<ServiceCatalogListItemDto>>.Ok(result), cancellationToken);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting services list");
+            
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteAsJsonAsync(ApiResponse<PagedResponse<ServiceCatalogListItemDto>>.Fail(
+                "An error occurred while retrieving services"), cancellationToken);
+            return errorResponse;
+        }
     }
 
     /// <summary>
@@ -103,18 +115,18 @@ public class ServiceCatalogFunctions
     {
         _logger.LogInformation("Creating new service");
 
-        var createDto = await req.ReadFromJsonAsync<ServiceCatalogCreateDto>(cancellationToken);
-        if (createDto == null)
+        var createRequest = await req.ReadFromJsonAsync<ServiceCatalogCreateDto>(cancellationToken);
+        if (createRequest == null)
         {
-            var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-            await badRequestResponse.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Fail("Invalid request body"), cancellationToken);
-            return badRequestResponse;
+            var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequest.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Fail("Invalid request body"), cancellationToken);
+            return badRequest;
         }
 
-        var result = await _serviceCatalogService.CreateServiceAsync(createDto, null, cancellationToken);
+        var service = await _serviceCatalogService.CreateServiceAsync(createRequest, null, cancellationToken);
 
         var response = req.CreateResponse(HttpStatusCode.Created);
-        await response.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Ok(result, "Service created successfully"), cancellationToken);
+        await response.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Ok(service), cancellationToken);
         return response;
     }
 
@@ -129,17 +141,17 @@ public class ServiceCatalogFunctions
     {
         _logger.LogInformation("Updating service with ID: {ServiceId}", id);
 
-        var updateDto = await req.ReadFromJsonAsync<ServiceCatalogUpdateDto>(cancellationToken);
-        if (updateDto == null)
+        var updateRequest = await req.ReadFromJsonAsync<ServiceCatalogUpdateDto>(cancellationToken);
+        if (updateRequest == null)
         {
-            var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-            await badRequestResponse.WriteAsJsonAsync(ApiResponse<ServiceCatalogFullDto>.Fail("Invalid request body"), cancellationToken);
-            return badRequestResponse;
+            var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequest.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Fail("Invalid request body"), cancellationToken);
+            return badRequest;
         }
 
-        var result = await _serviceCatalogService.UpdateServiceAsync(id, updateDto, null, cancellationToken);
+        var service = await _serviceCatalogService.UpdateServiceAsync(id, updateRequest, null, cancellationToken);
 
-        if (result == null)
+        if (service == null)
         {
             var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
             await notFoundResponse.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Fail($"Service with ID {id} not found"), cancellationToken);
@@ -147,7 +159,7 @@ public class ServiceCatalogFunctions
         }
 
         var response = req.CreateResponse(HttpStatusCode.OK);
-        await response.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Ok(result, "Service updated successfully"), cancellationToken);
+        await response.WriteAsJsonAsync(ApiResponse<ServiceCatalogItemDto>.Ok(service), cancellationToken);
         return response;
     }
 
@@ -167,28 +179,26 @@ public class ServiceCatalogFunctions
         if (!success)
         {
             var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
-            await notFoundResponse.WriteAsJsonAsync(ApiResponse<bool>.Fail($"Service with ID {id} not found"), cancellationToken);
+            await notFoundResponse.WriteAsJsonAsync(ApiResponse<object>.Fail($"Service with ID {id} not found"), cancellationToken);
             return notFoundResponse;
         }
 
-        var response = req.CreateResponse(HttpStatusCode.OK);
-        await response.WriteAsJsonAsync(ApiResponse<bool>.Ok(true, "Service deleted successfully"), cancellationToken);
+        var response = req.CreateResponse(HttpStatusCode.NoContent);
         return response;
     }
 
-    private static GetServicesRequest ParseGetServicesRequest(HttpRequestData req)
+    private GetServicesRequest ParseGetServicesRequest(HttpRequestData req)
     {
         var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
-
+        
         return new GetServicesRequest
         {
-            Page = int.TryParse(query["page"], out var page) ? page : 1,
-            PageSize = int.TryParse(query["pageSize"], out var pageSize) ? pageSize : 20,
-            SearchTerm = query["search"],
-            CategoryId = int.TryParse(query["categoryId"], out var categoryId) ? categoryId : null,
-            IsActive = bool.TryParse(query["isActive"], out var isActive) ? isActive : null,
+            Page = int.TryParse(query["pageNumber"] ?? query["page"], out var page) ? page : 1,
+            PageSize = int.TryParse(query["pageSize"], out var size) ? size : 20,
+            SearchTerm = query["searchTerm"],
+            CategoryId = int.TryParse(query["categoryId"] ?? query["category"], out var catId) ? catId : null,
             SortBy = query["sortBy"],
-            SortDescending = bool.TryParse(query["sortDesc"], out var sortDesc) && sortDesc
+            SortDescending = query["sortOrder"]?.ToLower() == "desc" || query["sortDescending"]?.ToLower() == "true"
         };
     }
 }

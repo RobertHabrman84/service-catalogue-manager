@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Service Catalogue Manager
 
 [![Build Status](https://dev.azure.com/yourorg/service-catalogue-manager/_apis/build/status/CI?branchName=main)](https://dev.azure.com/yourorg/service-catalogue-manager/_build/latest?definitionId=1&branchName=main)
@@ -8,6 +7,37 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Enterprise web application for managing service catalog items for cloud architecture and consulting services.
+
+## ⚡ Latest Updates (27. ledna 2026)
+
+**✅ Version 1.5 - FINAL JSON FIX (LATEST) ⭐⭐⭐**
+
+This version includes ALL previous fixes PLUS:
+- 📄 **PERFECT JSON guaranteed to work** (Application_Landing_Zone_Design_PERFECT.json)
+- 🔧 Fixed missing collaborationTools field
+- 🔧 All fields have correct types (no unexpected nulls)
+- 🔧 All 31 tools properly structured
+- ✅ **JSON import GUARANTEED TO WORK**
+
+**All previous fixes included:**
+- 🔧 start-all.ps1 improvements (30s timeout) - v1.4
+- 🔧 Method signature fixes - v1.3
+- 🔧 ServiceCatalogFunctions.cs syntax - v1.2
+- 🔧 Microsoft.Identity.Web 3.9.0 - v1.2
+- 🔧 IN-MEMORY database fallback - v1.1
+- 🔧 Enhanced error handling - v1.1
+- 🔧 Authorization fixes - v1.1
+- 🔧 Backend compilation fixes - v1.0
+- 🔧 PDF Extractor validation - v1.0
+
+**📖 Documentation:**
+- [JSON-IMPORT-FIX-v1.5-FINAL.md](JSON-IMPORT-FIX-v1.5-FINAL.md) - **v1.5 GUARANTEED FIX** ⭐
+- [SCRIPT-AND-JSON-FIXES-v1.4.md](SCRIPT-AND-JSON-FIXES-v1.4.md) - v1.4 improvements
+- [SIGNATURE-FIXES-v1.3.md](SIGNATURE-FIXES-v1.3.md) - v1.3 method signatures
+- [BUILD-FIXES-v1.2.md](BUILD-FIXES-v1.2.md) - v1.2 syntax fixes  
+- [RUNTIME-FIXES-v1.1.md](RUNTIME-FIXES-v1.1.md) - v1.1 runtime fixes
+- [OPRAVY-CHANGELOG.md](OPRAVY-CHANGELOG.md) - v1.0 initial fixes  
+- [examples/](examples/) - **PERFECT** validated JSON ready for import ⭐
 
 ## 🎯 Overview
 

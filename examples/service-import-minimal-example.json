@@ -1,0 +1,14 @@
+{
+  "serviceCode": "ID001",
+  "serviceName": "Example Service",
+  "version": "v1.0",
+  "category": "Services/Example",
+  "description": "This is a minimal valid example",
+  "toolsAndEnvironment": {
+    "cloudPlatforms": [],
+    "designTools": [],
+    "automationTools": [],
+    "collaborationTools": [],
+    "other": []
+  }
+}

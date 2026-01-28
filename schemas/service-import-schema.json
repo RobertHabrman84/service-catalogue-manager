@@ -1,20 +1,31 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Service Catalog Import Schema",
-  "description": "Schema for importing service catalog items from JSON",
+  "description": "Complete JSON schema for importing service catalog items - matches backend ImportServiceModel exactly",
   "type": "object",
-  "required": ["serviceCode", "serviceName", "version", "category", "description"],
+  "required": [
+    "serviceCode",
+    "serviceName",
+    "version",
+    "category",
+    "description"
+  ],
   "properties": {
     "serviceCode": {
       "type": "string",
-      "minLength": 1,
-      "description": "Unique service identifier (e.g., ID001, ID0XX, or any format)"
+      "pattern": "^ID\\d{3}$",
+      "description": "Service code in format ID### (e.g., ID001, ID123, ID999). MUST be exactly 'ID' followed by 3 digits.",
+      "examples": [
+        "ID001",
+        "ID123",
+        "ID999"
+      ]
     },
     "serviceName": {
       "type": "string",
       "minLength": 1,
       "maxLength": 200,
-      "description": "Service name"
+      "description": "Service name (1-200 characters)"
     },
     "version": {
       "type": "string",
@@ -23,7 +34,8 @@
     },
     "category": {
       "type": "string",
-      "description": "Service category path (e.g., 'Services/Architecture/Technical Architecture')"
+      "minLength": 1,
+      "description": "Service category (e.g., 'Services/Architecture/Technical Architecture')"
     },
     "description": {
       "type": "string",
@@ -31,602 +43,193 @@
       "description": "Detailed service description"
     },
     "notes": {
-      "type": "string",
-      "description": "Additional notes"
-    },
-    "usageScenarios": {
-      "type": "array",
-      "description": "List of usage scenarios",
-      "items": {
-        "$ref": "#/definitions/usageScenario"
-      }
-    },
-    "dependencies": {
-      "type": "object",
-      "description": "Service dependencies",
-      "properties": {
-        "prerequisite": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/dependency" }
-        },
-        "triggersFor": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/dependency" }
-        },
-        "parallelWith": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/dependency" }
-        }
-      }
-    },
-    "scope": {
-      "type": "object",
-      "properties": {
-        "inScope": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/scopeCategory" }
-        },
-        "outOfScope": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "prerequisites": {
-      "type": "object",
-      "properties": {
-        "organizational": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/prerequisiteItem" }
-        },
-        "technical": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/prerequisiteItem" }
-        },
-        "documentation": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/prerequisiteItem" }
-        }
-      }
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Additional notes (optional)"
     },
     "toolsAndEnvironment": {
-      "type": "object",
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Tools and environment requirements - CRITICAL: All arrays MUST be present",
       "properties": {
         "cloudPlatforms": {
           "type": "array",
-          "items": { "$ref": "#/definitions/toolItem" }
+          "description": "Cloud platforms (MUST be array, use [] if empty)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
         },
         "designTools": {
           "type": "array",
-          "items": { "$ref": "#/definitions/toolItem" }
+          "description": "Design tools (MUST be array, use [] if empty)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
         },
         "automationTools": {
           "type": "array",
-          "items": { "$ref": "#/definitions/toolItem" }
+          "description": "Automation tools (MUST be array, use [] if empty)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
         },
         "collaborationTools": {
           "type": "array",
-          "items": { "$ref": "#/definitions/toolItem" }
+          "description": "Collaboration tools (MUST be array, use [] if empty - CANNOT be null!)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
         },
         "other": {
           "type": "array",
-          "items": { "$ref": "#/definitions/toolItem" }
+          "description": "Other tools (MUST be array, use [] if empty)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "toolName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "purpose": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
         }
-      }
-    },
-    "licenses": {
-      "type": "object",
-      "properties": {
-        "requiredByCustomer": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/licenseItem" }
-        },
-        "recommendedOptional": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/licenseItem" }
-        },
-        "providedByServiceProvider": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/licenseItem" }
-        }
-      }
-    },
-    "stakeholderInteraction": {
-      "type": "object",
-      "properties": {
-        "interactionLevel": {
-          "type": "string",
-          "enum": ["LOW", "MEDIUM", "HIGH"]
-        },
-        "customerMustProvide": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "workshopParticipation": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/stakeholderRole" }
-        },
-        "accessRequirements": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/accessRequirement" }
-        }
-      }
-    },
-    "serviceInputs": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/serviceInput" }
-    },
-    "serviceOutputs": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/outputCategory" }
-    },
-    "timeline": {
-      "type": "object",
-      "properties": {
-        "phases": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/timelinePhase" }
-        }
-      }
-    },
-    "sizeOptions": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/sizeOption" }
-    },
-    "responsibleRoles": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/responsibleRole" }
-    },
-    "multiCloudConsiderations": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/multiCloudConsideration" }
+      },
+      "required": [
+        "cloudPlatforms",
+        "designTools",
+        "automationTools",
+        "collaborationTools",
+        "other"
+      ]
     }
   },
-  "definitions": {
-    "usageScenario": {
-      "type": "object",
-      "required": ["scenarioNumber", "scenarioTitle", "scenarioDescription"],
-      "properties": {
-        "scenarioNumber": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "scenarioTitle": {
-          "type": "string",
-          "minLength": 1
-        },
-        "scenarioDescription": {
-          "type": "string",
-          "minLength": 1
-        },
-        "sortOrder": {
-          "type": "integer",
-          "minimum": 0
-        }
-      }
-    },
-    "dependency": {
-      "type": "object",
-      "required": ["serviceName", "requirementLevel"],
-      "properties": {
-        "serviceName": {
-          "type": "string"
-        },
-        "serviceCode": {
-          "type": "string"
-        },
-        "requirementLevel": {
-          "type": "string",
-          "enum": ["REQUIRED", "RECOMMENDED", "OPTIONAL"]
-        },
-        "notes": {
-          "type": "string"
-        }
-      }
-    },
-    "scopeCategory": {
-      "type": "object",
-      "required": ["categoryName"],
-      "properties": {
-        "categoryName": {
-          "type": "string"
-        },
-        "categoryNumber": {
-          "type": "integer"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "itemName": {
-                "type": "string"
-              },
-              "itemDescription": {
-                "type": "string"
-              }
-            }
-          }
-        }
-      }
-    },
-    "prerequisiteItem": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "requirementLevel": {
-          "type": "string",
-          "enum": ["REQUIRED", "RECOMMENDED", "OPTIONAL"]
-        }
-      }
-    },
-    "toolItem": {
-      "type": "object",
-      "properties": {
-        "category": {
-          "type": "string"
-        },
-        "toolName": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        },
-        "purpose": {
-          "type": "string"
-        }
-      }
-    },
-    "licenseItem": {
-      "type": "object",
-      "properties": {
-        "licenseName": {
-          "type": "string"
-        },
-        "licenseType": {
-          "type": "string",
-          "enum": ["REQUIRED", "RECOMMENDED", "OPTIONAL", "PROVIDED"]
-        },
-        "description": {
-          "type": "string"
-        },
-        "notes": {
-          "type": "string"
-        }
-      }
-    },
-    "stakeholderRole": {
-      "type": "object",
-      "properties": {
-        "roleName": {
-          "type": "string"
-        },
-        "involvementLevel": {
-          "type": "string",
-          "enum": ["REQUIRED", "RECOMMENDED", "OPTIONAL", "AS_NEEDED"]
-        },
-        "responsibilities": {
-          "type": "string"
-        }
-      }
-    },
-    "accessRequirement": {
-      "type": "object",
-      "properties": {
-        "requirementType": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "isMandatory": {
-          "type": "boolean"
-        }
-      }
-    },
-    "serviceInput": {
-      "type": "object",
-      "required": ["parameterName", "requirementLevel"],
-      "properties": {
-        "parameterName": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "requirementLevel": {
-          "type": "string",
-          "enum": ["REQUIRED", "RECOMMENDED", "OPTIONAL"]
-        },
-        "dataType": {
-          "type": "string"
-        },
-        "defaultValue": {
-          "type": ["string", "null"]
-        },
-        "exampleValue": {
-          "type": ["string", "null"]
-        }
-      }
-    },
-    "outputCategory": {
-      "type": "object",
-      "required": ["categoryName"],
-      "properties": {
-        "categoryName": {
-          "type": "string"
-        },
-        "categoryNumber": {
-          "type": "integer"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "itemName": {
-                "type": "string"
-              },
-              "itemDescription": {
-                "type": "string"
-              }
-            }
-          }
-        }
-      }
-    },
-    "timelinePhase": {
-      "type": "object",
-      "required": ["phaseName"],
-      "properties": {
-        "phaseName": {
-          "type": "string"
-        },
-        "phaseNumber": {
-          "type": "integer"
-        },
-        "description": {
-          "type": "string"
-        },
-        "durationBySize": {
-          "type": "object",
-          "properties": {
-            "small": { "type": "string" },
-            "medium": { "type": "string" },
-            "large": { "type": "string" }
-          }
-        }
-      }
-    },
-    "sizeOption": {
-      "type": "object",
-      "required": ["sizeCode", "description", "duration", "effort"],
-      "properties": {
-        "sizeCode": {
-          "type": "string",
-          "enum": ["S", "M", "L", "XL", "XXL"]
-        },
-        "description": {
-          "type": "string"
-        },
-        "duration": {
-          "type": "string"
-        },
-        "durationInDays": {
-          "type": "integer"
-        },
-        "effort": {
-          "type": "object",
-          "properties": {
-            "hours": {
-              "type": "number"
-            },
-            "hoursMin": {
-              "type": "number"
-            },
-            "hoursMax": {
-              "type": "number"
-            },
-            "currency": {
-              "type": "string"
-            }
-          }
-        },
-        "teamSize": {
-          "type": "string"
-        },
-        "complexity": {
-          "type": "string",
-          "enum": ["LOW", "MEDIUM", "HIGH"]
-        },
-        "sizingCriteria": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/sizingCriterion" }
-        },
-        "effortBreakdown": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/effortItem" }
-        },
-        "complexityAdditions": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/complexityAddition" }
-        },
-        "teamAllocation": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/teamAllocation" }
-        },
-        "examples": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/sizingExample" }
-        },
-        "scopeDependencies": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/scopeDependency" }
-        },
-        "sizingParameters": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/sizingParameter" }
-        }
-      }
-    },
-    "sizingCriterion": {
-      "type": "object",
-      "properties": {
-        "criteriaName": {
-          "type": "string"
-        },
-        "values": {
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      }
-    },
-    "effortItem": {
-      "type": "object",
-      "properties": {
-        "scopeArea": {
-          "type": "string"
-        },
-        "baseHours": {
-          "type": "number"
-        },
-        "notes": {
-          "type": "string"
-        }
-      }
-    },
-    "complexityAddition": {
-      "type": "object",
-      "properties": {
-        "factor": {
-          "type": "string"
-        },
-        "condition": {
-          "type": "string"
-        },
-        "additionalHours": {
-          "type": "number"
-        }
-      }
-    },
-    "teamAllocation": {
-      "type": "object",
-      "properties": {
-        "role": {
-          "type": "string"
-        },
-        "allocation": {
-          "type": "number"
-        },
-        "notes": {
-          "type": "string"
-        }
-      }
-    },
-    "sizingExample": {
-      "type": "object",
-      "properties": {
-        "exampleName": {
-          "type": "string"
-        },
-        "scenario": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "characteristics": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "deliverables": {
-          "type": "string"
-        }
-      }
-    },
-    "scopeDependency": {
-      "type": "object",
-      "properties": {
-        "scopeArea": {
-          "type": "string"
-        },
-        "requires": {
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      }
-    },
-    "sizingParameter": {
-      "type": "object",
-      "properties": {
-        "parameterName": {
-          "type": "string"
-        },
-        "parameterType": {
-          "type": "string",
-          "enum": ["SCALE", "TECHNICAL"]
-        },
-        "description": {
-          "type": "string"
-        },
-        "values": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "value": { "type": "string" },
-              "sizeMapping": { "type": "string" },
-              "additionalHours": { "type": "number" }
-            }
-          }
-        }
-      }
-    },
-    "responsibleRole": {
-      "type": "object",
-      "required": ["roleName"],
-      "properties": {
-        "roleName": {
-          "type": "string"
-        },
-        "isPrimaryOwner": {
-          "type": "boolean"
-        },
-        "responsibilities": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "multiCloudConsideration": {
-      "type": "object",
-      "properties": {
-        "considerationTitle": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        }
-      }
-    }
-  }
+  "additionalProperties": true
 }

@@ -110,6 +110,9 @@ class ServicePdfExtractor:
             
             print("✅ Extraction successful")
             
+            # Normalize data structure before validation
+            service_data = self._normalize_tools_and_environment(service_data)
+            
             # Validate against schema (unless relaxed mode)
             if not self.relaxed_mode:
                 self._validate_against_schema(service_data)
@@ -190,7 +193,13 @@ The output must conform to the service import JSON schema with the following str
 
 6. **Tools and Environment:**
    - Group by category: cloudPlatforms, designTools, automationTools, collaborationTools
-   - Extract tool names, versions (if specified), purpose
+   - CRITICAL: Each tool MUST be an object with these properties:
+     * category: string (e.g., "Diagramming", "IaC", "Collaboration")
+     * toolName: string (name of the tool)
+     * version: string (version if specified, empty string if not)
+     * purpose: string (description of what the tool is used for)
+   - NEVER use simple strings - ALWAYS use objects
+   - Example: { "category": "Diagramming", "toolName": "Visio", "version": "", "purpose": "Architecture diagrams" }
 
 7. **Licenses:**
    - Group into: requiredByCustomer, recommendedOptional, providedByServiceProvider
@@ -434,6 +443,70 @@ Begin extraction now. Return only the JSON object:"""
             return f"Change schema to string, or parse string into object"
         else:
             return f"Schema expects {expected}, got {actual}"
+    
+    def _normalize_tools_and_environment(self, data: Dict) -> Dict:
+        """
+        Normalize toolsAndEnvironment structure to match schema requirements.
+        Converts strings and incorrectly structured objects to proper toolItem format.
+        """
+        if "toolsAndEnvironment" not in data:
+            return data
+        
+        tools_env = data["toolsAndEnvironment"]
+        tool_categories = ["cloudPlatforms", "designTools", "automationTools", "collaborationTools", "other"]
+        
+        for category in tool_categories:
+            if category not in tools_env:
+                continue
+                
+            items = tools_env[category]
+            if not isinstance(items, list):
+                continue
+            
+            normalized_items = []
+            for item in items:
+                # If item is a string, convert to toolItem object
+                if isinstance(item, str):
+                    normalized_items.append({
+                        "category": category.replace("Tools", "").replace("Platforms", "Platform").title(),
+                        "toolName": item,
+                        "version": "",
+                        "purpose": ""
+                    })
+                # If item is a dict but has wrong structure (e.g., 'tools' instead of 'toolName')
+                elif isinstance(item, dict):
+                    # Check if it already has the correct structure
+                    if "toolName" in item:
+                        normalized_items.append(item)
+                    # Handle legacy format with 'tools' field
+                    elif "tools" in item:
+                        tools_list = item["tools"].split(",") if isinstance(item["tools"], str) else [item["tools"]]
+                        for tool_name in tools_list:
+                            normalized_items.append({
+                                "category": item.get("category", ""),
+                                "toolName": tool_name.strip(),
+                                "version": item.get("version", ""),
+                                "purpose": item.get("purpose", "")
+                            })
+                    # Handle cloudPlatforms with capability/aws/azure/gcp structure
+                    elif any(k in item for k in ["capability", "aws", "azure", "gcp"]):
+                        capability = item.get("capability", "Multi-cloud")
+                        for platform in ["aws", "azure", "gcp"]:
+                            if platform in item and item[platform]:
+                                platform_name = {"aws": "AWS", "azure": "Azure", "gcp": "GCP"}[platform]
+                                normalized_items.append({
+                                    "category": "Cloud Platform",
+                                    "toolName": platform_name,
+                                    "version": "",
+                                    "purpose": capability
+                                })
+                    else:
+                        # Keep as is if we don't know how to normalize
+                        normalized_items.append(item)
+            
+            tools_env[category] = normalized_items
+        
+        return data
     
     def _validate_against_schema(self, data: Dict) -> None:
         """Validate extracted JSON against schema."""

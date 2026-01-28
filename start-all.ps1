@@ -19,7 +19,7 @@ param(
     [switch]$RecreateDb = $false,
     [switch]$SeedData = $false,
     [switch]$SkipHealthCheck = $false,
-    [int]$HealthCheckTimeout = 120,
+    [int]$HealthCheckTimeout = 30,
     [switch]$Help = $false
 )
 
@@ -500,7 +500,7 @@ npm run dev 2>&1 | Tee-Object -FilePath '$logFile'
 function Wait-ForBackend {
     param(
         [int]$Port = 7071,
-        [int]$TimeoutSeconds = 120
+        [int]$TimeoutSeconds = 30
     )
     
     Write-Host ""

@@ -16,6 +16,10 @@ public static class ImportServiceExtensions
         // Lookup Resolution Service
         services.AddScoped<ILookupResolverService, LookupResolverService>();
 
+        // Helpers
+        services.AddScoped<CategoryHelper>();
+        services.AddScoped<ToolsHelper>();
+
         // Import Validation Service
         services.AddScoped<IImportValidationService, ImportValidationService>();
 
