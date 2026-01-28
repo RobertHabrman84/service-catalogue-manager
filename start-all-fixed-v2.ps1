@@ -2,9 +2,9 @@
 # ============================================================================
 # Service Catalogue Manager - START ALL (FIXED)
 # ============================================================================
-# Version: 3.3.1
-# Description: Starts DB, builds and runs backend and frontend
-# Opravená verze pro sandbox prostředí bez Dockeru
+# Version: 3.3.2
+# Description: Starts DB with db_structure.sql, builds and runs backend and frontend
+# Používá kompletní strukturu databáze ze souboru db_structure.sql (42 tabulek)
 # ============================================================================
 
 param(
@@ -16,8 +16,8 @@ param(
     [switch]$BackendOnly = $false,
     [switch]$FrontendOnly = $false,
     [switch]$DbOnly = $false,
-    [switch]$UseSQLite = $true,  # Použít SQLite pro sandbox
-    [switch]$UseDocker = $false, # Použít Docker (pouze pokud je k dispozici)
+    [switch]$UseSQLite = $false,  # SQLite pouze explicitně
+    [switch]$UseDocker = $true,  # Docker jako výchozí pro kompletní strukturu
     [switch]$RecreateDb = $false,
     [switch]$SeedData = $false,
     [switch]$SkipHealthCheck = $false,
@@ -86,10 +86,16 @@ function Write-ErrorMessage {
 }
 
 function Show-Help {
-    Write-Header "SERVICE CATALOGUE MANAGER - START SCRIPT v3.3.1"
+    Write-Header "SERVICE CATALOGUE MANAGER - START SCRIPT v3.3.2"
     
     Write-Host "USAGE:" -ForegroundColor $COLOR_INFO
-    Write-Host "  .\start-all.ps1 [OPTIONS]"
+    Write-Host "  .\start-all-fixed-v2.ps1 [OPTIONS]"
+    Write-Host ""
+    
+    Write-Host "POPIS:" -ForegroundColor $COLOR_INFO
+    Write-Host "  Tento skript spustí kompletní Service Catalogue Manager s plnou databázovou strukturou."
+    Write-Host "  Používá db_structure.sql pro vytvoření 42 tabulek včetně 11 lookup tabulek."
+    Write-Host "  Automaticky detekuje Docker a používá SQL Server, jinak SQLite."
     Write-Host ""
     
     Write-Host "OPTIONS:" -ForegroundColor $COLOR_INFO
@@ -99,9 +105,9 @@ function Show-Help {
     Write-Host "  -SkipDb                  Skip database startup"
     Write-Host "  -SkipBuild               Skip the build step"
     Write-Host "  -CleanBuild              Clean before building"
-    Write-Host "  -UseSQLite               Use SQLite database (default for sandbox)"
-    Write-Host "  -UseDocker               Use Docker SQL Server (if available)"
-    Write-Host "  -RecreateDb              Recreate database (drops existing)"
+    Write-Host "  -UseSQLite               Use SQLite database (fallback mode)"
+    Write-Host "  -UseDocker               Use Docker SQL Server with db_structure.sql (default)"
+    Write-Host "  -RecreateDb              Recreate database from scratch using db_structure.sql"
     Write-Host "  -SeedData                Seed database with sample data"
     Write-Host "  -SkipHealthCheck         Skip backend health check (not recommended)"
     Write-Host "  -HealthCheckTimeout <s>  Health check timeout in seconds (default: 120)"
@@ -109,15 +115,15 @@ function Show-Help {
     Write-Host ""
     
     Write-Host "EXAMPLES:" -ForegroundColor $COLOR_INFO
-    Write-Host "  .\start-all.ps1                    # Start DB + Backend + Frontend (SQLite)"
-    Write-Host "  .\start-all.ps1 -UseDocker          # Use Docker SQL Server"
+    Write-Host "  .\start-all.ps1                    # Start DB + Backend + Frontend (Docker with db_structure.sql)"
+    Write-Host "  .\start-all.ps1 -UseSQLite          # Use SQLite database (fallback)"
+    Write-Host "  .\start-all.ps1 -RecreateDb        # Recreate DB from scratch using db_structure.sql"
     Write-Host "  .\start-all.ps1 -DbOnly            # Start only database"
     Write-Host "  .\start-all.ps1 -BackendOnly       # Start DB + Backend"
-    Write-Host "  .\start-all.ps1 -RecreateDb        # Recreate DB from scratch"
     Write-Host ""
     
     Write-Host "ENDPOINTS:" -ForegroundColor $COLOR_INFO
-    Write-Host "  Database:     SQLite: ServiceCatalogueManager.db"
+    Write-Host "  Database:     Docker: localhost:$DB_PORT | SQLite: ServiceCatalogueManager.db"
     Write-Host "  Backend API:  http://localhost:$BACKEND_PORT/api"
     Write-Host "  Frontend:     http://localhost:$FRONTEND_PORT"
     Write-Host ""
@@ -237,42 +243,14 @@ function Setup-DockerDatabase {
     
     $setupScript = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed-v2.ps1"
     if (Test-Path $setupScript) {
-        Write-Info "Running database setup script..."
+        Write-Info "Running database setup script with db_structure.sql support..."
+        Write-Info "This will create all 42 tables including 11 lookup tables from db_structure.sql"
         & $setupScript -DbName $DB_NAME -ContainerName $DB_CONTAINER -Force:$RecreateDb
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "Database setup complete!"
+            Write-Success "Database setup complete using db_structure.sql!"
         } else {
-            Write-Warning "Database setup had issues"
-        }
-    } else {
-        Write-Warning "Database setup script not found: $setupScript"
-        Write-Warning "Database may not be properly initialized"
-    }
-}
-
-function Setup-DockerDatabase {
-    Write-Info "Setting up database schema..."
-    
-    # Use Docker configuration for backend
-    $dockerConfig = Join-Path $BACKEND_DIR "local.settings.docker.json"
-    $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
-    
-    if (Test-Path $dockerConfig) {
-        Write-Info "Using Docker configuration for backend..."
-        Copy-Item -Path $dockerConfig -Destination $targetConfig -Force
-        Write-Success "Backend configuration updated for Docker"
-    }
-    
-    $setupScript = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed-v2.ps1"
-    if (Test-Path $setupScript) {
-        Write-Info "Running database setup script..."
-        & $setupScript -DbName $DB_NAME -ContainerName $DB_CONTAINER -Force:$RecreateDb
-        
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "Database setup complete!"
-        } else {
-            Write-Warning "Database setup had issues"
+            Write-Warning "Database setup had issues - check logs above"
         }
     } else {
         Write-Warning "Database setup script not found: $setupScript"
@@ -641,7 +619,7 @@ try {
         exit 0
     }
     
-    Write-Header "SERVICE CATALOGUE MANAGER v3.3.1"
+    Write-Header "SERVICE CATALOGUE MANAGER v3.3.2"
     
     # Handle mode flags
     if ($DbOnly) {
