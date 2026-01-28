@@ -91,6 +91,8 @@ var host = new HostBuilder()
         // Import Services
         services.AddScoped<IImportOrchestrationService, ImportOrchestrationService>();
         services.AddScoped<IImportValidationService, ImportValidationService>();
+        services.AddScoped<CategoryHelper>();
+        services.AddScoped<ToolsHelper>();
         
         // Cache Service
         services.AddSingleton<ICacheService, InMemoryCacheService>();
