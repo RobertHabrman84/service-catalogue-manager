@@ -1,0 +1,707 @@
+#!/usr/bin/env pwsh
+# ============================================================================
+# Service Catalogue Manager - START ALL (FIXED)
+# ============================================================================
+# Version: 3.3.1
+# Description: Starts DB, builds and runs backend and frontend
+# Opravená verze pro sandbox prostředí bez Dockeru
+# ============================================================================
+
+param(
+    [switch]$SkipBuild = $false,
+    [switch]$SkipFrontend = $false,
+    [switch]$SkipBackend = $false,
+    [switch]$SkipDb = $false,
+    [switch]$CleanBuild = $false,
+    [switch]$BackendOnly = $false,
+    [switch]$FrontendOnly = $false,
+    [switch]$DbOnly = $false,
+    [switch]$UseSQLite = $true,  # Použít SQLite pro sandbox
+    [switch]$UseDocker = $false, # Použít Docker (pouze pokud je k dispozici)
+    [switch]$RecreateDb = $false,
+    [switch]$SeedData = $false,
+    [switch]$SkipHealthCheck = $false,
+    [int]$HealthCheckTimeout = 30,
+    [switch]$Help = $false
+)
+
+$ErrorActionPreference = "Continue"
+$ProgressPreference = "SilentlyContinue"
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+$SCRIPT_DIR = $PSScriptRoot
+$BACKEND_DIR = Join-Path $SCRIPT_DIR "src\backend\ServiceCatalogueManager.Api"
+$FRONTEND_DIR = Join-Path $SCRIPT_DIR "src\frontend"
+$DB_SETUP_SCRIPT = Join-Path $SCRIPT_DIR "database\scripts\setup-db.ps1"
+$DB_SQLITE_SCRIPT = Join-Path $SCRIPT_DIR "database\scripts\setup-sqlite.ps1"
+
+$BACKEND_PORT = 7071
+$FRONTEND_PORT = 3000
+$DB_PORT = 1433
+$DB_CONTAINER = "scm-sqlserver"
+$SA_PASSWORD = "YourStrong@Passw0rd"
+$DB_NAME = "ServiceCatalogueManager"
+
+# Colors
+$COLOR_SUCCESS = "Green"
+$COLOR_INFO = "Cyan"
+$COLOR_WARNING = "Yellow"
+$COLOR_ERROR = "Red"
+$COLOR_HEADER = "Magenta"
+
+# ============================================================================
+# FUNCTIONS
+# ============================================================================
+
+function Write-Header {
+    param([string]$Message)
+    Write-Host ""
+    Write-Host ("=" * 80) -ForegroundColor $COLOR_HEADER
+    Write-Host " $Message" -ForegroundColor $COLOR_HEADER
+    Write-Host ("=" * 80) -ForegroundColor $COLOR_HEADER
+    Write-Host ""
+}
+
+function Write-Success {
+    param([string]$Message)
+    Write-Host "✅ $Message" -ForegroundColor $COLOR_SUCCESS
+}
+
+function Write-Info {
+    param([string]$Message)
+    Write-Host "ℹ️  $Message" -ForegroundColor $COLOR_INFO
+}
+
+function Write-Warning {
+    param([string]$Message)
+    Write-Host "⚠️  $Message" -ForegroundColor $COLOR_WARNING
+}
+
+function Write-ErrorMessage {
+    param([string]$Message)
+    Write-Host "❌ $Message" -ForegroundColor $COLOR_ERROR
+}
+
+function Show-Help {
+    Write-Header "SERVICE CATALOGUE MANAGER - START SCRIPT v3.3.1"
+    
+    Write-Host "USAGE:" -ForegroundColor $COLOR_INFO
+    Write-Host "  .\start-all.ps1 [OPTIONS]"
+    Write-Host ""
+    
+    Write-Host "OPTIONS:" -ForegroundColor $COLOR_INFO
+    Write-Host "  -DbOnly                  Start only the database"
+    Write-Host "  -BackendOnly             Start database + backend API"
+    Write-Host "  -FrontendOnly            Start only the frontend"
+    Write-Host "  -SkipDb                  Skip database startup"
+    Write-Host "  -SkipBuild               Skip the build step"
+    Write-Host "  -CleanBuild              Clean before building"
+    Write-Host "  -UseSQLite               Use SQLite database (default for sandbox)"
+    Write-Host "  -UseDocker               Use Docker SQL Server (if available)"
+    Write-Host "  -RecreateDb              Recreate database (drops existing)"
+    Write-Host "  -SeedData                Seed database with sample data"
+    Write-Host "  -SkipHealthCheck         Skip backend health check (not recommended)"
+    Write-Host "  -HealthCheckTimeout <s>  Health check timeout in seconds (default: 120)"
+    Write-Host "  -Help                    Show this help message"
+    Write-Host ""
+    
+    Write-Host "EXAMPLES:" -ForegroundColor $COLOR_INFO
+    Write-Host "  .\start-all.ps1                    # Start DB + Backend + Frontend (SQLite)"
+    Write-Host "  .\start-all.ps1 -UseDocker          # Use Docker SQL Server"
+    Write-Host "  .\start-all.ps1 -DbOnly            # Start only database"
+    Write-Host "  .\start-all.ps1 -BackendOnly       # Start DB + Backend"
+    Write-Host "  .\start-all.ps1 -RecreateDb        # Recreate DB from scratch"
+    Write-Host ""
+    
+    Write-Host "ENDPOINTS:" -ForegroundColor $COLOR_INFO
+    Write-Host "  Database:     SQLite: ServiceCatalogueManager.db"
+    Write-Host "  Backend API:  http://localhost:$BACKEND_PORT/api"
+    Write-Host "  Frontend:     http://localhost:$FRONTEND_PORT"
+    Write-Host ""
+}
+
+function Test-Command {
+    param([string]$Command)
+    $null = Get-Command $Command -ErrorAction SilentlyContinue
+    return $?
+}
+
+function Test-DockerAvailable {
+    try {
+        docker --version 2>&1 | Out-Null
+        return $?
+    } catch {
+        return $false
+    }
+}
+
+function Test-BackendConnection {
+    param(
+        [int]$Port = 7071,
+        [int]$TimeoutSeconds = 10
+    )
+    
+    try {
+        $uri = "http://localhost:$Port/api/health"
+        $response = Invoke-WebRequest -Uri $uri -Method GET -TimeoutSec $TimeoutSeconds -UseBasicParsing -ErrorAction Stop
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Start-Database {
+    Write-Header "STARTING DATABASE"
+    
+    # Rozhodnout se mezi Docker a SQLite
+    if ($UseDocker -and (Test-DockerAvailable)) {
+        Start-DockerDatabase
+    } else {
+        Start-SqliteDatabase
+    }
+}
+
+function Start-DockerDatabase {
+    Write-Info "Docker detected, starting SQL Server container..."
+    
+    # Check Docker
+    if (-not (Test-Command "docker")) {
+        Write-Warning "Docker is not installed! Using SQLite fallback..."
+        Start-SqliteDatabase
+        return
+    }
+    
+    if (-not (Test-DockerAvailable)) {
+        Write-Warning "Docker is not running! Using SQLite fallback..."
+        Start-SqliteDatabase
+        return
+    }
+    
+    Write-Success "Docker is available"
+    
+    # Check if container exists and is running
+    try {
+        $container = docker ps --filter "name=$DB_CONTAINER" --format "{{.Names}}" 2>$null
+        if ($container -eq $DB_CONTAINER) {
+            Write-Info "SQL Server container is already running"
+            Write-Success "Database: localhost,$DB_PORT"
+            # Setup database if not exists
+            Setup-DockerDatabase
+            return
+        }
+    } catch {}
+    
+    # Stop and remove old container if exists
+    Write-Info "Preparing fresh SQL Server container..."
+    docker stop $DB_CONTAINER 2>$null | Out-Null
+    docker rm $DB_CONTAINER 2>$null | Out-Null
+    
+    # Start new container
+    Write-Info "Starting SQL Server 2022..."
+    docker run -d `
+        --name $DB_CONTAINER `
+        -e "ACCEPT_EULA=Y" `
+        -e "SA_PASSWORD=$SA_PASSWORD" `
+        -e "MSSQL_PID=Developer" `
+        -p "${DB_PORT}:1433" `
+        mcr.microsoft.com/mssql/server:2022-latest | Out-Null
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-ErrorMessage "Failed to start SQL Server container"
+        exit 1
+    }
+    
+    Write-Success "SQL Server container started"
+    Write-Info "Waiting 25 seconds for SQL Server initialization..."
+    Start-Sleep -Seconds 25
+    
+    # Setup database
+    Setup-DockerDatabase
+}
+
+function Setup-DockerDatabase {
+    Write-Info "Setting up database schema..."
+    
+    # Use Docker configuration for backend
+    $dockerConfig = Join-Path $BACKEND_DIR "local.settings.docker.json"
+    $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
+    
+    if (Test-Path $dockerConfig) {
+        Write-Info "Using Docker configuration for backend..."
+        Copy-Item -Path $dockerConfig -Destination $targetConfig -Force
+        Write-Success "Backend configuration updated for Docker"
+    }
+    
+    $setupScript = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed-v2.ps1"
+    if (Test-Path $setupScript) {
+        Write-Info "Running database setup script..."
+        & $setupScript -DbName $DB_NAME -ContainerName $DB_CONTAINER -Force:$RecreateDb
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Database setup complete!"
+        } else {
+            Write-Warning "Database setup had issues"
+        }
+    } else {
+        Write-Warning "Database setup script not found: $setupScript"
+        Write-Warning "Database may not be properly initialized"
+    }
+}
+
+function Setup-DockerDatabase {
+    Write-Info "Setting up database schema..."
+    
+    # Use Docker configuration for backend
+    $dockerConfig = Join-Path $BACKEND_DIR "local.settings.docker.json"
+    $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
+    
+    if (Test-Path $dockerConfig) {
+        Write-Info "Using Docker configuration for backend..."
+        Copy-Item -Path $dockerConfig -Destination $targetConfig -Force
+        Write-Success "Backend configuration updated for Docker"
+    }
+    
+    $setupScript = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed-v2.ps1"
+    if (Test-Path $setupScript) {
+        Write-Info "Running database setup script..."
+        & $setupScript -DbName $DB_NAME -ContainerName $DB_CONTAINER -Force:$RecreateDb
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Database setup complete!"
+        } else {
+            Write-Warning "Database setup had issues"
+        }
+    } else {
+        Write-Warning "Database setup script not found: $setupScript"
+        Write-Warning "Database may not be properly initialized"
+    }
+}
+
+function Start-SqliteDatabase {
+    Write-Info "Using SQLite database (sandbox mode)..."
+    
+    # Spustit SQLite setup skript
+    if (Test-Path $DB_SQLITE_SCRIPT) {
+        Write-Info "Setting up SQLite database..."
+        & $DB_SQLITE_SCRIPT -Force:$RecreateDb
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "SQLite database setup complete!"
+        } else {
+            Write-Warning "SQLite setup had issues"
+        }
+    } else {
+        Write-Warning "SQLite setup script not found: $DB_SQLITE_SCRIPT"
+        Write-Warning "Database may not be properly initialized"
+    }
+    
+    # Zkopírovat SQLite config do local.settings.json
+    $sqliteConfig = Join-Path $BACKEND_DIR "local.settings.sqlite.json"
+    $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
+    
+    if (Test-Path $sqliteConfig) {
+        Write-Info "Using SQLite configuration..."
+        Copy-Item -Path $sqliteConfig -Destination $targetConfig -Force
+        Write-Success "Configuration updated for SQLite"
+    }
+}
+
+function Test-Prerequisites {
+    Write-Header "CHECKING PREREQUISITES"
+    
+    # .NET SDK
+    Write-Info "Checking .NET SDK..."
+    if (Test-Command "dotnet") {
+        $dotnetVersion = dotnet --version
+        Write-Success ".NET SDK v$dotnetVersion"
+    } else {
+        Write-ErrorMessage ".NET SDK not found!"
+        Write-Warning "Install from: https://dotnet.microsoft.com/download"
+        exit 1
+    }
+    
+    # Azure Functions Core Tools
+    Write-Info "Checking Azure Functions Core Tools..."
+    if (Test-Command "func") {
+        $funcVersion = func --version
+        Write-Success "Azure Functions Core Tools v$funcVersion"
+    } else {
+        Write-ErrorMessage "Azure Functions Core Tools not found!"
+        Write-Warning "Install from: https://docs.microsoft.com/azure/azure-functions/functions-run-local"
+        exit 1
+    }
+    
+    # Node.js
+    if (-not $BackendOnly -and -not $DbOnly) {
+        Write-Info "Checking Node.js..."
+        if (Test-Command "node") {
+            $nodeVersion = node --version
+            Write-Success "Node.js $nodeVersion"
+        } else {
+            Write-ErrorMessage "Node.js not found!"
+            Write-Warning "Install from: https://nodejs.org/"
+            exit 1
+        }
+    }
+    
+    Write-Success "All required prerequisites satisfied!"
+}
+
+function Build-Backend {
+    Write-Header "BUILDING BACKEND API"
+    
+    Push-Location $BACKEND_DIR
+    
+    try {
+        if ($CleanBuild) {
+            Write-Info "Cleaning previous build..."
+            dotnet clean --configuration Release --nologo -v q
+            Write-Success "Clean complete"
+        }
+        
+        Write-Info "Restoring NuGet packages..."
+        dotnet restore --nologo -v q
+        Write-Success "Packages restored"
+        
+        Write-Info "Building backend..."
+        dotnet build --configuration Release --no-restore --nologo -v q
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-ErrorMessage "Backend build failed!"
+            exit 1
+        }
+        
+        Write-Success "Backend built successfully"
+    } finally {
+        Pop-Location
+    }
+}
+
+function Build-Frontend {
+    Write-Header "BUILDING FRONTEND"
+    
+    Push-Location $FRONTEND_DIR
+    
+    try {
+        # Check for node_modules
+        if (-not (Test-Path "node_modules")) {
+            Write-Info "Installing dependencies..."
+            npm install --silent
+            Write-Success "Dependencies installed"
+        } else {
+            Write-Info "Dependencies already installed"
+        }
+        
+        if ($CleanBuild) {
+            Write-Info "Cleaning previous build..."
+            if (Test-Path ".next") {
+                Remove-Item -Recurse -Force ".next"
+            }
+            Write-Success "Clean complete"
+        }
+        
+        Write-Success "Frontend ready"
+    } finally {
+        Pop-Location
+    }
+}
+
+function Start-Backend {
+    Write-Header "STARTING BACKEND API"
+    
+    $logFile = Join-Path $SCRIPT_DIR "logs\backend-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+    $logsDir = Join-Path $SCRIPT_DIR "logs"
+    
+    if (-not (Test-Path $logsDir)) {
+        New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+    }
+    
+    Write-Info "Starting Azure Functions in new window..."
+    Write-Info "Backend will be available at: http://localhost:$BACKEND_PORT"
+    Write-Info "Logs: $logFile"
+    Write-Host ""
+    
+    # Create backend startup script
+    $backendScript = @"
+`$ErrorActionPreference = 'Continue'
+`$Host.UI.RawUI.WindowTitle = 'Backend API - Port $BACKEND_PORT'
+
+Set-Location '$BACKEND_DIR'
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'BACKEND API STARTING' -ForegroundColor Cyan
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'Port: $BACKEND_PORT' -ForegroundColor Yellow
+Write-Host 'Directory: $BACKEND_DIR' -ForegroundColor Yellow
+Write-Host 'Log File: $logFile' -ForegroundColor Yellow
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host ''
+
+func start --port $BACKEND_PORT 2>&1 | Tee-Object -FilePath '$logFile'
+"@
+    
+    $tempScript = Join-Path $env:TEMP "start-backend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
+    $backendScript | Out-File -FilePath $tempScript -Encoding UTF8
+    
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $tempScript
+    
+    Write-Success "Backend started in new window"
+}
+
+function Start-Frontend {
+    Write-Header "STARTING FRONTEND"
+    
+    # CRITICAL: Ensure dependencies are installed before starting
+    Push-Location $FRONTEND_DIR
+    try {
+        if (-not (Test-Path "node_modules")) {
+            Write-Warning "Frontend dependencies not found!"
+            Write-Info "Installing dependencies (this may take a few minutes)..."
+            npm install
+            Write-Success "Dependencies installed"
+        }
+    } finally {
+        Pop-Location
+    }
+    
+    $logFile = Join-Path $SCRIPT_DIR "logs\frontend-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+    $logsDir = Join-Path $SCRIPT_DIR "logs"
+    
+    if (-not (Test-Path $logsDir)) {
+        New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+    }
+    
+    Write-Info "Starting Vite development server in new window..."
+    Write-Info "Frontend will be available at: http://localhost:$FRONTEND_PORT"
+    Write-Info "Logs: $logFile"
+    Write-Host ""
+    
+    # Create startup script for frontend
+    $frontendScript = @"
+`$ErrorActionPreference = 'Continue'
+`$Host.UI.RawUI.WindowTitle = 'Frontend - Port $FRONTEND_PORT'
+`$env:PORT = '$FRONTEND_PORT'
+Set-Location '$FRONTEND_DIR'
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'FRONTEND STARTING' -ForegroundColor Cyan
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'Port: $FRONTEND_PORT' -ForegroundColor Yellow
+Write-Host 'Directory: $FRONTEND_DIR' -ForegroundColor Yellow
+Write-Host 'Log File: $logFile' -ForegroundColor Yellow
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host ''
+
+npm run dev 2>&1 | Tee-Object -FilePath '$logFile'
+"@
+    
+    $tempScript = Join-Path $env:TEMP "start-frontend-$(Get-Date -Format 'yyyyMMddHHmmss').ps1"
+    $frontendScript | Out-File -FilePath $tempScript -Encoding UTF8
+    
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $tempScript
+    
+    Write-Success "Frontend started in new window"
+}
+
+function Wait-ForBackend {
+    param(
+        [int]$Port = 7071,
+        [int]$TimeoutSeconds = 30
+    )
+    
+    Write-Host ""
+    Write-Info "Waiting for backend health check on http://localhost:$Port..."
+    Write-Host "  Timeout: $TimeoutSeconds seconds" -ForegroundColor Gray
+    Write-Host ""
+    
+    $startTime = Get-Date
+    $timeout = (Get-Date).AddSeconds($TimeoutSeconds)
+    $attempt = 0
+    $maxAttempts = [Math]::Ceiling($TimeoutSeconds / 2)
+    
+    while ((Get-Date) -lt $timeout) {
+        $attempt++
+        $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
+        
+        # Progress indicator
+        Write-Host "`r  Attempt $attempt/$maxAttempts... [" -NoNewline -ForegroundColor Gray
+        Write-Host "${elapsed}s" -NoNewline -ForegroundColor Cyan
+        Write-Host "]" -NoNewline -ForegroundColor Gray
+        
+        try {
+            $uri = "http://localhost:$Port/api/health"
+            $response = Invoke-WebRequest -Uri $uri -Method GET -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
+            
+            # Success!
+            Write-Host ""  # New line after progress
+            Write-Host ""
+            Write-Success "Backend is HEALTHY!"
+            Write-Host "  Endpoint: $uri" -ForegroundColor Gray
+            Write-Host "  Status: $($response.StatusCode)" -ForegroundColor Gray
+            Write-Host "  Response time: ${elapsed}s" -ForegroundColor Gray
+            
+            return $true
+            
+        } catch [System.Net.WebException] {
+            # Check if we got any HTTP response (even error codes)
+            if ($_.Exception.Response) {
+                $statusCode = [int]$_.Exception.Response.StatusCode
+                if ($statusCode -ge 200 -and $statusCode -lt 600) {
+                    # Any HTTP response means server is listening
+                    Write-Host ""  # New line
+                    Write-Host ""
+                    Write-Success "Backend is responding! (HTTP $statusCode)"
+                    Write-Host "  Endpoint: $uri" -ForegroundColor Gray
+                    Write-Host "  Response time: ${elapsed}s" -ForegroundColor Gray
+                    return $true
+                }
+            }
+        } catch {
+            # Connection refused, timeout, etc. - continue
+        }
+        
+        # Calculate exponential backoff: 1s, 2s, 3s, 4s, 5s (max)
+        $sleepTime = [Math]::Min(5, $attempt)
+        Start-Sleep -Seconds $sleepTime
+    }
+    
+    # Timeout reached
+    Write-Host ""  # New line after progress
+    Write-Host ""
+    Write-Warning "Backend health check TIMEOUT after $TimeoutSeconds seconds"
+    Write-Warning "Backend may still be starting. Check backend window for errors."
+    Write-Host ""
+    Write-Host "To diagnose:" -ForegroundColor Cyan
+    Write-Host "  1. Check backend window for compilation errors" -ForegroundColor Gray
+    Write-Host "  2. Try manual health check:" -ForegroundColor Gray
+    Write-Host "     Invoke-WebRequest http://localhost:$Port/api/health" -ForegroundColor White
+    Write-Host "  3. Check port availability:" -ForegroundColor Gray
+    Write-Host "     netstat -ano | findstr :$Port" -ForegroundColor White
+    Write-Host ""
+    Write-Warning "Frontend will start anyway, but may not work correctly."
+    Write-Host ""
+    Write-Host "Press Enter to continue or Ctrl+C to abort..." -ForegroundColor Yellow
+    Read-Host
+    
+    return $false
+}
+
+function Start-All {
+    Write-Header "STARTING ALL SERVICES"
+    
+    Write-Info "Starting services in separate windows..."
+    Write-Host ""
+    
+    # Start backend in new window
+    Start-Backend
+    
+    # Wait for backend to be ready before starting frontend
+    if ($script:SkipHealthCheck) {
+        Write-Warning "Skipping backend health check (not recommended)"
+        Write-Info "Waiting 5 seconds before starting frontend..."
+        Start-Sleep -Seconds 5
+    } else {
+        $backendReady = Wait-ForBackend -Port $BACKEND_PORT -TimeoutSeconds $script:HealthCheckTimeout
+        
+        if ($backendReady) {
+            Write-Host ""
+            Write-Info "Backend is ready, now starting frontend..."
+        } else {
+            Write-Host ""
+            Write-Warning "Starting frontend anyway..."
+        }
+    }
+    
+    Write-Host ""
+    
+    # Start frontend in new window
+    Start-Frontend
+    
+    Write-Host ""
+    Write-Success "All services started!"
+    Write-Host ""
+    Write-Info "Backend: http://localhost:$BACKEND_PORT"
+    Write-Info "Frontend: http://localhost:$FRONTEND_PORT"
+    Write-Info "Logs: $(Join-Path $SCRIPT_DIR 'logs')"
+    Write-Host ""
+    Write-Warning "Keep this window open. Close service windows to stop services."
+    Write-Host ""
+    Write-Host "Press any key to exit..."
+    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+}
+
+# ============================================================================
+# MAIN EXECUTION
+# ============================================================================
+
+try {
+    if ($Help) {
+        Show-Help
+        exit 0
+    }
+    
+    Write-Header "SERVICE CATALOGUE MANAGER v3.3.1"
+    
+    # Handle mode flags
+    if ($DbOnly) {
+        Test-Prerequisites
+        Start-Database
+        Write-Host ""
+        Write-Success "Database is running!"
+        if ($UseDocker -and (Test-DockerAvailable)) {
+            Write-Info "Connection String:"
+            Write-Host "Server=localhost,$DB_PORT;Database=$DB_NAME;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" -ForegroundColor White
+        } else {
+            Write-Info "SQLite database: ServiceCatalogueManager.db"
+        }
+        exit 0
+    }
+    
+    if ($FrontendOnly) {
+        $SkipDb = $true
+        $SkipBackend = $true
+    }
+    
+    if ($BackendOnly) {
+        $SkipFrontend = $true
+    }
+    
+    # Check prerequisites
+    Test-Prerequisites
+    
+    # Start database
+    if (-not $SkipDb -and -not $FrontendOnly) {
+        Start-Database
+    }
+    
+    # Build phase
+    if (-not $SkipBuild) {
+        if (-not $SkipBackend -and -not $FrontendOnly) {
+            Build-Backend
+        }
+        
+        if (-not $SkipFrontend -and -not $BackendOnly) {
+            Build-Frontend
+        }
+    }
+    
+    # Start phase
+    Write-Host ""
+    Write-Info "All services ready to start!"
+    Write-Host ""
+    
+    if ($BackendOnly) {
+        Start-Backend
+    } elseif ($FrontendOnly) {
+        Start-Frontend
+    } else {
+        Start-All
+    }
+    
+} catch {
+    Write-Host ""
+    Write-ErrorMessage "An error occurred: $_"
+    Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+    exit 1
+}
