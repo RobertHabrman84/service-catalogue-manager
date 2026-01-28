@@ -14,11 +14,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$NoEFCoreMode = $NoEFCore.IsPresent -or ($PSBoundParameters.ContainsKey('NoEFCore') -and [bool]$NoEFCore)
+
 $SA_PASSWORD = "YourStrong@Passw0rd"
 $SERVER = "localhost,1433"
 $SCHEMA_DIR = Join-Path $PSScriptRoot "..\schema"
 # Optional: echo explicit NO EF mode for tracing
-if ($NoEFCore) { Write-Host "Mode: NO EF CORE (pure SQL)" -ForegroundColor Cyan }
+if ($NoEFCoreMode) { Write-Host "Mode: NO EF CORE (pure SQL)" -ForegroundColor Cyan }
 
 Write-Host "🗄️  Service Catalogue Database Setup (FIXED V2)" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
@@ -133,7 +135,7 @@ try {
 # Wait a moment for database to be ready
 Start-Sleep -Seconds 2
 
-if (-not $NoEFCore) {
+if (-not $NoEFCoreMode) {
     # Try EF Core migrations first (preferred method)
     Write-Host "ℹ️  Attempting EF Core migrations..." -ForegroundColor Cyan
     $backendDir = Join-Path $PSScriptRoot "..\..\src\backend\ServiceCatalogueManager.Api"
@@ -300,10 +302,25 @@ $tableCountResult = Invoke-SqlCommand -Query $countQuery
 
 # Lepší extrakce čísla z výsledku
 try {
-    if ($tableCountResult -match '(\d+)') {
-        $tableCount = $matches[1]
-    } else {
-        $tableCount = 0
+    $tableCount = 0
+    $tableCountLines = @()
+    if ($null -ne $tableCountResult) {
+        if ($tableCountResult -is [array]) {
+            $tableCountLines = $tableCountResult
+        } else {
+            $tableCountLines = @($tableCountResult)
+        }
+    }
+    $numericLine = $tableCountLines |
+        ForEach-Object { $_.ToString().Trim() } |
+        Where-Object { $_ -match '^\d+$' } |
+        Select-Object -First 1
+    if (-not [int]::TryParse($numericLine, [ref]$tableCount)) {
+        $joined = ($tableCountLines | ForEach-Object { $_.ToString() }) -join ' '
+        $match = [regex]::Match($joined, '\d+')
+        if ($match.Success) {
+            [void][int]::TryParse($match.Value, [ref]$tableCount)
+        }
     }
 } catch {
     $tableCount = 0
@@ -362,10 +379,25 @@ $tableCountResult = Invoke-SqlCommand -Query $countQuery
 
 # Lepší extrakce čísla z výsledku
 try {
-    if ($tableCountResult -match '(\d+)') {
-        $tableCount = $matches[1]
-    } else {
-        $tableCount = 0
+    $tableCount = 0
+    $tableCountLines = @()
+    if ($null -ne $tableCountResult) {
+        if ($tableCountResult -is [array]) {
+            $tableCountLines = $tableCountResult
+        } else {
+            $tableCountLines = @($tableCountResult)
+        }
+    }
+    $numericLine = $tableCountLines |
+        ForEach-Object { $_.ToString().Trim() } |
+        Where-Object { $_ -match '^\d+$' } |
+        Select-Object -First 1
+    if (-not [int]::TryParse($numericLine, [ref]$tableCount)) {
+        $joined = ($tableCountLines | ForEach-Object { $_.ToString() }) -join ' '
+        $match = [regex]::Match($joined, '\d+')
+        if ($match.Success) {
+            [void][int]::TryParse($match.Value, [ref]$tableCount)
+        }
     }
 } catch {
     $tableCount = 0
