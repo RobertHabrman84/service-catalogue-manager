@@ -402,6 +402,15 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
+        // Skip transactions when using EF Core InMemory provider (transactions are not supported)
+        // See https://go.microsoft.com/fwlink/?LinkId=800142
+        var provider = _context.Database.ProviderName;
+        if (!string.IsNullOrEmpty(provider) && provider.Contains("InMemory"))
+        {
+            // No-op for InMemory database
+            return;
+        }
+
         _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
     }
 
