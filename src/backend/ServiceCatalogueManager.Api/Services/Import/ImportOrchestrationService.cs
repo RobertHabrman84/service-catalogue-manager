@@ -3,6 +3,7 @@ namespace ServiceCatalogueManager.Api.Services.Import;
 using ServiceCatalogueManager.Api.Models.Import;
 using ServiceCatalogueManager.Api.Data.Repositories;
 using ServiceCatalogueManager.Api.Data.Entities;
+using ServiceCatalogueManager.Api.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
@@ -16,6 +17,7 @@ public class ImportOrchestrationService : IImportOrchestrationService
     private readonly IImportValidationService _validationService;
     private readonly CategoryHelper _categoryHelper;
     private readonly ToolsHelper _toolsHelper;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<ImportOrchestrationService> _logger;
 
     public ImportOrchestrationService(
@@ -23,12 +25,14 @@ public class ImportOrchestrationService : IImportOrchestrationService
         IImportValidationService validationService,
         CategoryHelper categoryHelper,
         ToolsHelper toolsHelper,
+        ICacheService cacheService,
         ILogger<ImportOrchestrationService> logger)
     {
         _unitOfWork = unitOfWork;
         _validationService = validationService;
         _categoryHelper = categoryHelper;
         _toolsHelper = toolsHelper;
+        _cacheService = cacheService;
         _logger = logger;
     }
 
@@ -140,6 +144,11 @@ public class ImportOrchestrationService : IImportOrchestrationService
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
+
+                // Invalidate cache after successful import
+                // This ensures that subsequent API calls fetch fresh data including the newly imported service
+                await _cacheService.RemoveByPrefixAsync("service_");
+                _logger.LogInformation("Cache invalidated after import");
 
                 _logger.LogInformation("Successfully imported service: {ServiceCode}", model.ServiceCode);
 
