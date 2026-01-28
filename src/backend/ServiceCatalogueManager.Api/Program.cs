@@ -1,6 +1,5 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -42,27 +41,20 @@ var host = new HostBuilder()
         {
             var connectionString = configuration.GetConnectionString("AzureSQL")
                 ?? configuration["AzureSQL__ConnectionString"];
-            
-            // Use In-Memory database fallback for development
-            if (string.IsNullOrEmpty(connectionString) || 
-                connectionString.Contains("localhost") || 
-                context.HostingEnvironment.IsDevelopment())
+
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
-                Console.WriteLine("⚠️  Using IN-MEMORY database for development");
-                options.UseInMemoryDatabase("ServiceCatalogueDevDb");
-                options.ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning));
+                throw new InvalidOperationException("Azure SQL connection string is not configured. Please set AzureSQL or AzureSQL__ConnectionString.");
             }
-            else
+
+            options.UseSqlServer(connectionString, sqlOptions =>
             {
-                options.UseSqlServer(connectionString, sqlOptions =>
-                {
-                    sqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(30),
-                        errorNumbersToAdd: null);
-                    sqlOptions.CommandTimeout(30);
-                });
-            }
+                sqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorNumbersToAdd: null);
+                sqlOptions.CommandTimeout(30);
+            });
         });
 
         // Blob Storage
