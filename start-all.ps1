@@ -4,7 +4,7 @@
 # ============================================================================
 # Version: 4.1.0
 # Description: Starts DB with db_structure.sql ONLY - NO EF Core migrations
-# Používá VÝHRADNĚ db_structure.sql pro vytvoření kompletní databázové struktury
+# PouÅ¾Ã­vÃ¡ VÃHRADNÄš db_structure.sql pro vytvoÅ™enÃ­ kompletnÃ­ databÃ¡zovÃ© struktury
 # ============================================================================
 
 param(
@@ -16,8 +16,8 @@ param(
     [switch]$BackendOnly = $false,
     [switch]$FrontendOnly = $false,
     [switch]$DbOnly = $false,
-    [switch]$UseSQLite = $false,  # SQLite pouze explicitně
-    [switch]$UseDocker = $true,  # Docker jako výchozí pro kompletní strukturu
+    [switch]$UseSQLite = $false,  # SQLite pouze explicitnÄ›
+    [switch]$UseDocker = $true,  # Docker jako vÃ½chozÃ­ pro kompletnÃ­ strukturu
     [switch]$RecreateDb = $false,
     [switch]$SeedData = $false,
     [switch]$SkipHealthCheck = $false,
@@ -69,22 +69,22 @@ function Write-Header {
 
 function Write-Success {
     param([string]$Message)
-    Write-Host "✅ $Message" -ForegroundColor $COLOR_SUCCESS
+    Write-Host "$Message" -ForegroundColor $COLOR_SUCCESS
 }
 
 function Write-Info {
     param([string]$Message)
-    Write-Host "ℹ️  $Message" -ForegroundColor $COLOR_INFO
+    Write-Host "â„¹ï¸  $Message" -ForegroundColor $COLOR_INFO
 }
 
 function Write-Warning {
     param([string]$Message)
-    Write-Host "⚠️  $Message" -ForegroundColor $COLOR_WARNING
+    Write-Host "âš ï¸  $Message" -ForegroundColor $COLOR_WARNING
 }
 
 function Write-ErrorMessage {
     param([string]$Message)
-    Write-Host "❌ $Message" -ForegroundColor $COLOR_ERROR
+    Write-Host "âŒ $Message" -ForegroundColor $COLOR_ERROR
 }
 
 function Show-Help {
@@ -95,44 +95,44 @@ function Show-Help {
     Write-Host ""
     
     Write-Host "POPIS:" -ForegroundColor $COLOR_INFO
-    Write-Host "  Tento skript spustí kompletní Service Catalogue Manager VÝHRADNĚ s db_structure.sql."
-    Write-Host "  NEPOUŽÍVÁ ŽÁDNÉ EF Core migrace - pouze SQL skripty pro vytvoření databáze."
-    Write-Host "  Používá kompletní strukturu 42 tabulek včetně 11 lookup tabulek z db_structure.sql."
+    Write-Host "  Tento skript spustÃ­ kompletnÃ­ Service Catalogue Manager VÃHRADNÄš s db_structure.sql."
+    Write-Host "  NEPOUÅ½ÃVÃ Å½ÃDNÃ‰ EF Core migrace - pouze SQL skripty pro vytvoÅ™enÃ­ databÃ¡ze."
+    Write-Host "  PouÅ¾Ã­vÃ¡ kompletnÃ­ strukturu 42 tabulek vÄetnÄ› 11 lookup tabulek z db_structure.sql."
     Write-Host ""
     
-    Write-Host "MOŽNOSTI:" -ForegroundColor $COLOR_INFO
-    Write-Host "  -SkipBuild         Přeskočit build aplikací"
-    Write-Host "  -SkipFrontend      Přeskočit frontend"
-    Write-Host "  -SkipBackend       Přeskočit backend" 
-    Write-Host "  -SkipDb            Přeskočit databázi"
-    Write-Host "  -CleanBuild        Vyčistit a buildovat znovu"
+    Write-Host "MOÅ½NOSTI:" -ForegroundColor $COLOR_INFO
+    Write-Host "  -SkipBuild         PÅ™eskoÄit build aplikacÃ­"
+    Write-Host "  -SkipFrontend      PÅ™eskoÄit frontend"
+    Write-Host "  -SkipBackend       PÅ™eskoÄit backend" 
+    Write-Host "  -SkipDb            PÅ™eskoÄit databÃ¡zi"
+    Write-Host "  -CleanBuild        VyÄistit a buildovat znovu"
     Write-Host "  -BackendOnly       Pouze backend"
     Write-Host "  -FrontendOnly      Pouze frontend"
-    Write-Host "  -DbOnly            Pouze databáze"
-    Write-Host "  -UseSQLite         Použít SQLite (výchozí je Docker)"
-    Write-Host "  -UseDocker         Použít Docker SQL Server (výchozí)"
-    Write-Host "  -RecreateDb        Znovu vytvořit databázi"
-    Write-Host "  -SeedData          Naplnit testovacími daty"
-    Write-Host "  -SkipHealthCheck   Přeskočit kontrolu zdraví"
-    Write-Host "  -HealthCheckTimeout Nastavit timeout pro kontrolu zdraví (v sekundách)"
-    Write-Host "  -Help              Zobrazit tuto nápovědu"
+    Write-Host "  -DbOnly            Pouze databÃ¡ze"
+    Write-Host "  -UseSQLite         PouÅ¾Ã­t SQLite (vÃ½chozÃ­ je Docker)"
+    Write-Host "  -UseDocker         PouÅ¾Ã­t Docker SQL Server (vÃ½chozÃ­)"
+    Write-Host "  -RecreateDb        Znovu vytvoÅ™it databÃ¡zi"
+    Write-Host "  -SeedData          Naplnit testovacÃ­mi daty"
+    Write-Host "  -SkipHealthCheck   PÅ™eskoÄit kontrolu zdravÃ­"
+    Write-Host "  -HealthCheckTimeout Nastavit timeout pro kontrolu zdravÃ­ (v sekundÃ¡ch)"
+    Write-Host "  -Help              Zobrazit tuto nÃ¡povÄ›du"
     Write-Host ""
     
-    Write-Host "PŘÍKLADY:" -ForegroundColor $COLOR_INFO
-    Write-Host "  # Standardní spuštění s Dockerem a kompletní strukturou"
+    Write-Host "PÅ˜ÃKLADY:" -ForegroundColor $COLOR_INFO
+    Write-Host "  # StandardnÃ­ spuÅ¡tÄ›nÃ­ s Dockerem a kompletnÃ­ strukturou"
     Write-Host "  .\start-all.ps1 -UseDocker -RecreateDb"
     Write-Host ""
-    Write-Host "  # Pouze databáze s kompletní strukturou"
+    Write-Host "  # Pouze databÃ¡ze s kompletnÃ­ strukturou"
     Write-Host "  .\start-all.ps1 -UseDocker -RecreateDb -DbOnly"
     Write-Host ""
-    Write-Host "  # SQLite pro sandbox režim"
+    Write-Host "  # SQLite pro sandbox reÅ¾im"
     Write-Host "  .\start-all.ps1 -UseSQLite -RecreateDb"
     Write-Host ""
     
-    Write-Host "DŮLEŽITÉ:" -ForegroundColor $COLOR_WARNING
-    Write-Host "  Tento skript NIKDY nepoužívá EF Core migrace!"
-    Write-Host "  Vždy používá pouze SQL skripty (db_structure.sql) pro vytvoření databáze."
-    Write-Host "  Pro Docker je vyžadován SQL Server container s kompletní strukturou."
+    Write-Host "DÅ®LEÅ½ITÃ‰:" -ForegroundColor $COLOR_WARNING
+    Write-Host "  Tento skript NIKDY nepouÅ¾Ã­vÃ¡ EF Core migrace!"
+    Write-Host "  VÅ¾dy pouÅ¾Ã­vÃ¡ pouze SQL skripty (db_structure.sql) pro vytvoÅ™enÃ­ databÃ¡ze."
+    Write-Host "  Pro Docker je vyÅ¾adovÃ¡n SQL Server container s kompletnÃ­ strukturou."
     Write-Host ""
     exit 0
 }
@@ -191,7 +191,7 @@ function Test-BackendConnection {
 function Start-Database {
     Write-Header "STARTING DATABASE (NO EF CORE - PURE SQL)"
     
-    Write-Info "🗄️  Používá se VÝHRADNĚ SQL skripty - žádné EF Core migrace!"
+    Write-Info "  PouÅ¾Ã­vÃ¡ se VÃHRADNÄš SQL skripty - Å¾Ã¡dnÃ© EF Core migrace!"
     
     # Rozhodnout se mezi Docker a SQLite
     if ($UseDocker -and (Test-DockerAvailable)) {
@@ -273,7 +273,7 @@ function Setup-DockerDatabase {
         Write-Success "Backend configuration updated for Docker"
     }
     
-    # Použít výhradně setup-db-fixed-v2.ps1 - žádné EF Core migrace!
+    # PouÅ¾Ã­t vÃ½hradnÄ› setup-db-fixed-v2.ps1 - Å¾Ã¡dnÃ© EF Core migrace!
     $setupScript = Join-Path $SCRIPT_DIR "database\scripts\setup-db-fixed-v2.ps1"
     if (Test-Path $setupScript) {
         Write-Info "Running database setup script with db_structure.sql (NO EF CORE!)..."
@@ -373,7 +373,7 @@ function Verify-DatabaseStructure {
 
 function Start-SqliteDatabase {
     Write-Info "Using SQLite database (sandbox mode) - NO EF CORE..."
-    Write-Info "SQLite používá alternativní přístup bez db_structure.sql"
+    Write-Info "SQLite pouÅ¾Ã­vÃ¡ alternativnÃ­ pÅ™Ã­stup bez db_structure.sql"
     
     # Spustit SQLite setup skript
     if (Test-Path $DB_SQLITE_SCRIPT) {
@@ -392,7 +392,7 @@ function Start-SqliteDatabase {
         exit 1
     }
     
-    # Zkopírovat SQLite config do local.settings.json
+    # ZkopÃ­rovat SQLite config do local.settings.json
     $sqliteConfig = Join-Path $BACKEND_DIR "local.settings.sqlite.json"
     $targetConfig = Join-Path $BACKEND_DIR "local.settings.json"
     
@@ -444,7 +444,7 @@ function Test-Prerequisites {
         exit 1
     }
     
-    # Docker (volitelné)
+    # Docker (volitelnÃ©)
     if ($UseDocker) {
         Write-Info "Checking Docker (optional)..."
         if (Test-DockerAvailable) {
@@ -570,8 +570,8 @@ function Start-Frontend {
 function Start-All {
     Write-Header "STARTING ALL SERVICES (NO EF CORE MODE)"
     
-    Write-Info "🚀 Spouštím Service Catalogue Manager v režimu BEZ EF Core migrací!"
-    Write-Info "Databáze bude vytvořena POUZE pomocí db_structure.sql"
+    Write-Info "ðŸš€ SpouÅ¡tÃ­m Service Catalogue Manager v reÅ¾imu BEZ EF Core migracÃ­!"
+    Write-Info "DatabÃ¡ze bude vytvoÅ™ena POUZE pomocÃ­ db_structure.sql"
     Write-Host ""
     
     # Start services based on parameters
@@ -603,46 +603,46 @@ function Start-All {
     if (-not $SkipFrontend) { Start-Frontend }
     
     Write-Header "ALL SERVICES STARTED SUCCESSFULLY!"
-    Write-Success "✅ Service Catalogue Manager běží BEZ EF Core migrací!"
-    Write-Success "✅ Databáze používá kompletní strukturu z db_structure.sql"
-    Write-Success "✅ Backend: http://localhost:$BACKEND_PORT"
+    Write-Success "Service Catalogue Manager bÄ›Å¾Ã­ BEZ EF Core migracÃ­!"
+    Write-Success "DatabÃ¡ze pouÅ¾Ã­vÃ¡ kompletnÃ­ strukturu z db_structure.sql"
+    Write-Success "Backend: http://localhost:$BACKEND_PORT"
     if ($script:BackendProcessId) {
         Write-Info "Backend PID: $script:BackendProcessId"
     }
-    Write-Success "✅ Frontend: http://localhost:$FRONTEND_PORT"
+    Write-Success "Frontend: http://localhost:$FRONTEND_PORT"
     if ($script:FrontendProcessId) {
         Write-Info "Frontend PID: $script:FrontendProcessId"
     }
-    Write-Success "✅ Database: localhost,$DB_PORT (SQL Server)"
+    Write-Success "Database: localhost,$DB_PORT (SQL Server)"
     if ($script:DatabaseTableCount) {
-        Write-Info "Celkový počet tabulek: $script:DatabaseTableCount"
+        Write-Info "CelkovÃ½ poÄet tabulek: $script:DatabaseTableCount"
     }
     Write-Host ""
-    Write-Info "Pro zastavení všech služeb použijte: Ctrl+C"
+    Write-Info "Pro zastavenÃ­ vÅ¡ech sluÅ¾eb pouÅ¾ijte: Ctrl+C"
     Write-Host ""
     
     # Health check
     if (-not $SkipHealthCheck) {
-        Write-Info "Čekám na inicializaci služeb..."
+        Write-Info "na inicializaci sluÅ¾eb..."
         Start-Sleep -Seconds 5
         
-        Write-Info "Kontroluji zdraví backendu..."
+        Write-Info "Kontroluji zdravÃ­ backendu..."
         $retries = 0
         $maxRetries = $HealthCheckTimeout
         
         while ($retries -lt $maxRetries) {
             if (Test-BackendConnection -Port $BACKEND_PORT -TimeoutSeconds 2) {
-                Write-Success "Backend je zdravý! ✅"
+                Write-Success "Backend je zdravÃ½! âœ…"
                 break
             }
             $retries++
-            Write-Info "Pokus $retries/$maxRetries - čekám 1 sekundu..."
+            Write-Info "Pokus $retries/$maxRetries - ÄekÃ¡m 1 sekundu..."
             Start-Sleep -Seconds 1
         }
         
         if ($retries -ge $maxRetries) {
-            Write-Warning "Backend neodpovídá po $maxRetries pokusech"
-            Write-Warning "Zkuste otevřít: http://localhost:$BACKEND_PORT/api/health"
+            Write-Warning "Backend neodpovÃ­dÃ¡ po $maxRetries pokusech"
+            Write-Warning "Zkuste otevÅ™Ã­t: http://localhost:$BACKEND_PORT/api/health"
         }
     }
 }
@@ -658,14 +658,14 @@ if ($Help) {
 
 # Check for parameter conflicts
 if ($UseSQLite -and $UseDocker) {
-    Write-ErrorMessage "Chyba: Nemůžete použít současně -UseSQLite a -UseDocker"
+    Write-ErrorMessage "Chyba: NemÅ¯Å¾ete pouÅ¾Ã­t souÄasnÄ› -UseSQLite a -UseDocker"
     exit 1
 }
 
 # Show startup header
 Write-Header "SERVICE CATALOGUE MANAGER - STARTUP v4.1.0 (NO EF CORE)"
-Write-Info "POUŽÍVÁ VÝHRADNĚ db_structure.sql - ŽÁDNÉ EF CORE MIGRACE!"
-Write-Info "Verze: 4.1.0 - Kompletní odstranění EF Core migrací"
+Write-Info "POUÅ½ÃVÃ VÃHRADNÄš db_structure.sql - Å½ÃDNÃ‰ EF CORE MIGRACE!"
+Write-Info "Verze: 4.1.0 - KompletnÃ­ odstranÄ›nÃ­ EF Core migracÃ­"
 Write-Host ""
 
 # Execute based on parameters
