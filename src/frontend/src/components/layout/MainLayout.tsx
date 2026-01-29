@@ -15,6 +15,8 @@ import {
   ChevronLeftIcon,
   BellIcon,
   MagnifyingGlassIcon,
+  CalculatorIcon,
+  MapIcon,
 } from '@heroicons/react/24/outline';
 import { Avatar, AvatarWithName, Dropdown, SearchInput } from '../common';
 import { authService } from '../../services/auth';
@@ -30,6 +32,8 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
   { name: 'Service Catalog', href: '/catalog', icon: FolderIcon },
+  { name: 'Service Map', href: '/service-map', icon: MapIcon },
+  { name: 'Calculator', href: '/calculator', icon: CalculatorIcon },
   { name: 'Create Service', href: '/services/new', icon: PlusCircleIcon },
   { name: 'Import', href: '/import', icon: DocumentArrowUpIcon },
   { name: 'Export', href: '/export', icon: DocumentArrowDownIcon },

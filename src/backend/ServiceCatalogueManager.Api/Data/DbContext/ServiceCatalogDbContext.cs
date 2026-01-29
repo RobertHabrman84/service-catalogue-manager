@@ -46,6 +46,23 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
     public DbSet<ServiceTeamAllocation> ServiceTeamAllocations => Set<ServiceTeamAllocation>();
     public DbSet<ServiceMultiCloudConsideration> ServiceMultiCloudConsiderations => Set<ServiceMultiCloudConsideration>();
 
+    // Calculator entities
+    public DbSet<ServicePricingConfig> ServicePricingConfigs => Set<ServicePricingConfig>();
+    public DbSet<ServiceRoleRate> ServiceRoleRates => Set<ServiceRoleRate>();
+    public DbSet<ServiceBaseEffort> ServiceBaseEfforts => Set<ServiceBaseEffort>();
+    public DbSet<ServiceContextMultiplier> ServiceContextMultipliers => Set<ServiceContextMultiplier>();
+    public DbSet<ServiceContextMultiplierValue> ServiceContextMultiplierValues => Set<ServiceContextMultiplierValue>();
+    public DbSet<ServiceScopeArea> ServiceScopeAreas => Set<ServiceScopeArea>();
+    public DbSet<ServiceComplianceFactor> ServiceComplianceFactors => Set<ServiceComplianceFactor>();
+    public DbSet<ServiceCalculatorSection> ServiceCalculatorSections => Set<ServiceCalculatorSection>();
+    public DbSet<ServiceCalculatorGroup> ServiceCalculatorGroups => Set<ServiceCalculatorGroup>();
+    public DbSet<ServiceCalculatorParameter> ServiceCalculatorParameters => Set<ServiceCalculatorParameter>();
+    public DbSet<ServiceCalculatorParameterOption> ServiceCalculatorParameterOptions => Set<ServiceCalculatorParameterOption>();
+    public DbSet<ServiceCalculatorScenario> ServiceCalculatorScenarios => Set<ServiceCalculatorScenario>();
+    public DbSet<ServiceCalculatorPhase> ServiceCalculatorPhases => Set<ServiceCalculatorPhase>();
+    public DbSet<ServiceTeamComposition> ServiceTeamCompositions => Set<ServiceTeamComposition>();
+    public DbSet<ServiceSizingCriteria> ServiceSizingCriterias => Set<ServiceSizingCriteria>();
+
     // Lookup tables
     public DbSet<LU_ServiceCategory> LU_ServiceCategories => Set<LU_ServiceCategory>();
     public DbSet<LU_SizeOption> LU_SizeOptions => Set<LU_SizeOption>();
@@ -105,7 +122,9 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("ServiceDependency");
             entity.HasKey(e => e.DependencyId);
-            entity.Property(e => e.DependencyName).HasMaxLength(200);
+            
+            // Column mapping - C# uses RelatedServiceId, SQL uses DependentServiceID
+            entity.Property(e => e.RelatedServiceId).HasColumnName("DependentServiceID");
 
             entity.HasOne(e => e.Service)
                 .WithMany(s => s.Dependencies)
@@ -356,17 +375,104 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Configure remaining entities with primary keys
-        modelBuilder.Entity<CloudProviderCapability>().HasKey(e => e.CapabilityId);
-        modelBuilder.Entity<ServiceToolFramework>().HasKey(e => e.ToolId);
-        modelBuilder.Entity<ServiceLicense>().HasKey(e => e.LicenseId);
-        modelBuilder.Entity<SizingCriteria>().HasKey(e => e.CriteriaId);
-        modelBuilder.Entity<SizingCriteriaValue>().HasKey(e => e.CriteriaValueId);
-        modelBuilder.Entity<SizingParameter>().HasKey(e => e.ParameterId);
-        modelBuilder.Entity<SizingParameterValue>().HasKey(e => e.ParameterValueId);
-        modelBuilder.Entity<TechnicalComplexityAddition>().HasKey(e => e.AdditionId);
-        modelBuilder.Entity<ScopeDependency>().HasKey(e => e.ScopeDependencyId);
-        modelBuilder.Entity<SizingExampleCharacteristic>().HasKey(e => e.CharacteristicId);
+        // Configure remaining entities with primary keys and table names
+        
+        // CloudProviderCapability - needs .ToTable()
+        modelBuilder.Entity<CloudProviderCapability>()
+            .ToTable("CloudProviderCapability")
+            .HasKey(e => e.CapabilityId);
+
+        // ServiceToolFramework - needs .ToTable() + column mapping for PK
+        modelBuilder.Entity<ServiceToolFramework>(entity =>
+        {
+            entity.ToTable("ServiceToolFramework");
+            entity.HasKey(e => e.ToolId);
+            entity.Property(e => e.ToolId).HasColumnName("ToolFrameworkID");
+        });
+
+        // ServiceLicense - needs .ToTable() + column mapping
+        modelBuilder.Entity<ServiceLicense>(entity =>
+        {
+            entity.ToTable("ServiceLicense");
+            entity.HasKey(e => e.LicenseId);
+            entity.Property(e => e.LicenseName).HasColumnName("LicenseDescription");
+        });
+
+        // Sizing entities - need .ToTable()
+        modelBuilder.Entity<SizingCriteria>()
+            .ToTable("SizingCriteria")
+            .HasKey(e => e.CriteriaId);
+        
+        modelBuilder.Entity<SizingCriteriaValue>()
+            .ToTable("SizingCriteriaValue")
+            .HasKey(e => e.CriteriaValueId);
+        
+        modelBuilder.Entity<SizingParameter>()
+            .ToTable("SizingParameter")
+            .HasKey(e => e.ParameterId);
+        
+        modelBuilder.Entity<SizingParameterValue>()
+            .ToTable("SizingParameterValue")
+            .HasKey(e => e.ParameterValueId);
+
+        // TechnicalComplexityAddition - needs .ToTable() + column mapping for PK
+        modelBuilder.Entity<TechnicalComplexityAddition>(entity =>
+        {
+            entity.ToTable("TechnicalComplexityAddition");
+            entity.HasKey(e => e.AdditionId);
+            entity.Property(e => e.AdditionId).HasColumnName("ComplexityAdditionID");
+        });
+
+        // ScopeDependency - needs .ToTable()
+        modelBuilder.Entity<ScopeDependency>()
+            .ToTable("ScopeDependency")
+            .HasKey(e => e.ScopeDependencyId);
+        
+        // SizingExampleCharacteristic - needs .ToTable()
+        modelBuilder.Entity<SizingExampleCharacteristic>()
+            .ToTable("SizingExampleCharacteristic")
+            .HasKey(e => e.CharacteristicId);
+
+        // Configure Calculator entities
+        modelBuilder.Entity<ServicePricingConfig>().HasKey(e => e.PricingConfigId);
+        modelBuilder.Entity<ServiceRoleRate>().HasKey(e => e.RoleRateId);
+        modelBuilder.Entity<ServiceBaseEffort>().HasKey(e => e.BaseEffortId);
+        modelBuilder.Entity<ServiceContextMultiplier>().HasKey(e => e.MultiplierId);
+        modelBuilder.Entity<ServiceContextMultiplierValue>().HasKey(e => e.ValueId);
+        modelBuilder.Entity<ServiceScopeArea>().HasKey(e => e.ScopeAreaId);
+        modelBuilder.Entity<ServiceComplianceFactor>().HasKey(e => e.FactorId);
+        modelBuilder.Entity<ServiceCalculatorSection>().HasKey(e => e.SectionId);
+        modelBuilder.Entity<ServiceCalculatorGroup>().HasKey(e => e.GroupId);
+        modelBuilder.Entity<ServiceCalculatorParameter>().HasKey(e => e.ParameterId);
+        modelBuilder.Entity<ServiceCalculatorParameterOption>().HasKey(e => e.OptionId);
+        modelBuilder.Entity<ServiceCalculatorScenario>().HasKey(e => e.ScenarioId);
+        modelBuilder.Entity<ServiceCalculatorPhase>().HasKey(e => e.PhaseId);
+        modelBuilder.Entity<ServiceTeamComposition>().HasKey(e => e.CompositionId);
+        modelBuilder.Entity<ServiceSizingCriteria>().HasKey(e => e.SizingCriteriaId);
+
+        // Configure Calculator entities with decimal precision
+        modelBuilder.Entity<ServicePricingConfig>(entity =>
+        {
+            entity.Property(e => e.Margin).HasColumnType("decimal(5,2)");
+            entity.Property(e => e.RiskPremium).HasColumnType("decimal(5,2)");
+            entity.Property(e => e.Contingency).HasColumnType("decimal(5,2)");
+            entity.Property(e => e.Discount).HasColumnType("decimal(5,2)");
+        });
+
+        modelBuilder.Entity<ServiceRoleRate>(entity =>
+        {
+            entity.Property(e => e.DailyRate).HasColumnType("decimal(10,2)");
+        });
+
+        modelBuilder.Entity<ServiceContextMultiplierValue>(entity =>
+        {
+            entity.Property(e => e.MultiplierValue).HasColumnType("decimal(5,2)");
+        });
+
+        modelBuilder.Entity<ServiceTeamComposition>(entity =>
+        {
+            entity.Property(e => e.FteAllocation).HasColumnType("decimal(3,2)");
+        });
 
 
 
@@ -431,8 +537,8 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("LU_LicenseType");
             entity.HasKey(e => e.LicenseTypeId);
-            entity.Property(e => e.Code).IsRequired().HasMaxLength(50).HasColumnName("CategoryCode");
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(100).HasColumnName("CategoryName");
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(50).HasColumnName("TypeCode");
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100).HasColumnName("TypeName");
             entity.HasIndex(e => e.Code).IsUnique();
         });
 
@@ -458,8 +564,8 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("LU_InteractionLevel");
             entity.HasKey(e => e.InteractionLevelId);
-            entity.Property(e => e.Code).IsRequired().HasMaxLength(20).HasColumnName("TypeCode");
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(50).HasColumnName("TypeName");
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(20).HasColumnName("LevelCode");
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(50).HasColumnName("LevelName");
             entity.HasIndex(e => e.Code).IsUnique();
         });
 
@@ -467,8 +573,8 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("LU_RequirementLevel");
             entity.HasKey(e => e.RequirementLevelId);
-            entity.Property(e => e.Code).IsRequired().HasMaxLength(20).HasColumnName("TypeCode");
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(50).HasColumnName("TypeName");
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(20).HasColumnName("LevelCode");
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(50).HasColumnName("LevelName");
             entity.HasIndex(e => e.Code).IsUnique();
         });
 
@@ -476,10 +582,11 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("LU_Role");
             entity.HasKey(e => e.RoleId);
-            entity.Property(e => e.Code).IsRequired().HasMaxLength(50).HasColumnName("CategoryCode");
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(100).HasColumnName("CategoryName");
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(50).HasColumnName("RoleCode");
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100).HasColumnName("RoleName");
             entity.HasIndex(e => e.Code).IsUnique();
         });
+
 
         modelBuilder.Entity<LU_EffortCategory>(entity =>
         {

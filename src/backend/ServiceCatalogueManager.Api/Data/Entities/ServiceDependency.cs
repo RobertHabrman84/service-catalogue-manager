@@ -9,6 +9,7 @@ public class ServiceDependency : BaseEntity
     public string DependencyDescription { get; set; } = string.Empty;
     public int? RelatedServiceId { get; set; }
     public string? DependentServiceCode { get; set; }
+    public string? DependentOnServiceCode => DependentServiceCode; // Alias for backward compatibility
     public string? DependentServiceName { get; set; }
     public int? RequirementLevelId { get; set; }
     public string? Notes { get; set; }

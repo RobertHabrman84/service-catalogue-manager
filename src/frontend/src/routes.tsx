@@ -17,6 +17,8 @@ const ExportPage = lazy(() => import('./pages/Export'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const NotFoundPage = lazy(() => import('./pages/NotFound'));
+const CalculatorPage = lazy(() => import('./pages/Calculator'));
+const ServiceMapPage = lazy(() => import('./pages/ServiceMap'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -129,6 +131,23 @@ export const router = createBrowserRouter([
             path: 'settings',
             element: <SettingsPage />,
           },
+          {
+            path: 'calculator',
+            children: [
+              {
+                index: true,
+                element: <CalculatorPage />,
+              },
+              {
+                path: ':serviceId',
+                element: <CalculatorPage />,
+              },
+            ],
+          },
+          {
+            path: 'service-map',
+            element: <ServiceMapPage />,
+          },
         ],
       },
       
@@ -153,6 +172,9 @@ export const ROUTES = {
   IMPORT: '/import',
   EXPORT: '/export',
   SETTINGS: '/settings',
+  CALCULATOR: '/calculator',
+  CALCULATOR_SERVICE: (id: string | number) => `/calculator/${id}`,
+  SERVICE_MAP: '/service-map',
 } as const;
 
 export default router;

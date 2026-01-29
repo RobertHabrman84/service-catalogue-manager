@@ -30,7 +30,9 @@ public class ServiceLicense : BaseEntity, ISortable
     public string LicenseName { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int SortOrder { get; set; }
+    public int? CloudProviderId { get; set; }
     public virtual ServiceCatalogItem? Service { get; set; }
+    public virtual LU_CloudProvider? CloudProvider { get; set; }
     public virtual LU_LicenseType? LicenseType { get; set; }
 }
 

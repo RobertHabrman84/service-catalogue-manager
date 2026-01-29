@@ -19,6 +19,16 @@ public class ImportOrchestrationService : IImportOrchestrationService
     private readonly ToolsHelper _toolsHelper;
     private readonly ICacheService _cacheService;
     private readonly ILogger<ImportOrchestrationService> _logger;
+    
+    // Session cache for lookup entities to avoid duplicate key violations
+    private readonly Dictionary<string, LU_RequirementLevel> _requirementLevelCache = new();
+    private readonly Dictionary<string, LU_DependencyType> _dependencyTypeCache = new();
+    private readonly Dictionary<string, LU_ScopeType> _scopeTypeCache = new();
+    private readonly Dictionary<string, LU_InteractionLevel> _interactionLevelCache = new();
+    private readonly Dictionary<string, LU_PrerequisiteCategory> _prerequisiteCategoryCache = new();
+    private readonly Dictionary<string, LU_LicenseType> _licenseTypeCache = new();
+    private readonly Dictionary<string, LU_SizeOption> _sizeOptionCache = new();
+
 
     public ImportOrchestrationService(
         IUnitOfWork unitOfWork,
@@ -101,58 +111,76 @@ public class ImportOrchestrationService : IImportOrchestrationService
                 });
             }
 
+            // Execute import within transaction
             await _unitOfWork.BeginTransactionAsync();
+
+            // Clear session cache for this import
+            _requirementLevelCache.Clear();
+            _dependencyTypeCache.Clear();
+            _scopeTypeCache.Clear();
+            _interactionLevelCache.Clear();
+            _prerequisiteCategoryCache.Clear();
+            _licenseTypeCache.Clear();
+            _sizeOptionCache.Clear();
 
             try
             {
-                // Find or create category
-                var categoryId = await _categoryHelper.FindOrCreateCategoryAsync(model.Category);
+                    // Find or create category
+                    var categoryId = await _categoryHelper.FindOrCreateCategoryAsync(model.Category);
 
-                // Create main service record
-                var service = new ServiceCatalogItem
-                {
-                    ServiceCode = model.ServiceCode,
-                    ServiceName = model.ServiceName,
-                    Version = model.Version ?? "v1.0",
-                    CategoryId = categoryId,
-                    Description = model.Description,
-                    Notes = model.Notes,
-                    IsActive = true,
-                    CreatedDate = DateTime.UtcNow,
-                    ModifiedDate = DateTime.UtcNow
-                };
+                    // Create main service record
+                    var service = new ServiceCatalogItem
+                    {
+                        ServiceCode = model.ServiceCode,
+                        ServiceName = model.ServiceName,
+                        Version = model.Version ?? "v1.0",
+                        CategoryId = categoryId,
+                        Description = model.Description,
+                        Notes = model.Notes,
+                        IsActive = true,
+                        CreatedDate = DateTime.UtcNow,
+                        ModifiedDate = DateTime.UtcNow
+                    };
 
-                service = await _unitOfWork.ServiceCatalogs.AddAsync(service);
-                await _unitOfWork.SaveChangesAsync();
+                    service = await _unitOfWork.ServiceCatalogs.AddAsync(service);
+                    await _unitOfWork.SaveChangesAsync();
 
-                _logger.LogInformation("Created service with ID: {ServiceId}", service.ServiceId);
+                    _logger.LogInformation("Created service with ID: {ServiceId}", service.ServiceId);
 
-                // Import all related data
-                await ImportUsageScenariosAsync(service.ServiceId, model.UsageScenarios);
-                await ImportServiceInputsAsync(service.ServiceId, model.ServiceInputs);
-                await ImportServiceOutputsAsync(service.ServiceId, model.ServiceOutputs);
-                await ImportPrerequisitesAsync(service.ServiceId, model.Prerequisites);
-                await _toolsHelper.ImportToolsAsync(service.ServiceId, model.ToolsAndEnvironment);
-                await ImportDependenciesAsync(service.ServiceId, model.Dependencies);
-                await ImportScopeAsync(service.ServiceId, model.Scope);
-                await ImportLicensesAsync(service.ServiceId, model.Licenses);
-                await ImportStakeholderInteractionAsync(service.ServiceId, model.StakeholderInteraction);
-                await ImportTimelineAsync(service.ServiceId, model.Timeline);
-                await ImportSizeOptionsAsync(service.ServiceId, model.SizeOptions);
-                await ImportResponsibleRolesAsync(service.ServiceId, model.ResponsibleRoles);
-                await ImportMultiCloudConsiderationsAsync(service.ServiceId, model.MultiCloudConsiderations);
+                    // Import all related data
+                    await ImportUsageScenariosAsync(service.ServiceId, model.UsageScenarios);
+                    await ImportServiceInputsAsync(service.ServiceId, model.ServiceInputs);
+                    await ImportServiceOutputsAsync(service.ServiceId, model.ServiceOutputs);
+                    await ImportPrerequisitesAsync(service.ServiceId, model.Prerequisites);
+                    await _toolsHelper.ImportToolsAsync(service.ServiceId, model.ToolsAndEnvironment);
+                    await ImportDependenciesAsync(service.ServiceId, model.Dependencies);
+                    await ImportScopeAsync(service.ServiceId, model.Scope);
+                    await ImportLicensesAsync(service.ServiceId, model.Licenses);
+                    await ImportStakeholderInteractionAsync(service.ServiceId, model.StakeholderInteraction);
+                    await ImportTimelineAsync(service.ServiceId, model.Timeline);
+                    await ImportSizeOptionsAsync(service.ServiceId, model.SizeOptions);
+                    await ImportResponsibleRolesAsync(service.ServiceId, model.ResponsibleRoles);
+                    await ImportMultiCloudConsiderationsAsync(service.ServiceId, model.MultiCloudConsiderations);
 
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransactionAsync();
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
 
-                // Invalidate cache after successful import
-                // This ensures that subsequent API calls fetch fresh data including the newly imported service
-                await _cacheService.RemoveByPrefixAsync("service_");
-                _logger.LogInformation("Cache invalidated after import");
+                    // Clear session cache after successful commit
+                    _requirementLevelCache.Clear();
+                    _dependencyTypeCache.Clear();
+                    _scopeTypeCache.Clear();
+                    _interactionLevelCache.Clear();
+                    _prerequisiteCategoryCache.Clear();
+                    _licenseTypeCache.Clear();
+                    _sizeOptionCache.Clear();
 
-                _logger.LogInformation("Successfully imported service: {ServiceCode}", model.ServiceCode);
+                    // Invalidate cache after successful import
+                    await _cacheService.RemoveByPrefixAsync("service_");
+                    _logger.LogInformation("Cache invalidated after import");
 
-                return ImportResult.Success(service.ServiceId, model.ServiceCode);
+                    _logger.LogInformation("Successfully imported service: {ServiceCode}", model.ServiceCode);
+
+                    return ImportResult.Success(service.ServiceId, model.ServiceCode);
             }
             catch (Exception ex)
             {
@@ -171,170 +199,334 @@ public class ImportOrchestrationService : IImportOrchestrationService
         }
     }
 
-    #region Lookup Helper Methods
 
     private async Task<LU_RequirementLevel?> FindOrCreateRequirementLevelAsync(string levelName)
     {
+        // Check session cache first to avoid duplicate key violations
+        var cacheKey = levelName.ToUpper().Replace(" ", "_");
+        if (_requirementLevelCache.TryGetValue(cacheKey, out var cached))
+        {
+            _logger.LogDebug("Found requirement level in cache: {CacheKey}", cacheKey);
+            return cached;
+        }
+
         var levels = await _unitOfWork.RequirementLevels.GetAllAsync();
+        // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var level = levels.FirstOrDefault(l => 
-            l.Name.Equals(levelName, StringComparison.OrdinalIgnoreCase));
+            l.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
         
         if (level == null)
         {
-            _logger.LogInformation("Creating requirement level: {LevelName}", levelName);
-            level = new LU_RequirementLevel
+            _logger.LogInformation("Creating requirement level: {LevelName} with Code: {Code}", levelName, cacheKey);
+            try
             {
-                Code = levelName.ToUpper().Replace(" ", "_"),
-                Name = levelName,
-                Description = $"Auto-created: {levelName}",
-                SortOrder = 1
-            };
-            level = await _unitOfWork.RequirementLevels.AddAsync(level);
-            await _unitOfWork.SaveChangesAsync();
+                level = new LU_RequirementLevel
+                {
+                    Code = cacheKey,
+                    Name = levelName,
+                    Description = $"Auto-created: {levelName}",
+                    SortOrder = 1
+                };
+                level = await _unitOfWork.RequirementLevels.AddAsync(level);
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
+            {
+                _logger.LogWarning("Duplicate key detected for requirement level {Code}, reloading from database", cacheKey);
+                levels = await _unitOfWork.RequirementLevels.GetAllAsync();
+                level = levels.FirstOrDefault(l => l.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
+                if (level == null) throw;
+            }
         }
+        
+        // Store in session cache
+        _requirementLevelCache[cacheKey] = level;
         
         return level;
     }
 
     private async Task<LU_DependencyType?> FindOrCreateDependencyTypeAsync(string typeName)
     {
+        // Check session cache first to avoid duplicate key violations
+        var cacheKey = typeName.ToUpper().Replace(" ", "_");
+        if (_dependencyTypeCache.TryGetValue(cacheKey, out var cached))
+        {
+            _logger.LogDebug("Found dependency type in cache: {CacheKey}", cacheKey);
+            return cached;
+        }
+
         var types = await _unitOfWork.DependencyTypes.GetAllAsync();
+        // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var type = types.FirstOrDefault(t => 
-            t.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase));
+            t.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
         
         if (type == null)
         {
-            _logger.LogInformation("Creating dependency type: {TypeName}", typeName);
-            type = new LU_DependencyType
+            _logger.LogInformation("Creating dependency type: {TypeName} with Code: {Code}", typeName, cacheKey);
+            try
             {
-                Code = typeName.ToUpper().Replace(" ", "_"),
-                Name = typeName,
-                Description = $"Auto-created: {typeName}",
-                SortOrder = 1
-            };
-            type = await _unitOfWork.DependencyTypes.AddAsync(type);
-            await _unitOfWork.SaveChangesAsync();
+                type = new LU_DependencyType
+                {
+                    Code = cacheKey,
+                    Name = typeName,
+                    Description = $"Auto-created: {typeName}",
+                    SortOrder = 1
+                };
+                type = await _unitOfWork.DependencyTypes.AddAsync(type);
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
+            {
+                _logger.LogWarning("Duplicate key detected for dependency type {Code}, reloading from database", cacheKey);
+                types = await _unitOfWork.DependencyTypes.GetAllAsync();
+                type = types.FirstOrDefault(t => t.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
+                if (type == null) throw;
+            }
         }
+        
+        // Store in session cache
+        _dependencyTypeCache[cacheKey] = type;
         
         return type;
     }
 
     private async Task<LU_ScopeType?> FindOrCreateScopeTypeAsync(string typeName)
     {
+        // Check session cache first to avoid duplicate key violations
+        var cacheKey = typeName.ToUpper().Replace(" ", "_");
+        if (_scopeTypeCache.TryGetValue(cacheKey, out var cached))
+        {
+            _logger.LogDebug("Found scope type in cache: {CacheKey}", cacheKey);
+            return cached;
+        }
+
         var types = await _unitOfWork.ScopeTypes.GetAllAsync();
+        // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var type = types.FirstOrDefault(t => 
-            t.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase));
+            t.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
         
         if (type == null)
         {
-            _logger.LogInformation("Creating scope type: {TypeName}", typeName);
-            type = new LU_ScopeType
+            _logger.LogInformation("Creating scope type: {TypeName} with Code: {Code}", typeName, cacheKey);
+            try
             {
-                Code = typeName.ToUpper().Replace(" ", "_"),
-                Name = typeName,
-                Description = $"Auto-created: {typeName}",
-                SortOrder = 1
-            };
-            type = await _unitOfWork.ScopeTypes.AddAsync(type);
-            await _unitOfWork.SaveChangesAsync();
+                type = new LU_ScopeType
+                {
+                    Code = cacheKey,
+                    Name = typeName,
+                    Description = $"Auto-created: {typeName}",
+                    SortOrder = 1
+                };
+                type = await _unitOfWork.ScopeTypes.AddAsync(type);
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
+            {
+                _logger.LogWarning("Duplicate key detected for scope type {Code}, reloading from database", cacheKey);
+                types = await _unitOfWork.ScopeTypes.GetAllAsync();
+                type = types.FirstOrDefault(t => t.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
+                if (type == null) throw;
+            }
         }
+        
+        // Store in session cache
+        _scopeTypeCache[cacheKey] = type;
         
         return type;
     }
 
     private async Task<LU_InteractionLevel?> FindOrCreateInteractionLevelAsync(string levelName)
     {
+        // Check session cache first to avoid duplicate key violations
+        var cacheKey = levelName.ToUpper().Replace(" ", "_");
+        if (_interactionLevelCache.TryGetValue(cacheKey, out var cached))
+        {
+            _logger.LogDebug("Found interaction level in cache: {CacheKey}", cacheKey);
+            return cached;
+        }
+
         var levels = await _unitOfWork.InteractionLevels.GetAllAsync();
+        // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var level = levels.FirstOrDefault(l => 
-            l.Name.Equals(levelName, StringComparison.OrdinalIgnoreCase));
+            l.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
         
         if (level == null)
         {
-            _logger.LogInformation("Creating interaction level: {LevelName}", levelName);
-            level = new LU_InteractionLevel
+            _logger.LogInformation("Creating interaction level: {LevelName} with Code: {Code}", levelName, cacheKey);
+            try
             {
-                Code = levelName.ToUpper().Replace(" ", "_"),
-                Name = levelName,
-                Description = $"Auto-created: {levelName}",
-                SortOrder = 1
-            };
-            level = await _unitOfWork.InteractionLevels.AddAsync(level);
-            await _unitOfWork.SaveChangesAsync();
+                level = new LU_InteractionLevel
+                {
+                    Code = cacheKey,
+                    Name = levelName,
+                    Description = $"Auto-created: {levelName}",
+                    SortOrder = 1
+                };
+                level = await _unitOfWork.InteractionLevels.AddAsync(level);
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
+            {
+                _logger.LogWarning("Duplicate key detected for interaction level {Code}, reloading from database", cacheKey);
+                levels = await _unitOfWork.InteractionLevels.GetAllAsync();
+                level = levels.FirstOrDefault(l => l.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
+                if (level == null) throw;
+            }
         }
+        
+        // Store in session cache
+        _interactionLevelCache[cacheKey] = level;
         
         return level;
     }
 
     private async Task<LU_PrerequisiteCategory?> FindOrCreatePrerequisiteCategoryAsync(string categoryName)
     {
+        // Check session cache first to avoid duplicate key violations
+        var cacheKey = categoryName.ToUpper().Replace(" ", "_");
+        if (_prerequisiteCategoryCache.TryGetValue(cacheKey, out var cached))
+        {
+            _logger.LogDebug("Found prerequisite category in cache: {CacheKey}", cacheKey);
+            return cached;
+        }
+
         var categories = await _unitOfWork.PrerequisiteCategories.GetAllAsync();
+        // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var category = categories.FirstOrDefault(c => 
-            c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+            c.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
         
         if (category == null)
         {
-            _logger.LogInformation("Creating prerequisite category: {CategoryName}", categoryName);
-            category = new LU_PrerequisiteCategory
+            _logger.LogInformation("Creating prerequisite category: {CategoryName} with Code: {Code}", categoryName, cacheKey);
+            try
             {
-                Code = categoryName.ToUpper().Replace(" ", "_"),
-                Name = categoryName,
-                Description = $"Auto-created: {categoryName}",
-                SortOrder = 1
-            };
-            category = await _unitOfWork.PrerequisiteCategories.AddAsync(category);
-            await _unitOfWork.SaveChangesAsync();
+                category = new LU_PrerequisiteCategory
+                {
+                    Code = cacheKey,
+                    Name = categoryName,
+                    Description = $"Auto-created: {categoryName}",
+                    SortOrder = 1
+                };
+                category = await _unitOfWork.PrerequisiteCategories.AddAsync(category);
+                await _unitOfWork.SaveChangesAsync();
+                _logger.LogInformation("Successfully created prerequisite category: {Code}", cacheKey);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
+            {
+                // Race condition - category was created by another process, reload from DB
+                _logger.LogWarning("Duplicate key detected for category {Code}, reloading from database", cacheKey);
+                categories = await _unitOfWork.PrerequisiteCategories.GetAllAsync();
+                category = categories.FirstOrDefault(c => 
+                    c.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
+                
+                if (category == null)
+                {
+                    _logger.LogError("Failed to find category {Code} after duplicate key error", cacheKey);
+                    throw;
+                }
+            }
         }
+        else
+        {
+            _logger.LogDebug("Found existing prerequisite category: {Code}", cacheKey);
+        }
+        
+        // Store in session cache
+        _prerequisiteCategoryCache[cacheKey] = category;
         
         return category;
     }
 
     private async Task<LU_LicenseType?> FindOrCreateLicenseTypeAsync(string typeName)
     {
+        // Check session cache first to avoid duplicate key violations
+        var cacheKey = typeName.ToUpper().Replace(" ", "_");
+        if (_licenseTypeCache.TryGetValue(cacheKey, out var cached))
+        {
+            _logger.LogDebug("Found license type in cache: {CacheKey}", cacheKey);
+            return cached;
+        }
+
         var types = await _unitOfWork.LicenseTypes.GetAllAsync();
+        // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var type = types.FirstOrDefault(t => 
-            t.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase));
+            t.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
         
         if (type == null)
         {
-            _logger.LogInformation("Creating license type: {TypeName}", typeName);
-            type = new LU_LicenseType
+            _logger.LogInformation("Creating license type: {TypeName} with Code: {Code}", typeName, cacheKey);
+            try
             {
-                Code = typeName.ToUpper().Replace(" ", "_"),
-                Name = typeName,
-                Description = $"Auto-created: {typeName}",
-                SortOrder = 1
-            };
-            type = await _unitOfWork.LicenseTypes.AddAsync(type);
-            await _unitOfWork.SaveChangesAsync();
+                type = new LU_LicenseType
+                {
+                    Code = cacheKey,
+                    Name = typeName,
+                    Description = $"Auto-created: {typeName}",
+                    SortOrder = 1
+                };
+                type = await _unitOfWork.LicenseTypes.AddAsync(type);
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
+            {
+                _logger.LogWarning("Duplicate key detected for license type {Code}, reloading from database", cacheKey);
+                types = await _unitOfWork.LicenseTypes.GetAllAsync();
+                type = types.FirstOrDefault(t => t.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
+                if (type == null) throw;
+            }
         }
+        
+        // Store in session cache
+        _licenseTypeCache[cacheKey] = type;
         
         return type;
     }
 
     private async Task<LU_SizeOption?> FindOrCreateSizeOptionAsync(string sizeName)
     {
+        // Check session cache first to avoid duplicate key violations
+        var cacheKey = sizeName.ToUpper().Replace(" ", "_");
+        if (_sizeOptionCache.TryGetValue(cacheKey, out var cached))
+        {
+            _logger.LogDebug("Found size option in cache: {CacheKey}", cacheKey);
+            return cached;
+        }
+
         var sizes = await _unitOfWork.SizeOptions.GetAllAsync();
+        // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var size = sizes.FirstOrDefault(s => 
-            s.Name.Equals(sizeName, StringComparison.OrdinalIgnoreCase));
+            s.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
         
         if (size == null)
         {
-            _logger.LogInformation("Creating size option: {SizeName}", sizeName);
-            size = new LU_SizeOption
+            _logger.LogInformation("Creating size option: {SizeName} with Code: {Code}", sizeName, cacheKey);
+            try
             {
-                Code = sizeName.ToUpper().Replace(" ", "_"),
-                Name = sizeName,
-                Description = $"Auto-created: {sizeName}",
-                SortOrder = 1
-            };
-            size = await _unitOfWork.SizeOptions.AddAsync(size);
-            await _unitOfWork.SaveChangesAsync();
+                size = new LU_SizeOption
+                {
+                    Code = cacheKey,
+                    Name = sizeName,
+                    Description = $"Auto-created: {sizeName}",
+                    SortOrder = 1
+                };
+                size = await _unitOfWork.SizeOptions.AddAsync(size);
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
+            {
+                _logger.LogWarning("Duplicate key detected for size option {Code}, reloading from database", cacheKey);
+                sizes = await _unitOfWork.SizeOptions.GetAllAsync();
+                size = sizes.FirstOrDefault(s => s.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
+                if (size == null) throw;
+            }
         }
+        
+        // Store in session cache
+        _sizeOptionCache[cacheKey] = size;
         
         return size;
     }
 
-    #endregion
 
     #region Phase 1: Core Import Methods
 

@@ -13,6 +13,9 @@ public class ToolsHelper
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ToolsHelper> _logger;
+    
+    // Session cache to avoid duplicate key violations
+    private readonly Dictionary<string, LU_ToolCategory> _toolCategoryCache = new();
 
     public ToolsHelper(IUnitOfWork unitOfWork, ILogger<ToolsHelper> logger)
     {
@@ -76,27 +79,66 @@ public class ToolsHelper
 
     private async Task<LU_ToolCategory> FindOrCreateToolCategoryAsync(string categoryName)
     {
+        // Generate the code that would be created for this category name
+        var categoryCode = categoryName.ToUpper().Replace(" ", "_");
+        
+        // Check session cache first to avoid duplicate key violations
+        if (_toolCategoryCache.TryGetValue(categoryCode, out var cached))
+        {
+            _logger.LogDebug("Found tool category in cache: {CacheKey}", categoryCode);
+            return cached;
+        }
+        
         var categories = await _unitOfWork.ToolCategories.GetAllAsync();
+        
+        // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var category = categories.FirstOrDefault(c => 
-            c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));  // ✅ FIXED: Use Name property
+            c.Code.Equals(categoryCode, StringComparison.OrdinalIgnoreCase));
 
         if (category == null)
         {
-            _logger.LogInformation("Creating tool category: {CategoryName}", categoryName);
-
-            category = new LU_ToolCategory
+            _logger.LogInformation("Creating tool category: {CategoryName} with code: {CategoryCode}", categoryName, categoryCode);
+            
+            try
             {
-                Code = categoryName.ToUpper().Replace(" ", "_"),
-                Name = categoryName,  // ✅ FIXED: Use Name property from LookupBase
-                Description = $"Auto-created category: {categoryName}",
-                SortOrder = 1
-            };
+                category = new LU_ToolCategory
+                {
+                    Code = categoryCode,
+                    Name = categoryName,
+                    Description = $"Auto-created category: {categoryName}",
+                    SortOrder = 1
+                };
 
-            category = await _unitOfWork.ToolCategories.AddAsync(category);
-            await _unitOfWork.SaveChangesAsync();
+                category = await _unitOfWork.ToolCategories.AddAsync(category);
+                await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("Created tool category ID: {CategoryId}", category.ToolCategoryId);
+                _logger.LogInformation("Created tool category ID: {CategoryId} with code: {Code}", category.ToolCategoryId, category.Code);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
+            {
+                // Race condition - category was created by another process/thread, reload from DB
+                _logger.LogWarning("Duplicate key detected for tool category {Code}, reloading from database", categoryCode);
+                categories = await _unitOfWork.ToolCategories.GetAllAsync();
+                category = categories.FirstOrDefault(c => 
+                    c.Code.Equals(categoryCode, StringComparison.OrdinalIgnoreCase));
+                
+                if (category == null)
+                {
+                    _logger.LogError("Failed to find tool category {Code} after duplicate key error", categoryCode);
+                    throw;
+                }
+                
+                _logger.LogInformation("Successfully recovered tool category {Code} from database after duplicate key", categoryCode);
+            }
         }
+        else
+        {
+            _logger.LogDebug("Found existing tool category: {CategoryName} (ID: {CategoryId}, Code: {Code})", 
+                category.Name, category.ToolCategoryId, category.Code);
+        }
+        
+        // Store in session cache
+        _toolCategoryCache[categoryCode] = category;
 
         return category;
     }

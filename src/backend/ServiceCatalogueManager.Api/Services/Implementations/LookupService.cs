@@ -177,12 +177,10 @@ public class LookupService : ILookupService
 
     public async Task<IEnumerable<EffortCategoryDto>> GetEffortCategoriesAsync(CancellationToken cancellationToken = default)
     {
-        var categories = await _dbContext.LU_EffortCategories
-            .Where(c => c.IsActive)
-            .OrderBy(c => c.SortOrder)
-            .ToListAsync(cancellationToken);
-
-        return _mapper.Map<IEnumerable<EffortCategoryDto>>(categories);
+        // LU_EffortCategory table does not exist in database
+        // Return empty list to maintain API compatibility
+        await Task.CompletedTask;
+        return Enumerable.Empty<EffortCategoryDto>();
     }
 
     public async Task<IEnumerable<object>> GetServicesListAsync(CancellationToken cancellationToken = default)

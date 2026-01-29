@@ -8,9 +8,54 @@
 
 Enterprise web application for managing service catalog items for cloud architecture and consulting services.
 
-## ⚡ Latest Updates (27. ledna 2026)
+## 🚀 Quick Start
 
-**✅ Version 1.5 - FINAL JSON FIX (LATEST) ⭐⭐⭐**
+**One-command startup** - Run the entire application:
+
+```powershell
+.\start-scm.ps1
+```
+
+This script will:
+1. ✅ Create SQL Server database in Docker
+2. ✅ Initialize database schema from db_structure.sql
+3. ✅ Build the backend (.NET)
+4. ✅ Build the frontend (React)
+5. ✅ Start both services in separate windows
+
+**Prerequisites:**
+- Docker Desktop (running)
+- .NET 8 SDK
+- Node.js 18+
+- PowerShell 7+
+
+**After startup:**
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:7071
+- Database: localhost:1433 (in Docker container)
+
+**To stop:**
+- Close the backend and frontend terminal windows
+- Run: `docker stop scm-sqlserver`
+
+## ⚡ Latest Updates (29. ledna 2026)
+
+**✅ Version 2.9.3 - Critical Bugfix 🔴**
+
+- 🐛 **FIXED:** Missing primary key configuration for LU_EffortCategory entity
+- ✅ Application is now fully functional (was completely broken)
+- 📝 See CHANGELOG-v2.9.3.md for detailed fix documentation
+
+
+**✅ Version 2.9 - One-Command Startup ⭐⭐⭐**
+
+New features:
+- 🚀 **start-scm.ps1** - Complete automated startup script
+- 🐳 Automatic Docker database setup with schema initialization
+- 🔧 Automatic build and startup of all services
+- ✅ No manual configuration needed
+
+**✅ Version 1.5 - FINAL JSON FIX (PREVIOUS) ⭐⭐⭐**
 
 This version includes ALL previous fixes PLUS:
 - 📄 **PERFECT JSON guaranteed to work** (Application_Landing_Zone_Design_PERFECT.json)

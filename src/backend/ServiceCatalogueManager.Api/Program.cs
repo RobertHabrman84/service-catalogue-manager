@@ -49,10 +49,10 @@ var host = new HostBuilder()
 
             options.UseSqlServer(connectionString, sqlOptions =>
             {
-                sqlOptions.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(30),
-                    errorNumbersToAdd: null);
+                //                 sqlOptions.EnableRetryOnFailure(
+                //                     maxRetryCount: 5,
+                //                     maxRetryDelay: TimeSpan.FromSeconds(30),
+                //                     errorNumbersToAdd: null);
                 sqlOptions.CommandTimeout(30);
             });
         });
