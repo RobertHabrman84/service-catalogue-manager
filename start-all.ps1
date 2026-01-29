@@ -45,6 +45,8 @@ $DB_CONTAINER = "scm-sqlserver"
 $SA_PASSWORD = "YourStrong@Passw0rd"
 $DB_NAME = "ServiceCatalogueManager"
 
+$script:DatabaseTableCount = $null
+
 # Colors
 $COLOR_SUCCESS = "Green"
 $COLOR_INFO = "Cyan"
@@ -288,18 +290,29 @@ function Setup-DockerDatabase {
         }
 
         & $setupScript @setupParams
+        $setupExitCode = $LASTEXITCODE
         
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "Database setup complete using db_structure.sql - NO EF CORE USED!"
-            
-            Write-Info "Verifying database structure..."
-            Verify-DatabaseStructure
-            
-        } else {
+        if ($setupExitCode -ne 0) {
             Write-ErrorMessage "Database setup FAILED using db_structure.sql!"
             Write-ErrorMessage "Check the logs above for SQL errors."
             exit 1
         }
+
+        Write-Info "Verifying database structure..."
+        $tableCount = Verify-DatabaseStructure
+
+        if ($tableCount -lt 0) {
+            Write-ErrorMessage "Database verification failed - unable to determine table count."
+            exit 1
+        }
+
+        if ($tableCount -lt 40) {
+            Write-ErrorMessage "Database verification failed - expected at least 40 tables, found $tableCount."
+            exit 1
+        }
+
+        $script:DatabaseTableCount = $tableCount
+        Write-Success "Database setup complete using db_structure.sql - NO EF CORE USED!"
     } else {
         Write-ErrorMessage "CRITICAL: Database setup script not found: $setupScript"
         Write-ErrorMessage "Database CANNOT be initialized without setup-db-fixed-v2.ps1"
@@ -311,6 +324,7 @@ function Setup-DockerDatabase {
 function Verify-DatabaseStructure {
     Write-Info "Verifying that database tables were created successfully..."
     
+    $tableCount = -1
     $checkQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_TYPE = 'BASE TABLE'"
     
     try {
@@ -341,16 +355,20 @@ function Verify-DatabaseStructure {
             }
         }
         
-        if ($tableCount -ge 40) {
-            Write-Success "SUCCESS: $tableCount tables found in database!"
-            Write-Success "Database structure verified - db_structure.sql applied correctly!"
-        } else {
-            Write-Warning "WARNING: Only $tableCount tables found (expected 42+)"
-            Write-Warning "Database structure may be incomplete."
-        }
     } catch {
         Write-Warning "Could not verify table count: $($_.Exception.Message)"
+        return -1
     }
+
+    if ($tableCount -ge 40) {
+        Write-Success "SUCCESS: $tableCount tables found in database!"
+        Write-Success "Database structure verified - db_structure.sql applied correctly!"
+    } else {
+        Write-Warning "WARNING: Only $tableCount tables found (expected 42+)"
+        Write-Warning "Database structure may be incomplete."
+    }
+
+    return $tableCount
 }
 
 function Start-SqliteDatabase {
@@ -596,6 +614,9 @@ function Start-All {
         Write-Info "Frontend PID: $script:FrontendProcessId"
     }
     Write-Success "✅ Database: localhost,$DB_PORT (SQL Server)"
+    if ($script:DatabaseTableCount) {
+        Write-Info "Celkový počet tabulek: $script:DatabaseTableCount"
+    }
     Write-Host ""
     Write-Info "Pro zastavení všech služeb použijte: Ctrl+C"
     Write-Host ""
