@@ -62,6 +62,8 @@ function Invoke-SqlFile {
     )
     
     if ($useSqlCmd) {
+        Write-Host "ℹ️  Executing SQL file locally with sqlcmd..." -ForegroundColor Cyan
+        Write-Host "   File: $FilePath" -ForegroundColor Gray
         if ($Database) {
             sqlcmd -S $SERVER -U sa -P $SA_PASSWORD -d $Database -i $FilePath -C 2>&1
         } else {
@@ -69,13 +71,67 @@ function Invoke-SqlFile {
         }
     } else {
         # For Docker exec, we need to copy file into container first
-        Write-Host "ℹ️  Copying schema file to container..." -ForegroundColor Cyan
-        docker cp $FilePath "${ContainerName}:/tmp/schema.sql" 2>&1 | Out-Null
+        Write-Host "ℹ️  Preparing SQL file for Docker container..." -ForegroundColor Cyan
+        Write-Host "   Source: $FilePath" -ForegroundColor Gray
         
-        if ($Database) {
-            docker exec $ContainerName /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -d $Database -i /tmp/schema.sql -C 2>&1
-        } else {
-            docker exec $ContainerName /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -i /tmp/schema.sql -C 2>&1
+        # FIX #1: Convert Windows CRLF to Unix LF line endings before copying to Docker
+        # This is critical for sqlcmd in Linux container to parse the file correctly
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        try {
+            Write-Host "ℹ️  Converting line endings (CRLF → LF)..." -ForegroundColor Cyan
+            $content = Get-Content $FilePath -Raw -Encoding UTF8
+            # Replace CRLF with LF
+            $content = $content -replace "`r`n", "`n"
+            # Also remove any trailing CR that might be left
+            $content = $content -replace "`r", ""
+            # Write with UTF8 encoding without BOM
+            $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+            [System.IO.File]::WriteAllText($tempFile, $content, $utf8NoBom)
+            
+            Write-Host "ℹ️  Copying schema file to container..." -ForegroundColor Cyan
+            $copyResult = docker cp $tempFile "${ContainerName}:/tmp/schema.sql" 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "❌ Failed to copy file to container!" -ForegroundColor Red
+                Write-Host "   Error: $copyResult" -ForegroundColor Red
+                return $copyResult
+            }
+            Write-Host "✅ File copied successfully" -ForegroundColor Green
+            
+            # FIX #2: Add verbose output and better error detection
+            Write-Host "ℹ️  Executing SQL script in container..." -ForegroundColor Cyan
+            Write-Host "   Database: $Database" -ForegroundColor Gray
+            
+            $sqlcmdOutput = $null
+            if ($Database) {
+                $sqlcmdOutput = docker exec $ContainerName /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -d $Database -i /tmp/schema.sql 2>&1
+            } else {
+                $sqlcmdOutput = docker exec $ContainerName /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -i /tmp/schema.sql 2>&1
+            }
+            
+            # FIX #3: Display detailed output for debugging
+            if ($sqlcmdOutput) {
+                Write-Host "📋 SQL Execution Output:" -ForegroundColor Cyan
+                Write-Host "----------------------------------------" -ForegroundColor DarkGray
+                $sqlcmdOutput | ForEach-Object { 
+                    $line = $_.ToString()
+                    if ($line -match "Msg \d+.*Level \d+") {
+                        Write-Host "   $line" -ForegroundColor Red
+                    } elseif ($line -match "^(Changed database context|PRINT|rows? affected)") {
+                        Write-Host "   $line" -ForegroundColor Green
+                    } else {
+                        Write-Host "   $line" -ForegroundColor Gray
+                    }
+                }
+                Write-Host "----------------------------------------" -ForegroundColor DarkGray
+            }
+            
+            return $sqlcmdOutput
+            
+        } finally {
+            # Clean up temp file
+            if (Test-Path $tempFile) {
+                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            }
         }
     }
 }
@@ -240,26 +296,75 @@ if (Test-Path $mainSchemaFile) {
     try {
         $schemaResult = Invoke-SqlFile -FilePath $mainSchemaFile -Database $DbName
         
-        # Zkontrolovat, zda výsledek obsahuje chyby
-        $hasErrors = $schemaResult -like "*Msg*" -or $schemaResult -like "*Error*" -or $schemaResult -like "*Exception*"
-        $hasSuccess = $schemaResult -like "*PRINT*" -or $schemaResult -like "*(1 row affected)*" -or $LASTEXITCODE -eq 0
+        # FIX #3: Improved error detection with better categorization
+        Write-Host ""
+        Write-Host "🔍 Analýza výsledku SQL skriptu..." -ForegroundColor Cyan
+        
+        # Count different types of messages
+        $errorCount = 0
+        $warningCount = 0
+        $successCount = 0
+        
+        if ($schemaResult) {
+            # Check for SQL errors (Level 16+ are errors, Level 0-10 are informational)
+            $errorMatches = $schemaResult | Select-String -Pattern "Msg \d+.*Level (1[6-9]|2[0-5])" -AllMatches
+            $errorCount = if ($errorMatches) { $errorMatches.Matches.Count } else { 0 }
+            
+            # Check for warnings (Level 11-15)
+            $warningMatches = $schemaResult | Select-String -Pattern "Msg \d+.*Level (1[1-5])" -AllMatches
+            $warningCount = if ($warningMatches) { $warningMatches.Matches.Count } else { 0 }
+            
+            # Check for success indicators
+            if ($schemaResult -like "*PRINT*" -or $schemaResult -like "*created successfully*") {
+                $successCount++
+            }
+        }
+        
+        Write-Host "   Chyby (Level 16+): $errorCount" -ForegroundColor $(if ($errorCount -gt 0) { "Red" } else { "Green" })
+        Write-Host "   Varování (Level 11-15): $warningCount" -ForegroundColor $(if ($warningCount -gt 0) { "Yellow" } else { "Green" })
+        Write-Host "   Exit Code: $LASTEXITCODE" -ForegroundColor Gray
+        
+        # Determine overall success
+        $hasErrors = $errorCount -gt 0
+        $hasWarnings = $warningCount -gt 0
+        $exitCodeOk = ($LASTEXITCODE -eq 0) -or ($null -eq $LASTEXITCODE)
         
         if ($hasErrors) {
-            Write-Host "⚠️  Aplikace struktury skončila s varováními nebo chybami:" -ForegroundColor Yellow
-            Write-Host "   Detail: $schemaResult" -ForegroundColor Gray
-            Write-Host "   ExitCode: $LASTEXITCODE" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "❌ SQL skript obsahuje CHYBY!" -ForegroundColor Red
+            Write-Host "   Databáze nemusí být kompletní." -ForegroundColor Yellow
             
-            # Pokud jsou to jen varování, pokračujeme
-            if ($schemaResult -like "*already exists*" -or $schemaResult -like "*Cannot drop*") {
-                Write-Host "ℹ️  Varování jsou očekávaná (tabulky již mohou existovat)" -ForegroundColor Cyan
+            # Show first few errors for debugging
+            $errorLines = $schemaResult | Select-String -Pattern "Msg \d+.*Level (1[6-9]|2[0-5])" -Context 0,2
+            if ($errorLines) {
+                Write-Host ""
+                Write-Host "📋 První chyby:" -ForegroundColor Red
+                $errorLines | Select-Object -First 3 | ForEach-Object {
+                    Write-Host "   $($_.Line)" -ForegroundColor Red
+                }
             }
-        } elseif ($hasSuccess -or $LASTEXITCODE -eq 0) {
+        } elseif ($hasWarnings) {
+            Write-Host ""
+            Write-Host "⚠️  SQL skript obsahuje varování" -ForegroundColor Yellow
+            Write-Host "   To může být v pořádku (např. drop neexistujících objektů)" -ForegroundColor Cyan
+            
+            if ($exitCodeOk) {
+                Write-Host "✅ Exit code je OK, pokračuji..." -ForegroundColor Green
+            }
+        } elseif ($exitCodeOk -and $successCount -gt 0) {
+            Write-Host ""
             Write-Host "✅ Kompletní struktura databáze byla úspěšně aplikována" -ForegroundColor Green
+        } elseif ($exitCodeOk) {
+            Write-Host ""
+            Write-Host "✅ SQL skript dokončen bez chyb" -ForegroundColor Green
         } else {
+            Write-Host ""
             Write-Host "⚠️  Neočekávaný výsledek při aplikaci struktury" -ForegroundColor Yellow
-            Write-Host "   Výsledek: $schemaResult" -ForegroundColor Gray
+            Write-Host "   Exit Code: $LASTEXITCODE" -ForegroundColor Gray
         }
+        
     } catch {
+        Write-Host ""
         Write-Host "❌ Chyba při aplikaci struktury databáze: $_" -ForegroundColor Red
         Write-Host "Pokračuji s záložními skripty..." -ForegroundColor Yellow
         $mainSchemaFile = $null  # Vynutit použití záložních skriptů
@@ -458,19 +563,34 @@ if ($foundTables.Count -eq 0) {
 
 $structureSuccess = ($missingTables.Count -eq 0 -and $tableCount -ge 40)
 
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
 if ($structureSuccess) {
+    Write-Host "✅ DATABASE SETUP SUCCESSFUL!" -ForegroundColor Green
+    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host ""
     Write-Host "✅ Všechny klíčové tabulky nové struktury byly úspěšně vytvořeny!" -ForegroundColor Green
+    Write-Host "   Celkový počet tabulek: $tableCount" -ForegroundColor Green
+    Write-Host "   Vytvořeno z db_structure.sql: $($foundTables.Count) tabulek" -ForegroundColor Green
 } else {
+    Write-Host "⚠️  DATABASE SETUP INCOMPLETE!" -ForegroundColor Yellow
+    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host ""
     if ($missingTables.Count -gt 0) {
-        Write-Host "⚠️  Chybějící tabulky: $($missingTables -join ', ')" -ForegroundColor Yellow
+        Write-Host "⚠️  Chybějící tabulky ($($missingTables.Count)):" -ForegroundColor Yellow
+        Write-Host "   $($missingTables -join ', ')" -ForegroundColor Gray
     } else {
-        Write-Host "⚠️  Databáze obsahuje pouze $tableCount tabulek (očekáváno 40+)" -ForegroundColor Yellow
+        Write-Host "⚠️  Databáze obsahuje pouze $tableCount tabulek (očekáváno 42)" -ForegroundColor Yellow
     }
-    Write-Host "   To může znamenat, že struktura nebyla kompletně aplikována." -ForegroundColor Yellow
-    Write-Host "   Doporučení:" -ForegroundColor Cyan
-    Write-Host "   1. Zkontrolujte, zda soubor db_structure.sql obsahuje všechny tabulky" -ForegroundColor Cyan
-    Write-Host "   2. Zkontrolujte logy SQL serveru pro případné chyby" -ForegroundColor Cyan
-    Write-Host "   3. Zkuste aplikovat strukturu ručně pomocí SQL Management Studio" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "   To znamená, že SQL struktura nebyla kompletně aplikována." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "   📋 Doporučené kroky pro diagnostiku:" -ForegroundColor Cyan
+    Write-Host "   1. Zkontrolujte výše uvedený SQL Output pro chyby" -ForegroundColor White
+    Write-Host "   2. Ověřte formát souboru db_structure.sql" -ForegroundColor White
+    Write-Host "   3. Zkuste spustit setup s -Force parametrem znovu" -ForegroundColor White
+    Write-Host "   4. Zkontrolujte Docker logs: docker logs $ContainerName" -ForegroundColor White
+    Write-Host ""
 }
 
 Write-Host ""
@@ -494,17 +614,30 @@ if ($efExists -eq "1") {
 }
 
 Write-Host ""
-Write-Host "Připojovací řetězec:" -ForegroundColor Cyan
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "📊 CONNECTION INFORMATION" -ForegroundColor Cyan
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Server: $SERVER" -ForegroundColor White
+Write-Host "Database: $DbName" -ForegroundColor White
+Write-Host "User: sa" -ForegroundColor White
+Write-Host ""
+Write-Host "Connection String:" -ForegroundColor Cyan
 Write-Host "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" -ForegroundColor White
 Write-Host ""
 
 if (-not $useSqlCmd) {
     Write-Host "💡 Tip: To connect from outside Docker, install SQL Server Command Line Utilities" -ForegroundColor Cyan
     Write-Host "   Download: https://aka.ms/sqlcmd" -ForegroundColor Cyan
+    Write-Host ""
 }
 
+# Final exit code based on success
 if ($structureSuccess) {
+    Write-Host "✅ Setup completed successfully!" -ForegroundColor Green
     exit 0
+} else {
+    Write-Host "❌ Setup completed with errors - database may be incomplete!" -ForegroundColor Red
+    Write-Host "   Please review the output above and fix any issues." -ForegroundColor Yellow
+    exit 1
 }
-
-exit 2
