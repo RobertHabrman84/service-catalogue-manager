@@ -1,6 +1,7 @@
 -- ============================================
 -- Service Catalog Database Structure
 -- Generic structure for all service catalog items
+-- Version: 1.1.0 - Fixed GO separators and hierarchical inserts
 -- ============================================
 
 -- ============================================
@@ -19,6 +20,7 @@ IF OBJECT_ID('dbo.SizingParameter', 'U') IS NOT NULL DROP TABLE dbo.SizingParame
 IF OBJECT_ID('dbo.SizingCriteriaValue', 'U') IS NOT NULL DROP TABLE dbo.SizingCriteriaValue;
 IF OBJECT_ID('dbo.SizingCriteria', 'U') IS NOT NULL DROP TABLE dbo.SizingCriteria;
 IF OBJECT_ID('dbo.ServiceSizeOption', 'U') IS NOT NULL DROP TABLE dbo.ServiceSizeOption;
+IF OBJECT_ID('dbo.PhaseDurationBySize', 'U') IS NOT NULL DROP TABLE dbo.PhaseDurationBySize;
 IF OBJECT_ID('dbo.TimelinePhase', 'U') IS NOT NULL DROP TABLE dbo.TimelinePhase;
 IF OBJECT_ID('dbo.ServiceOutputItem', 'U') IS NOT NULL DROP TABLE dbo.ServiceOutputItem;
 IF OBJECT_ID('dbo.ServiceOutputCategory', 'U') IS NOT NULL DROP TABLE dbo.ServiceOutputCategory;
@@ -50,6 +52,13 @@ IF OBJECT_ID('dbo.LU_InteractionLevel', 'U') IS NOT NULL DROP TABLE dbo.LU_Inter
 IF OBJECT_ID('dbo.LU_RequirementLevel', 'U') IS NOT NULL DROP TABLE dbo.LU_RequirementLevel;
 IF OBJECT_ID('dbo.LU_ServiceCategory', 'U') IS NOT NULL DROP TABLE dbo.LU_ServiceCategory;
 
+-- Drop views if exist
+IF OBJECT_ID('dbo.vw_ServiceOverview', 'V') IS NOT NULL DROP VIEW dbo.vw_ServiceOverview;
+IF OBJECT_ID('dbo.vw_ServiceDependencies', 'V') IS NOT NULL DROP VIEW dbo.vw_ServiceDependencies;
+IF OBJECT_ID('dbo.vw_ServiceSizing', 'V') IS NOT NULL DROP VIEW dbo.vw_ServiceSizing;
+IF OBJECT_ID('dbo.vw_ServiceScope', 'V') IS NOT NULL DROP VIEW dbo.vw_ServiceScope;
+GO
+
 -- ============================================
 -- LOOKUP TABLES
 -- ============================================
@@ -59,13 +68,20 @@ CREATE TABLE dbo.LU_ServiceCategory (
     CategoryID INT IDENTITY(1,1) PRIMARY KEY,
     CategoryCode NVARCHAR(50) NOT NULL UNIQUE,
     CategoryName NVARCHAR(200) NOT NULL,
-    ParentCategoryID INT NULL REFERENCES dbo.LU_ServiceCategory(CategoryID),
-    CategoryPath NVARCHAR(500) NULL, -- Full path like "Services / Architecture / Technical Architecture"
+    ParentCategoryID INT NULL,
+    CategoryPath NVARCHAR(500) NULL,
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1,
     CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE()
 );
+GO
+
+-- Add self-referencing FK after table creation
+ALTER TABLE dbo.LU_ServiceCategory 
+ADD CONSTRAINT FK_LU_ServiceCategory_Parent 
+FOREIGN KEY (ParentCategoryID) REFERENCES dbo.LU_ServiceCategory(CategoryID);
+GO
 
 -- Size Options (S, M, L, XL, etc.)
 CREATE TABLE dbo.LU_SizeOption (
@@ -75,6 +91,7 @@ CREATE TABLE dbo.LU_SizeOption (
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
+GO
 
 -- Cloud Providers
 CREATE TABLE dbo.LU_CloudProvider (
@@ -83,6 +100,7 @@ CREATE TABLE dbo.LU_CloudProvider (
     ProviderName NVARCHAR(100) NOT NULL,
     IsActive BIT NOT NULL DEFAULT 1
 );
+GO
 
 -- Dependency Types (Prerequisite, Triggers for, Parallel)
 CREATE TABLE dbo.LU_DependencyType (
@@ -91,6 +109,7 @@ CREATE TABLE dbo.LU_DependencyType (
     TypeName NVARCHAR(100) NOT NULL,
     Description NVARCHAR(500) NULL
 );
+GO
 
 -- Prerequisite Categories (Organizational, Technical, Documentation)
 CREATE TABLE dbo.LU_PrerequisiteCategory (
@@ -98,6 +117,7 @@ CREATE TABLE dbo.LU_PrerequisiteCategory (
     CategoryCode NVARCHAR(50) NOT NULL UNIQUE,
     CategoryName NVARCHAR(100) NOT NULL
 );
+GO
 
 -- License Types (Required by Customer, Recommended/Optional, Provided by Service Provider)
 CREATE TABLE dbo.LU_LicenseType (
@@ -105,6 +125,7 @@ CREATE TABLE dbo.LU_LicenseType (
     TypeCode NVARCHAR(50) NOT NULL UNIQUE,
     TypeName NVARCHAR(100) NOT NULL
 );
+GO
 
 -- Tool Categories (Cloud Platforms, Design & Documentation, IaC, Assessment & Analysis)
 CREATE TABLE dbo.LU_ToolCategory (
@@ -112,6 +133,7 @@ CREATE TABLE dbo.LU_ToolCategory (
     CategoryCode NVARCHAR(50) NOT NULL UNIQUE,
     CategoryName NVARCHAR(100) NOT NULL
 );
+GO
 
 -- Scope Type (In Scope, Out of Scope)
 CREATE TABLE dbo.LU_ScopeType (
@@ -119,6 +141,7 @@ CREATE TABLE dbo.LU_ScopeType (
     TypeCode NVARCHAR(20) NOT NULL UNIQUE,
     TypeName NVARCHAR(50) NOT NULL
 );
+GO
 
 -- Interaction Level (HIGH, MEDIUM, LOW)
 CREATE TABLE dbo.LU_InteractionLevel (
@@ -127,6 +150,7 @@ CREATE TABLE dbo.LU_InteractionLevel (
     LevelName NVARCHAR(50) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 -- Requirement Level (Required, Recommended, Optional)
 CREATE TABLE dbo.LU_RequirementLevel (
@@ -135,6 +159,7 @@ CREATE TABLE dbo.LU_RequirementLevel (
     LevelName NVARCHAR(50) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 -- Roles
 CREATE TABLE dbo.LU_Role (
@@ -144,6 +169,7 @@ CREATE TABLE dbo.LU_Role (
     Description NVARCHAR(500) NULL,
     IsActive BIT NOT NULL DEFAULT 1
 );
+GO
 
 -- ============================================
 -- MAIN SERVICE CATALOG ITEM TABLE
@@ -151,21 +177,25 @@ CREATE TABLE dbo.LU_Role (
 
 CREATE TABLE dbo.ServiceCatalogItem (
     ServiceID INT IDENTITY(1,1) PRIMARY KEY,
-    ServiceCode NVARCHAR(50) NOT NULL UNIQUE,           -- e.g., "ID0XX"
-    ServiceName NVARCHAR(200) NOT NULL,                  -- e.g., "Application Landing Zone Design"
+    ServiceCode NVARCHAR(50) NOT NULL UNIQUE,
+    ServiceName NVARCHAR(200) NOT NULL,
     Version NVARCHAR(20) NOT NULL DEFAULT 'v1.0',
     CategoryID INT NOT NULL REFERENCES dbo.LU_ServiceCategory(CategoryID),
     Description NVARCHAR(MAX) NOT NULL,
-    Notes NVARCHAR(MAX) NULL,                            -- Additional notes
+    Notes NVARCHAR(MAX) NULL,
     IsActive BIT NOT NULL DEFAULT 1,
     CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     CreatedBy NVARCHAR(100) NULL,
     ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     ModifiedBy NVARCHAR(100) NULL
 );
+GO
 
 CREATE INDEX IX_ServiceCatalogItem_Category ON dbo.ServiceCatalogItem(CategoryID);
+GO
+
 CREATE INDEX IX_ServiceCatalogItem_Active ON dbo.ServiceCatalogItem(IsActive);
+GO
 
 -- ============================================
 -- USAGE SCENARIOS
@@ -179,8 +209,10 @@ CREATE TABLE dbo.UsageScenario (
     ScenarioDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_UsageScenario_Service ON dbo.UsageScenario(ServiceID);
+GO
 
 -- ============================================
 -- DEPENDENCIES
@@ -190,41 +222,47 @@ CREATE TABLE dbo.ServiceDependency (
     DependencyID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     DependencyTypeID INT NOT NULL REFERENCES dbo.LU_DependencyType(DependencyTypeID),
-    DependentServiceID INT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID), -- NULL if external service
-    DependentServiceName NVARCHAR(200) NOT NULL,                               -- Name for display/external services
+    DependentServiceID INT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID),
+    DependentServiceName NVARCHAR(200) NOT NULL,
     RequirementLevelID INT NULL REFERENCES dbo.LU_RequirementLevel(RequirementLevelID),
     Notes NVARCHAR(500) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceDependency_Service ON dbo.ServiceDependency(ServiceID);
+GO
+
 CREATE INDEX IX_ServiceDependency_Type ON dbo.ServiceDependency(DependencyTypeID);
+GO
 
 -- ============================================
 -- SCOPE (IN SCOPE / OUT OF SCOPE)
 -- ============================================
 
--- Scope Categories (e.g., Platform Architecture, Network Architecture, etc.)
 CREATE TABLE dbo.ServiceScopeCategory (
     ScopeCategoryID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     ScopeTypeID INT NOT NULL REFERENCES dbo.LU_ScopeType(ScopeTypeID),
-    CategoryNumber INT NULL,                             -- e.g., 1, 2, 3 for numbered categories
-    CategoryName NVARCHAR(200) NOT NULL,                 -- e.g., "Platform Architecture"
+    CategoryNumber INT NULL,
+    CategoryName NVARCHAR(200) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceScopeCategory_Service ON dbo.ServiceScopeCategory(ServiceID);
+GO
 
--- Scope Items (individual items within each category)
 CREATE TABLE dbo.ServiceScopeItem (
     ScopeItemID INT IDENTITY(1,1) PRIMARY KEY,
     ScopeCategoryID INT NOT NULL REFERENCES dbo.ServiceScopeCategory(ScopeCategoryID) ON DELETE CASCADE,
     ItemDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceScopeItem_Category ON dbo.ServiceScopeItem(ScopeCategoryID);
+GO
 
 -- ============================================
 -- PREREQUISITES
@@ -237,27 +275,29 @@ CREATE TABLE dbo.ServicePrerequisite (
     PrerequisiteDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServicePrerequisite_Service ON dbo.ServicePrerequisite(ServiceID);
+GO
 
 -- ============================================
 -- REQUIRED TOOLS & FRAMEWORKS
 -- ============================================
 
--- Cloud Provider Capabilities (Reference Architecture, Landing Zone Accelerator, etc.)
 CREATE TABLE dbo.CloudProviderCapability (
     CapabilityID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     CloudProviderID INT NOT NULL REFERENCES dbo.LU_CloudProvider(CloudProviderID),
-    CapabilityType NVARCHAR(100) NOT NULL,              -- e.g., "Reference Architecture", "Landing Zone Accelerator"
-    CapabilityName NVARCHAR(200) NOT NULL,              -- e.g., "AWS Well-Architected Framework"
+    CapabilityType NVARCHAR(100) NOT NULL,
+    CapabilityName NVARCHAR(200) NOT NULL,
     Notes NVARCHAR(500) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_CloudProviderCapability_Service ON dbo.CloudProviderCapability(ServiceID);
+GO
 
--- Tools and Frameworks (IaC Frameworks, Module Libraries, etc.)
 CREATE TABLE dbo.ServiceToolFramework (
     ToolFrameworkID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
@@ -266,8 +306,10 @@ CREATE TABLE dbo.ServiceToolFramework (
     Description NVARCHAR(500) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceToolFramework_Service ON dbo.ServiceToolFramework(ServiceID);
+GO
 
 -- ============================================
 -- LICENSES
@@ -278,11 +320,13 @@ CREATE TABLE dbo.ServiceLicense (
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     LicenseTypeID INT NOT NULL REFERENCES dbo.LU_LicenseType(LicenseTypeID),
     LicenseDescription NVARCHAR(MAX) NOT NULL,
-    CloudProviderID INT NULL REFERENCES dbo.LU_CloudProvider(CloudProviderID), -- Optional, if specific to a cloud
+    CloudProviderID INT NULL REFERENCES dbo.LU_CloudProvider(CloudProviderID),
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceLicense_Service ON dbo.ServiceLicense(ServiceID);
+GO
 
 -- ============================================
 -- INTERACTION REQUIREMENTS
@@ -294,39 +338,44 @@ CREATE TABLE dbo.ServiceInteraction (
     InteractionLevelID INT NOT NULL REFERENCES dbo.LU_InteractionLevel(InteractionLevelID),
     Notes NVARCHAR(MAX) NULL
 );
+GO
 
 CREATE UNIQUE INDEX IX_ServiceInteraction_Service ON dbo.ServiceInteraction(ServiceID);
+GO
 
--- Customer Requirements (Customer Must Provide)
 CREATE TABLE dbo.CustomerRequirement (
     RequirementID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     RequirementDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_CustomerRequirement_Service ON dbo.CustomerRequirement(ServiceID);
+GO
 
--- Access Requirements
 CREATE TABLE dbo.AccessRequirement (
     AccessRequirementID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     RequirementDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_AccessRequirement_Service ON dbo.AccessRequirement(ServiceID);
+GO
 
--- Stakeholder Involvement
 CREATE TABLE dbo.StakeholderInvolvement (
     InvolvementID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    StakeholderRole NVARCHAR(200) NOT NULL,             -- e.g., "CTO/CIO or delegate"
-    InvolvementDescription NVARCHAR(MAX) NOT NULL,      -- e.g., "Kick-off, key decision points, final sign-off"
+    StakeholderRole NVARCHAR(200) NOT NULL,
+    InvolvementDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_StakeholderInvolvement_Service ON dbo.StakeholderInvolvement(ServiceID);
+GO
 
 -- ============================================
 -- SERVICE INPUTS (PARAMETERS)
@@ -338,18 +387,19 @@ CREATE TABLE dbo.ServiceInput (
     ParameterName NVARCHAR(200) NOT NULL,
     ParameterDescription NVARCHAR(MAX) NOT NULL,
     RequirementLevelID INT NOT NULL REFERENCES dbo.LU_RequirementLevel(RequirementLevelID),
-    DataType NVARCHAR(50) NULL,                         -- e.g., "Text", "Number", "List", "Boolean"
+    DataType NVARCHAR(50) NULL,
     DefaultValue NVARCHAR(500) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceInput_Service ON dbo.ServiceInput(ServiceID);
+GO
 
 -- ============================================
 -- SERVICE OUTPUTS
 -- ============================================
 
--- Output Categories (e.g., "Technical Architecture Design Document")
 CREATE TABLE dbo.ServiceOutputCategory (
     OutputCategoryID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
@@ -357,18 +407,21 @@ CREATE TABLE dbo.ServiceOutputCategory (
     CategoryName NVARCHAR(200) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceOutputCategory_Service ON dbo.ServiceOutputCategory(ServiceID);
+GO
 
--- Output Items (individual deliverables within each category)
 CREATE TABLE dbo.ServiceOutputItem (
     OutputItemID INT IDENTITY(1,1) PRIMARY KEY,
     OutputCategoryID INT NOT NULL REFERENCES dbo.ServiceOutputCategory(OutputCategoryID) ON DELETE CASCADE,
     ItemDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceOutputItem_Category ON dbo.ServiceOutputItem(OutputCategoryID);
+GO
 
 -- ============================================
 -- TIMELINE & PHASES
@@ -381,11 +434,10 @@ CREATE TABLE dbo.TimelinePhase (
     PhaseName NVARCHAR(200) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_TimelinePhase_Service ON dbo.TimelinePhase(ServiceID);
-
--- Phase Duration by Size (added as separate table for flexibility)
--- This will be handled through ServiceSizeOption
+GO
 
 -- ============================================
 -- SIZE OPTIONS
@@ -395,21 +447,23 @@ CREATE TABLE dbo.ServiceSizeOption (
     ServiceSizeID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
-    ScopeDescription NVARCHAR(MAX) NULL,                -- Description of what this size covers
-    DurationMin NVARCHAR(50) NULL,                      -- e.g., "2 weeks" or "2-3 weeks"
+    ScopeDescription NVARCHAR(MAX) NULL,
+    DurationMin NVARCHAR(50) NULL,
     DurationMax NVARCHAR(50) NULL,
-    DurationDisplay NVARCHAR(100) NULL,                 -- e.g., "2-3 weeks"
+    DurationDisplay NVARCHAR(100) NULL,
     EffortHoursMin INT NULL,
     EffortHoursMax INT NULL,
-    EffortDisplay NVARCHAR(100) NULL,                   -- e.g., "40-60 hours"
+    EffortDisplay NVARCHAR(100) NULL,
     TeamSizeMin INT NULL,
     TeamSizeMax INT NULL,
-    TeamSizeDisplay NVARCHAR(100) NULL,                 -- e.g., "1-2 resources"
-    Complexity NVARCHAR(50) NULL,                       -- e.g., "Low", "Medium", "High"
+    TeamSizeDisplay NVARCHAR(100) NULL,
+    Complexity NVARCHAR(50) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceSizeOption_Service ON dbo.ServiceSizeOption(ServiceID);
+GO
 
 -- Phase Duration per Size
 CREATE TABLE dbo.PhaseDurationBySize (
@@ -418,10 +472,12 @@ CREATE TABLE dbo.PhaseDurationBySize (
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
     DurationMin NVARCHAR(50) NULL,
     DurationMax NVARCHAR(50) NULL,
-    DurationDisplay NVARCHAR(100) NULL                  -- e.g., "2-3 days"
+    DurationDisplay NVARCHAR(100) NULL
 );
+GO
 
 CREATE INDEX IX_PhaseDurationBySize_Phase ON dbo.PhaseDurationBySize(PhaseID);
+GO
 
 -- ============================================
 -- SIZING CRITERIA
@@ -430,23 +486,26 @@ CREATE INDEX IX_PhaseDurationBySize_Phase ON dbo.PhaseDurationBySize(PhaseID);
 CREATE TABLE dbo.SizingCriteria (
     CriteriaID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    CriteriaName NVARCHAR(200) NOT NULL,                -- e.g., "Number of applications"
-    CriteriaType NVARCHAR(50) NULL,                     -- e.g., "Scale", "Technical"
+    CriteriaName NVARCHAR(200) NOT NULL,
+    CriteriaType NVARCHAR(50) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_SizingCriteria_Service ON dbo.SizingCriteria(ServiceID);
+GO
 
--- Criteria Values per Size
 CREATE TABLE dbo.SizingCriteriaValue (
     CriteriaValueID INT IDENTITY(1,1) PRIMARY KEY,
     CriteriaID INT NOT NULL REFERENCES dbo.SizingCriteria(CriteriaID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
-    CriteriaValue NVARCHAR(500) NOT NULL,               -- e.g., "1", "2-5", "6+"
+    CriteriaValue NVARCHAR(500) NOT NULL,
     Notes NVARCHAR(500) NULL
 );
+GO
 
 CREATE INDEX IX_SizingCriteriaValue_Criteria ON dbo.SizingCriteriaValue(CriteriaID);
+GO
 
 -- ============================================
 -- SIZING PARAMETERS (Scale & Technical Parameters)
@@ -455,26 +514,29 @@ CREATE INDEX IX_SizingCriteriaValue_Criteria ON dbo.SizingCriteriaValue(Criteria
 CREATE TABLE dbo.SizingParameter (
     ParameterID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ParameterCategory NVARCHAR(50) NOT NULL,            -- "Scale" or "Technical"
-    ParameterName NVARCHAR(200) NOT NULL,               -- e.g., "Number of Applications", "Hybrid Connectivity"
+    ParameterCategory NVARCHAR(50) NOT NULL,
+    ParameterName NVARCHAR(200) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_SizingParameter_Service ON dbo.SizingParameter(ServiceID);
+GO
 
--- Parameter Values (e.g., "1 application: Size S" or "+16 hours")
 CREATE TABLE dbo.SizingParameterValue (
     ParameterValueID INT IDENTITY(1,1) PRIMARY KEY,
     ParameterID INT NOT NULL REFERENCES dbo.SizingParameter(ParameterID) ON DELETE CASCADE,
-    ValueCondition NVARCHAR(500) NOT NULL,              -- e.g., "1 application", "ExpressRoute/Direct Connect required"
-    ResultSize NVARCHAR(50) NULL,                       -- e.g., "Size S", "Size M"
-    HoursAdjustment INT NULL,                           -- e.g., 16, -8
-    AdjustmentDisplay NVARCHAR(100) NULL,               -- e.g., "+16 hours", "baseline"
+    ValueCondition NVARCHAR(500) NOT NULL,
+    ResultSize NVARCHAR(50) NULL,
+    HoursAdjustment INT NULL,
+    AdjustmentDisplay NVARCHAR(100) NULL,
     Notes NVARCHAR(500) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_SizingParameterValue_Parameter ON dbo.SizingParameterValue(ParameterID);
+GO
 
 -- ============================================
 -- EFFORT ESTIMATION
@@ -483,26 +545,29 @@ CREATE INDEX IX_SizingParameterValue_Parameter ON dbo.SizingParameterValue(Param
 CREATE TABLE dbo.EffortEstimationItem (
     EstimationItemID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ScopeArea NVARCHAR(200) NOT NULL,                   -- e.g., "Platform Architecture", "Network Architecture"
+    ScopeArea NVARCHAR(200) NOT NULL,
     BaseHours INT NOT NULL,
     Notes NVARCHAR(MAX) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_EffortEstimationItem_Service ON dbo.EffortEstimationItem(ServiceID);
+GO
 
--- Technical Complexity Additions
 CREATE TABLE dbo.TechnicalComplexityAddition (
     ComplexityAdditionID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    AdditionName NVARCHAR(200) NOT NULL,                -- e.g., "Hybrid connectivity"
-    Condition NVARCHAR(500) NOT NULL,                   -- e.g., "On-premises integration required"
+    AdditionName NVARCHAR(200) NOT NULL,
+    Condition NVARCHAR(500) NOT NULL,
     HoursAdded INT NOT NULL,
     Notes NVARCHAR(500) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_TechnicalComplexityAddition_Service ON dbo.TechnicalComplexityAddition(ServiceID);
+GO
 
 -- ============================================
 -- SCOPE DEPENDENCIES
@@ -511,12 +576,14 @@ CREATE INDEX IX_TechnicalComplexityAddition_Service ON dbo.TechnicalComplexityAd
 CREATE TABLE dbo.ScopeDependency (
     ScopeDependencyID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ScopeArea NVARCHAR(200) NOT NULL,                   -- e.g., "Container Platform Design"
-    RequiredAreas NVARCHAR(MAX) NOT NULL,               -- e.g., "Compute Architecture, Network Architecture"
+    ScopeArea NVARCHAR(200) NOT NULL,
+    RequiredAreas NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ScopeDependency_Service ON dbo.ScopeDependency(ServiceID);
+GO
 
 -- ============================================
 -- SIZING EXAMPLES
@@ -526,23 +593,26 @@ CREATE TABLE dbo.SizingExample (
     ExampleID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
-    ExampleTitle NVARCHAR(200) NOT NULL,                -- e.g., "Single PaaS Web Application Landing Zone"
+    ExampleTitle NVARCHAR(200) NOT NULL,
     Scenario NVARCHAR(MAX) NOT NULL,
     Deliverables NVARCHAR(MAX) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_SizingExample_Service ON dbo.SizingExample(ServiceID);
+GO
 
--- Example Characteristics
 CREATE TABLE dbo.SizingExampleCharacteristic (
     CharacteristicID INT IDENTITY(1,1) PRIMARY KEY,
     ExampleID INT NOT NULL REFERENCES dbo.SizingExample(ExampleID) ON DELETE CASCADE,
     CharacteristicDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_SizingExampleCharacteristic_Example ON dbo.SizingExampleCharacteristic(ExampleID);
+GO
 
 -- ============================================
 -- RESPONSIBLE ROLES
@@ -556,8 +626,10 @@ CREATE TABLE dbo.ServiceResponsibleRole (
     Responsibility NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceResponsibleRole_Service ON dbo.ServiceResponsibleRole(ServiceID);
+GO
 
 -- ============================================
 -- TEAM ALLOCATION
@@ -568,12 +640,14 @@ CREATE TABLE dbo.ServiceTeamAllocation (
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
     RoleID INT NOT NULL REFERENCES dbo.LU_Role(RoleID),
-    FTEAllocation DECIMAL(3,2) NOT NULL,                -- e.g., 0.80, 1.00
+    FTEAllocation DECIMAL(3,2) NOT NULL,
     Notes NVARCHAR(500) NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceTeamAllocation_Service ON dbo.ServiceTeamAllocation(ServiceID);
+GO
 
 -- ============================================
 -- MULTI-CLOUD CONSIDERATIONS
@@ -582,12 +656,14 @@ CREATE INDEX IX_ServiceTeamAllocation_Service ON dbo.ServiceTeamAllocation(Servi
 CREATE TABLE dbo.ServiceMultiCloudConsideration (
     ConsiderationID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ConsiderationTitle NVARCHAR(200) NOT NULL,          -- e.g., "Design Pattern Abstraction"
+    ConsiderationTitle NVARCHAR(200) NOT NULL,
     ConsiderationDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
+GO
 
 CREATE INDEX IX_ServiceMultiCloudConsideration_Service ON dbo.ServiceMultiCloudConsideration(ServiceID);
+GO
 
 -- ============================================
 -- INSERT LOOKUP DATA
@@ -601,6 +677,7 @@ VALUES
     ('M', 'Medium', 3),
     ('L', 'Large', 4),
     ('XL', 'Extra Large', 5);
+GO
 
 -- Cloud Providers
 INSERT INTO dbo.LU_CloudProvider (ProviderCode, ProviderName)
@@ -609,6 +686,7 @@ VALUES
     ('AZURE', 'Microsoft Azure'),
     ('GCP', 'Google Cloud Platform'),
     ('MULTI', 'Multi-Cloud');
+GO
 
 -- Dependency Types
 INSERT INTO dbo.LU_DependencyType (TypeCode, TypeName, Description)
@@ -616,6 +694,7 @@ VALUES
     ('PREREQUISITE', 'Prerequisite Services', 'Services that must be completed before this service'),
     ('TRIGGERS', 'Triggers For', 'Services that this service triggers or enables'),
     ('PARALLEL', 'Can Run In Parallel', 'Services that can be executed in parallel with this service');
+GO
 
 -- Prerequisite Categories
 INSERT INTO dbo.LU_PrerequisiteCategory (CategoryCode, CategoryName)
@@ -623,6 +702,7 @@ VALUES
     ('ORGANIZATIONAL', 'Organizational Prerequisites'),
     ('TECHNICAL', 'Technical Prerequisites'),
     ('DOCUMENTATION', 'Documentation Prerequisites');
+GO
 
 -- License Types
 INSERT INTO dbo.LU_LicenseType (TypeCode, TypeName)
@@ -630,6 +710,7 @@ VALUES
     ('REQUIRED_CUSTOMER', 'Required by Customer'),
     ('RECOMMENDED', 'Recommended/Optional'),
     ('PROVIDED', 'Provided by Service Provider');
+GO
 
 -- Tool Categories
 INSERT INTO dbo.LU_ToolCategory (CategoryCode, CategoryName)
@@ -638,12 +719,14 @@ VALUES
     ('DESIGN_DOC', 'Design & Documentation Tools'),
     ('IAC', 'Infrastructure as Code Reference'),
     ('ASSESSMENT', 'Assessment & Analysis Tools');
+GO
 
 -- Scope Types
 INSERT INTO dbo.LU_ScopeType (TypeCode, TypeName)
 VALUES 
     ('IN_SCOPE', 'In Scope'),
     ('OUT_SCOPE', 'Out of Scope');
+GO
 
 -- Interaction Levels
 INSERT INTO dbo.LU_InteractionLevel (LevelCode, LevelName, SortOrder)
@@ -651,6 +734,7 @@ VALUES
     ('HIGH', 'High', 1),
     ('MEDIUM', 'Medium', 2),
     ('LOW', 'Low', 3);
+GO
 
 -- Requirement Levels
 INSERT INTO dbo.LU_RequirementLevel (LevelCode, LevelName, SortOrder)
@@ -658,6 +742,7 @@ VALUES
     ('REQUIRED', 'Required', 1),
     ('RECOMMENDED', 'Recommended', 2),
     ('OPTIONAL', 'Optional', 3);
+GO
 
 -- Roles
 INSERT INTO dbo.LU_Role (RoleCode, RoleName, Description)
@@ -669,18 +754,50 @@ VALUES
     ('SOLUTION_ARCHITECT', 'Solution Architect', 'Solution design and integration'),
     ('DATA_ARCHITECT', 'Data Architect', 'Data architecture and modeling'),
     ('DEVOPS_ENGINEER', 'DevOps Engineer', 'CI/CD and automation design');
+GO
 
--- Service Categories (hierarchical)
+-- Service Categories (hierarchical) - using subqueries to avoid IDENTITY value assumptions
+-- First insert root category
 INSERT INTO dbo.LU_ServiceCategory (CategoryCode, CategoryName, ParentCategoryID, CategoryPath, SortOrder)
-VALUES 
-    ('SERVICES', 'Services', NULL, 'Services', 1),
-    ('ARCHITECTURE', 'Architecture', 1, 'Services / Architecture', 1),
-    ('TECH_ARCH', 'Technical Architecture', 2, 'Services / Architecture / Technical Architecture', 1),
-    ('SOLUTION_ARCH', 'Solution Architecture', 2, 'Services / Architecture / Solution Architecture', 2),
-    ('ASSESSMENT', 'Assessment', 1, 'Services / Assessment', 2),
-    ('MIGRATION', 'Migration', 1, 'Services / Migration', 3),
-    ('OPERATIONS', 'Operations', 1, 'Services / Operations', 4);
+VALUES ('SERVICES', 'Services', NULL, 'Services', 1);
+GO
 
+-- Insert child categories using subquery to get parent ID
+INSERT INTO dbo.LU_ServiceCategory (CategoryCode, CategoryName, ParentCategoryID, CategoryPath, SortOrder)
+VALUES ('ARCHITECTURE', 'Architecture', 
+        (SELECT CategoryID FROM dbo.LU_ServiceCategory WHERE CategoryCode = 'SERVICES'), 
+        'Services / Architecture', 1);
+GO
+
+INSERT INTO dbo.LU_ServiceCategory (CategoryCode, CategoryName, ParentCategoryID, CategoryPath, SortOrder)
+VALUES ('ASSESSMENT', 'Assessment', 
+        (SELECT CategoryID FROM dbo.LU_ServiceCategory WHERE CategoryCode = 'SERVICES'), 
+        'Services / Assessment', 2);
+GO
+
+INSERT INTO dbo.LU_ServiceCategory (CategoryCode, CategoryName, ParentCategoryID, CategoryPath, SortOrder)
+VALUES ('MIGRATION', 'Migration', 
+        (SELECT CategoryID FROM dbo.LU_ServiceCategory WHERE CategoryCode = 'SERVICES'), 
+        'Services / Migration', 3);
+GO
+
+INSERT INTO dbo.LU_ServiceCategory (CategoryCode, CategoryName, ParentCategoryID, CategoryPath, SortOrder)
+VALUES ('OPERATIONS', 'Operations', 
+        (SELECT CategoryID FROM dbo.LU_ServiceCategory WHERE CategoryCode = 'SERVICES'), 
+        'Services / Operations', 4);
+GO
+
+-- Insert grandchild categories
+INSERT INTO dbo.LU_ServiceCategory (CategoryCode, CategoryName, ParentCategoryID, CategoryPath, SortOrder)
+VALUES ('TECH_ARCH', 'Technical Architecture', 
+        (SELECT CategoryID FROM dbo.LU_ServiceCategory WHERE CategoryCode = 'ARCHITECTURE'), 
+        'Services / Architecture / Technical Architecture', 1);
+GO
+
+INSERT INTO dbo.LU_ServiceCategory (CategoryCode, CategoryName, ParentCategoryID, CategoryPath, SortOrder)
+VALUES ('SOLUTION_ARCH', 'Solution Architecture', 
+        (SELECT CategoryID FROM dbo.LU_ServiceCategory WHERE CategoryCode = 'ARCHITECTURE'), 
+        'Services / Architecture / Solution Architecture', 2);
 GO
 
 -- ============================================
@@ -688,7 +805,7 @@ GO
 -- ============================================
 
 -- View: Complete Service Overview
-CREATE OR ALTER VIEW dbo.vw_ServiceOverview AS
+CREATE VIEW dbo.vw_ServiceOverview AS
 SELECT 
     s.ServiceID,
     s.ServiceCode,
@@ -709,7 +826,7 @@ JOIN dbo.LU_ServiceCategory c ON s.CategoryID = c.CategoryID;
 GO
 
 -- View: Service Dependencies with Details
-CREATE OR ALTER VIEW dbo.vw_ServiceDependencies AS
+CREATE VIEW dbo.vw_ServiceDependencies AS
 SELECT 
     sd.DependencyID,
     s.ServiceCode,
@@ -727,7 +844,7 @@ LEFT JOIN dbo.LU_RequirementLevel rl ON sd.RequirementLevelID = rl.RequirementLe
 GO
 
 -- View: Service Sizing Summary
-CREATE OR ALTER VIEW dbo.vw_ServiceSizing AS
+CREATE VIEW dbo.vw_ServiceSizing AS
 SELECT 
     s.ServiceCode,
     s.ServiceName,
@@ -744,7 +861,7 @@ JOIN dbo.LU_SizeOption so ON sso.SizeOptionID = so.SizeOptionID;
 GO
 
 -- View: Complete Scope Items
-CREATE OR ALTER VIEW dbo.vw_ServiceScope AS
+CREATE VIEW dbo.vw_ServiceScope AS
 SELECT 
     s.ServiceCode,
     s.ServiceName,
@@ -760,5 +877,6 @@ JOIN dbo.ServiceCatalogItem s ON sc.ServiceID = s.ServiceID
 JOIN dbo.LU_ScopeType st ON sc.ScopeTypeID = st.ScopeTypeID;
 GO
 
-PRINT 'Service Catalog Database Structure created successfully.';
+PRINT 'Service Catalog Database Structure v1.1.0 created successfully.';
+PRINT 'Fixed: Explicit GO batch separators and hierarchical category inserts.';
 GO
