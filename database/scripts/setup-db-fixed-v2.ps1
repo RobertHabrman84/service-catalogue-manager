@@ -64,10 +64,44 @@ function Invoke-SqlFile {
     if ($useSqlCmd) {
         Write-Host "ℹ️  Executing SQL file locally with sqlcmd..." -ForegroundColor Cyan
         Write-Host "   File: $FilePath" -ForegroundColor Gray
-        if ($Database) {
-            sqlcmd -S $SERVER -U sa -P $SA_PASSWORD -d $Database -i $FilePath -C 2>&1
-        } else {
-            sqlcmd -S $SERVER -U sa -P $SA_PASSWORD -i $FilePath -C 2>&1
+        
+        # FIX #4: Add GO batch separators for local execution too
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        try {
+            Write-Host "ℹ️  Preparing SQL script with GO separators..." -ForegroundColor Cyan
+            $content = Get-Content $FilePath -Raw -Encoding UTF8
+            
+            # Count statements
+            $createTableCount = ([regex]::Matches($content, "CREATE TABLE", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
+            $createIndexCount = ([regex]::Matches($content, "CREATE INDEX", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
+            Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX statements" -ForegroundColor Gray
+            
+            # Add GO batch separators
+            $content = $content -replace '(?m)^\);[\r\n\s]*$', ");\nGO\n"
+            $content = $content -replace '(?im)(CREATE\s+INDEX\s+[^\;]+\;)[\r\n]+', "`$1`nGO`n`n"
+            $content = $content -replace '(?im)(CREATE\s+OR\s+ALTER\s+(VIEW|PROCEDURE|FUNCTION)\s+[^\;]+\;)[\r\n]+', "`$1`nGO`n`n"
+            $content = $content -replace '(?im)(INSERT\s+INTO\s+[^;]+\;)[\r\n]+(?!INSERT)', "`$1`nGO`n`n"
+            $content = $content -replace '(?m)^GO[\r\n]+GO[\r\n]+', "GO`n"
+            
+            $goCount = ([regex]::Matches($content, "^GO", [System.Text.RegularExpressions.RegexOptions]::Multiline)).Count
+            Write-Host "   Added: $goCount GO batch separators" -ForegroundColor Green
+            
+            # Write temp file
+            $utf8Bom = New-Object System.Text.UTF8Encoding $true
+            [System.IO.File]::WriteAllText($tempFile, $content, $utf8Bom)
+            
+            # Execute with sqlcmd
+            if ($Database) {
+                $result = sqlcmd -S $SERVER -U sa -P $SA_PASSWORD -d $Database -i $tempFile -C 2>&1
+            } else {
+                $result = sqlcmd -S $SERVER -U sa -P $SA_PASSWORD -i $tempFile -C 2>&1
+            }
+            
+            return $result
+        } finally {
+            if (Test-Path $tempFile) {
+                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            }
         }
     } else {
         # For Docker exec, we need to copy file into container first
@@ -78,15 +112,50 @@ function Invoke-SqlFile {
         # This is critical for sqlcmd in Linux container to parse the file correctly
         $tempFile = [System.IO.Path]::GetTempFileName()
         try {
-            Write-Host "ℹ️  Converting line endings (CRLF → LF)..." -ForegroundColor Cyan
+            Write-Host "ℹ️  Preparing SQL script for execution..." -ForegroundColor Cyan
             $content = Get-Content $FilePath -Raw -Encoding UTF8
-            # Replace CRLF with LF
+            
+            # FIX #4: Add GO batch separators for proper SQL batch execution
+            # Problem: db_structure.sql has all CREATE TABLE statements in one batch
+            # Solution: Insert GO after each statement to ensure proper execution
+            Write-Host "ℹ️  Adding GO batch separators..." -ForegroundColor Cyan
+            
+            # Count statements before processing
+            $createTableCount = ([regex]::Matches($content, "CREATE TABLE", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
+            $createIndexCount = ([regex]::Matches($content, "CREATE INDEX", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
+            Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX statements" -ForegroundColor Gray
+            
+            # Add GO after CREATE TABLE statements (after closing );)
+            # Pattern: ); followed by whitespace, then optionally blank lines
+            $content = $content -replace '(?m)^\);[\r\n\s]*$', ");\nGO\n"
+            
+            # Add GO after CREATE INDEX statements
+            # Pattern: CREATE INDEX ... ON table(column); followed by newline
+            $content = $content -replace '(?im)(CREATE\s+INDEX\s+[^\;]+\;)[\r\n]+', "`$1`nGO`n`n"
+            
+            # Add GO after CREATE OR ALTER VIEW/PROCEDURE/FUNCTION statements
+            $content = $content -replace '(?im)(CREATE\s+OR\s+ALTER\s+(VIEW|PROCEDURE|FUNCTION)\s+[^\;]+\;)[\r\n]+', "`$1`nGO`n`n"
+            
+            # Add GO after INSERT INTO statements (multi-line inserts)
+            $content = $content -replace '(?im)(INSERT\s+INTO\s+[^;]+\;)[\r\n]+(?!INSERT)', "`$1`nGO`n`n"
+            
+            # Ensure GO statements are on their own line
+            $content = $content -replace '(?m)^GO[\r\n]+GO[\r\n]+', "GO`n"
+            
+            # Count GO statements after processing
+            $goCount = ([regex]::Matches($content, "^GO", [System.Text.RegularExpressions.RegexOptions]::Multiline)).Count
+            Write-Host "   Added: $goCount GO batch separators" -ForegroundColor Green
+            
+            # Replace CRLF with LF for Linux container
+            Write-Host "ℹ️  Converting line endings (CRLF → LF)..." -ForegroundColor Cyan
             $content = $content -replace "`r`n", "`n"
             # Also remove any trailing CR that might be left
             $content = $content -replace "`r", ""
+            
             # Write with UTF8 encoding without BOM
             $utf8NoBom = New-Object System.Text.UTF8Encoding $false
             [System.IO.File]::WriteAllText($tempFile, $content, $utf8NoBom)
+            Write-Host "✅ SQL script prepared successfully" -ForegroundColor Green
             
             Write-Host "ℹ️  Copying schema file to container..." -ForegroundColor Cyan
             $copyResult = docker cp $tempFile "${ContainerName}:/tmp/schema.sql" 2>&1
