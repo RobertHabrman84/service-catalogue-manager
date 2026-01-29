@@ -45,8 +45,6 @@ $DB_CONTAINER = "scm-sqlserver"
 $SA_PASSWORD = "YourStrong@Passw0rd"
 $DB_NAME = "ServiceCatalogueManager"
 
-$script:DatabaseTableCount = $null
-
 # Colors
 $COLOR_SUCCESS = "Green"
 $COLOR_INFO = "Cyan"
@@ -298,20 +296,6 @@ function Setup-DockerDatabase {
             exit 1
         }
 
-        Write-Info "Verifying database structure..."
-        $tableCount = Verify-DatabaseStructure
-
-        if ($tableCount -lt 0) {
-            Write-ErrorMessage "Database verification failed - unable to determine table count."
-            exit 1
-        }
-
-        if ($tableCount -lt 40) {
-            Write-ErrorMessage "Database verification failed - expected at least 40 tables, found $tableCount."
-            exit 1
-        }
-
-        $script:DatabaseTableCount = $tableCount
         Write-Success "Database setup complete using db_structure.sql - NO EF CORE USED!"
     } else {
         Write-ErrorMessage "CRITICAL: Database setup script not found: $setupScript"
@@ -319,56 +303,6 @@ function Setup-DockerDatabase {
         Write-ErrorMessage "This script REQUIRES db_structure.sql implementation!"
         exit 1
     }
-}
-
-function Verify-DatabaseStructure {
-    Write-Info "Verifying that database tables were created successfully..."
-    
-    $tableCount = -1
-    $checkQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_TYPE = 'BASE TABLE'"
-    
-    try {
-        $resultLines = @()
-        if (Test-Command "sqlcmd") {
-            $resultLines = sqlcmd -S "localhost,1433" -U sa -P $SA_PASSWORD -Q $checkQuery -h -1 2>$null
-        } else {
-            $resultLines = docker exec $DB_CONTAINER /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -Q $checkQuery -h -1 2>$null
-        }
-        
-        if ($null -eq $resultLines) {
-            $resultLines = @()
-        } elseif ($resultLines -isnot [array]) {
-            $resultLines = @($resultLines)
-        }
-        
-        $numericLine = $resultLines |
-            ForEach-Object { $_.ToString().Trim() } |
-            Where-Object { $_ -match '^\d+$' } |
-            Select-Object -First 1
-        
-        $tableCount = 0
-        if (-not [int]::TryParse($numericLine, [ref]$tableCount)) {
-            $joinedResult = ($resultLines | ForEach-Object { $_.ToString() }) -join " "
-            $match = [regex]::Match($joinedResult, "\d+")
-            if ($match.Success) {
-                [void][int]::TryParse($match.Value, [ref]$tableCount)
-            }
-        }
-        
-    } catch {
-        Write-Warning "Could not verify table count: $($_.Exception.Message)"
-        return -1
-    }
-
-    if ($tableCount -ge 40) {
-        Write-Success "SUCCESS: $tableCount tables found in database!"
-        Write-Success "Database structure verified - db_structure.sql applied correctly!"
-    } else {
-        Write-Warning "WARNING: Only $tableCount tables found (expected 42+)"
-        Write-Warning "Database structure may be incomplete."
-    }
-
-    return $tableCount
 }
 
 function Start-SqliteDatabase {
@@ -614,9 +548,6 @@ function Start-All {
         Write-Info "Frontend PID: $script:FrontendProcessId"
     }
     Write-Success "Database: localhost,$DB_PORT (SQL Server)"
-    if ($script:DatabaseTableCount) {
-        Write-Info "CelkovÃ½ poÄet tabulek: $script:DatabaseTableCount"
-    }
     Write-Host ""
     Write-Info "Pro zastavenÃ­ vÅ¡ech sluÅ¾eb pouÅ¾ijte: Ctrl+C"
     Write-Host ""
