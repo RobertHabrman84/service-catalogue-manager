@@ -1,8 +1,9 @@
 #!/usr/bin/env pwsh
 # ============================================================================
-# Service Catalogue Manager - Database Setup (FIXED V2)
+# Service Catalogue Manager - Database Setup (FIXED V2.1)
 # ============================================================================
-# Opravená verze kompatibilní s start-all-fixed.ps1
+# V2.1: Removed dynamic GO separator injection - db_structure.sql now has
+#       proper GO separators built-in. This script only converts line endings.
 # ============================================================================
 
 param(
@@ -22,7 +23,7 @@ $SCHEMA_DIR = Join-Path $PSScriptRoot "..\schema"
 # Optional: echo explicit NO EF mode for tracing
 if ($NoEFCoreMode) { Write-Host "Mode: NO EF CORE (pure SQL)" -ForegroundColor Cyan }
 
-Write-Host "🗄️  Service Catalogue Database Setup (FIXED V2)" -ForegroundColor Cyan
+Write-Host "🗄️  Service Catalogue Database Setup (FIXED V2.1)" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -61,36 +62,28 @@ function Invoke-SqlFile {
         [string]$Database = $null
     )
     
+    # V2.1: SQL soubor db_structure.sql již obsahuje správné GO separátory
+    # Nepřidáváme další GO - pouze konvertujeme line endings pro kompatibilitu
+    
     if ($useSqlCmd) {
         Write-Host "ℹ️  Executing SQL file locally with sqlcmd..." -ForegroundColor Cyan
         Write-Host "   File: $FilePath" -ForegroundColor Gray
         
-        # FIX #4: Add GO batch separators for local execution too
         $tempFile = [System.IO.Path]::GetTempFileName()
         try {
-            Write-Host "ℹ️  Preparing SQL script with GO separators..." -ForegroundColor Cyan
+            Write-Host "ℹ️  Preparing SQL script..." -ForegroundColor Cyan
             $content = Get-Content $FilePath -Raw -Encoding UTF8
             
-            # Count statements
+            # Count statements for info
             $createTableCount = ([regex]::Matches($content, "CREATE TABLE", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
             $createIndexCount = ([regex]::Matches($content, "CREATE INDEX", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
-            Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX statements" -ForegroundColor Gray
+            $existingGoCount = ([regex]::Matches($content, "(?m)^GO\s*$")).Count
+            Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX, $existingGoCount GO statements" -ForegroundColor Gray
             
-            # FIX #6: Add GO after the entire CLEANUP section (all DROP statements together)
-            # Fix: Use case-insensitive pattern and match until last DROP TABLE statement
-            $content = $content -replace '(?smi)(-- CLEANUP.*?IF OBJECT_ID[^;]+DROP TABLE[^;]+;\s*)(?=\s*--\s*=+\s*$)', "`$1`nGO`n`n"
+            # V2.1: SQL soubor již má GO separátory - nepřidáváme další!
+            Write-Host "   Using existing GO batch separators from SQL file" -ForegroundColor Green
             
-            # Add GO batch separators (excluding DROP statements)
-            $content = $content -replace '(?m)^\);[\r\n]+(?=\s*(CREATE|INSERT|--|$))', ");\nGO\n"
-            $content = $content -replace '(?im)(CREATE\s+INDEX\s+[^\;]+\;)[\r\n]+', "`$1`nGO`n`n"
-            $content = $content -replace '(?im)(CREATE\s+OR\s+ALTER\s+(VIEW|PROCEDURE|FUNCTION)\s+[^\;]+\;)[\r\n]+', "`$1`nGO`n`n"
-            $content = $content -replace '(?im)(INSERT\s+INTO\s+[^;]+\;)[\r\n]+(?!INSERT)', "`$1`nGO`n`n"
-            $content = $content -replace '(?m)^GO[\r\n]+GO[\r\n]+', "GO`n"
-            
-            $goCount = ([regex]::Matches($content, "^GO", [System.Text.RegularExpressions.RegexOptions]::Multiline)).Count
-            Write-Host "   Added: $goCount GO batch separators" -ForegroundColor Green
-            
-            # Write temp file
+            # Write temp file with UTF8 BOM for Windows sqlcmd
             $utf8Bom = New-Object System.Text.UTF8Encoding $true
             [System.IO.File]::WriteAllText($tempFile, $content, $utf8Bom)
             
@@ -112,57 +105,26 @@ function Invoke-SqlFile {
         Write-Host "ℹ️  Preparing SQL file for Docker container..." -ForegroundColor Cyan
         Write-Host "   Source: $FilePath" -ForegroundColor Gray
         
-        # FIX #1: Convert Windows CRLF to Unix LF line endings before copying to Docker
-        # This is critical for sqlcmd in Linux container to parse the file correctly
         $tempFile = [System.IO.Path]::GetTempFileName()
         try {
-            Write-Host "ℹ️  Preparing SQL script for execution..." -ForegroundColor Cyan
+            Write-Host "ℹ️  Preparing SQL script..." -ForegroundColor Cyan
             $content = Get-Content $FilePath -Raw -Encoding UTF8
             
-            # FIX #4: Add GO batch separators for proper SQL batch execution
-            # Problem: db_structure.sql has all CREATE TABLE statements in one batch
-            # Solution: Insert GO after each statement to ensure proper execution
-            # FIX #5: Exclude IF OBJECT_ID DROP statements from GO insertion
-            Write-Host "ℹ️  Adding GO batch separators..." -ForegroundColor Cyan
-            
-            # Count statements before processing
+            # Count statements for info
             $createTableCount = ([regex]::Matches($content, "CREATE TABLE", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
             $createIndexCount = ([regex]::Matches($content, "CREATE INDEX", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
-            Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX statements" -ForegroundColor Gray
+            $existingGoCount = ([regex]::Matches($content, "(?m)^GO\s*$")).Count
+            Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX, $existingGoCount GO statements" -ForegroundColor Gray
             
-            # FIX #6: Add GO after the entire CLEANUP section (all DROP statements together)
-            # Fix: Use case-insensitive pattern and match until last DROP TABLE statement
-            $content = $content -replace '(?smi)(-- CLEANUP.*?IF OBJECT_ID[^;]+DROP TABLE[^;]+;\s*)(?=\s*--\s*=+\s*$)', "`$1`nGO`n`n"
+            # V2.1: SQL soubor již má GO separátory - nepřidáváme další!
+            Write-Host "   Using existing GO batch separators from SQL file" -ForegroundColor Green
             
-            # Add GO after CREATE TABLE statements (after closing );)
-            # BUT: Make sure we're not in a DROP context
-            # Pattern: ); at end of line, followed by blank lines or CREATE/INSERT (not DROP)
-            $content = $content -replace '(?m)^\);[\r\n]+(?=\s*(CREATE|INSERT|--|$))', ");\nGO\n"
-            
-            # Add GO after CREATE INDEX statements
-            # Pattern: CREATE INDEX ... ON table(column); followed by newline
-            $content = $content -replace '(?im)(CREATE\s+INDEX\s+[^\;]+\;)[\r\n]+', "`$1`nGO`n`n"
-            
-            # Add GO after CREATE OR ALTER VIEW/PROCEDURE/FUNCTION statements
-            $content = $content -replace '(?im)(CREATE\s+OR\s+ALTER\s+(VIEW|PROCEDURE|FUNCTION)\s+[^\;]+\;)[\r\n]+', "`$1`nGO`n`n"
-            
-            # Add GO after INSERT INTO statements (multi-line inserts)
-            $content = $content -replace '(?im)(INSERT\s+INTO\s+[^;]+\;)[\r\n]+(?!INSERT)', "`$1`nGO`n`n"
-            
-            # Ensure GO statements are on their own line and remove duplicates
-            $content = $content -replace '(?m)^GO[\r\n]+GO[\r\n]+', "GO`n"
-            
-            # Count GO statements after processing
-            $goCount = ([regex]::Matches($content, "^GO", [System.Text.RegularExpressions.RegexOptions]::Multiline)).Count
-            Write-Host "   Added: $goCount GO batch separators" -ForegroundColor Green
-            
-            # Replace CRLF with LF for Linux container
+            # Convert CRLF to LF for Linux container (this is the only transformation needed)
             Write-Host "ℹ️  Converting line endings (CRLF → LF)..." -ForegroundColor Cyan
             $content = $content -replace "`r`n", "`n"
-            # Also remove any trailing CR that might be left
             $content = $content -replace "`r", ""
             
-            # Write with UTF8 encoding without BOM
+            # Write with UTF8 encoding without BOM for Linux
             $utf8NoBom = New-Object System.Text.UTF8Encoding $false
             [System.IO.File]::WriteAllText($tempFile, $content, $utf8NoBom)
             Write-Host "✅ SQL script prepared successfully" -ForegroundColor Green
@@ -176,7 +138,6 @@ function Invoke-SqlFile {
             }
             Write-Host "✅ File copied successfully" -ForegroundColor Green
             
-            # FIX #2: Add verbose output and better error detection
             Write-Host "ℹ️  Executing SQL script in container..." -ForegroundColor Cyan
             Write-Host "   Database: $Database" -ForegroundColor Gray
             
@@ -187,7 +148,7 @@ function Invoke-SqlFile {
                 $sqlcmdOutput = docker exec $ContainerName /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $SA_PASSWORD -i /tmp/schema.sql 2>&1
             }
             
-            # FIX #3: Display detailed output for debugging
+            # Display output for debugging
             if ($sqlcmdOutput) {
                 Write-Host "📋 SQL Execution Output:" -ForegroundColor Cyan
                 Write-Host "----------------------------------------" -ForegroundColor DarkGray
