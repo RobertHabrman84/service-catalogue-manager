@@ -155,6 +155,7 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("ServiceScopeItem");
             entity.HasKey(e => e.ScopeItemId);
+            entity.Property(e => e.ItemName).IsRequired().HasMaxLength(500);
             entity.Property(e => e.ItemDescription).IsRequired();
 
             entity.HasOne(e => e.ScopeCategory)
@@ -259,6 +260,7 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("ServiceOutputItem");
             entity.HasKey(e => e.OutputItemId);
+            entity.Property(e => e.ItemName).IsRequired().HasMaxLength(500);
             entity.Property(e => e.ItemDescription).IsRequired();
 
             entity.HasOne(e => e.OutputCategory)

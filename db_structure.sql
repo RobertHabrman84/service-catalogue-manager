@@ -256,6 +256,7 @@ CREATE INDEX IX_ServiceScopeCategory_Service ON dbo.ServiceScopeCategory(Service
 CREATE TABLE dbo.ServiceScopeItem (
     ScopeItemID INT IDENTITY(1,1) PRIMARY KEY,
     ScopeCategoryID INT NOT NULL REFERENCES dbo.ServiceScopeCategory(ScopeCategoryID) ON DELETE CASCADE,
+    ItemName NVARCHAR(500) NOT NULL DEFAULT '',
     ItemDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
@@ -410,6 +411,7 @@ CREATE INDEX IX_ServiceOutputCategory_Service ON dbo.ServiceOutputCategory(Servi
 CREATE TABLE dbo.ServiceOutputItem (
     OutputItemID INT IDENTITY(1,1) PRIMARY KEY,
     OutputCategoryID INT NOT NULL REFERENCES dbo.ServiceOutputCategory(OutputCategoryID) ON DELETE CASCADE,
+    ItemName NVARCHAR(500) NOT NULL DEFAULT '',
     ItemDescription NVARCHAR(MAX) NOT NULL,
     SortOrder INT NOT NULL DEFAULT 0
 );
