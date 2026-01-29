@@ -23,7 +23,7 @@ $SCHEMA_DIR = Join-Path $PSScriptRoot "..\schema"
 # Optional: echo explicit NO EF mode for tracing
 if ($NoEFCoreMode) { Write-Host "Mode: NO EF CORE (pure SQL)" -ForegroundColor Cyan }
 
-Write-Host "🗄️  Service Catalogue Database Setup (FIXED V2.1)" -ForegroundColor Cyan
+Write-Host "Service Catalogue Database Setup (FIXED V2.1)" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -31,7 +31,7 @@ Write-Host ""
 $useSqlCmd = $null -ne (Get-Command "sqlcmd" -ErrorAction SilentlyContinue)
 
 if (-not $useSqlCmd) {
-    Write-Host "ℹ️  Using Docker exec (sqlcmd not found locally)" -ForegroundColor Cyan
+    Write-Host "Using Docker exec (sqlcmd not found locally)" -ForegroundColor Cyan
 }
 
 # Helper function to run SQL commands
@@ -62,16 +62,16 @@ function Invoke-SqlFile {
         [string]$Database = $null
     )
     
-    # V2.1: SQL soubor db_structure.sql již obsahuje správné GO separátory
-    # Nepřidáváme další GO - pouze konvertujeme line endings pro kompatibilitu
+    # V2.1: SQL soubor db_structure.sql jiÅ¾ obsahuje sprÃ¡vnÃ© GO separÃ¡tory
+    # NepÅ™idÃ¡vÃ¡me dalÅ¡Ã­ GO - pouze konvertujeme line endings pro kompatibilitu
     
     if ($useSqlCmd) {
-        Write-Host "ℹ️  Executing SQL file locally with sqlcmd..." -ForegroundColor Cyan
-        Write-Host "   File: $FilePath" -ForegroundColor Gray
+        Write-Host "Executing SQL file locally with sqlcmd..." -ForegroundColor Cyan
+        Write-Host "File: $FilePath" -ForegroundColor Gray
         
         $tempFile = [System.IO.Path]::GetTempFileName()
         try {
-            Write-Host "ℹ️  Preparing SQL script..." -ForegroundColor Cyan
+            Write-Host "Preparing SQL script..." -ForegroundColor Cyan
             $content = Get-Content $FilePath -Raw -Encoding UTF8
             
             # Count statements for info
@@ -80,7 +80,7 @@ function Invoke-SqlFile {
             $existingGoCount = ([regex]::Matches($content, "(?m)^GO\s*$")).Count
             Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX, $existingGoCount GO statements" -ForegroundColor Gray
             
-            # V2.1: SQL soubor již má GO separátory - nepřidáváme další!
+            # V2.1: SQL soubor jiÅ¾ mÃ¡ GO separÃ¡tory - nepÅ™idÃ¡vÃ¡me dalÅ¡Ã­!
             Write-Host "   Using existing GO batch separators from SQL file" -ForegroundColor Green
             
             # Write temp file with UTF8 BOM for Windows sqlcmd
@@ -102,44 +102,44 @@ function Invoke-SqlFile {
         }
     } else {
         # For Docker exec, we need to copy file into container first
-        Write-Host "ℹ️  Preparing SQL file for Docker container..." -ForegroundColor Cyan
-        Write-Host "   Source: $FilePath" -ForegroundColor Gray
+        Write-Host "Preparing SQL file for Docker container..." -ForegroundColor Cyan
+        Write-Host "Source: $FilePath" -ForegroundColor Gray
         
         $tempFile = [System.IO.Path]::GetTempFileName()
         try {
-            Write-Host "ℹ️  Preparing SQL script..." -ForegroundColor Cyan
+            Write-Host "Preparing SQL script..." -ForegroundColor Cyan
             $content = Get-Content $FilePath -Raw -Encoding UTF8
             
             # Count statements for info
             $createTableCount = ([regex]::Matches($content, "CREATE TABLE", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
             $createIndexCount = ([regex]::Matches($content, "CREATE INDEX", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
             $existingGoCount = ([regex]::Matches($content, "(?m)^GO\s*$")).Count
-            Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX, $existingGoCount GO statements" -ForegroundColor Gray
+            Write-Host "Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX, $existingGoCount GO statements" -ForegroundColor Gray
             
-            # V2.1: SQL soubor již má GO separátory - nepřidáváme další!
-            Write-Host "   Using existing GO batch separators from SQL file" -ForegroundColor Green
+            # V2.1: SQL soubor jiÅ¾ mÃ¡ GO separÃ¡tory - nepÅ™idÃ¡vÃ¡me dalÅ¡Ã­!
+            Write-Host "Using existing GO batch separators from SQL file" -ForegroundColor Green
             
             # Convert CRLF to LF for Linux container (this is the only transformation needed)
-            Write-Host "ℹ️  Converting line endings (CRLF → LF)..." -ForegroundColor Cyan
+            Write-Host "Converting line endings (CRLF •†’ LF)..." -ForegroundColor Cyan
             $content = $content -replace "`r`n", "`n"
             $content = $content -replace "`r", ""
             
             # Write with UTF8 encoding without BOM for Linux
             $utf8NoBom = New-Object System.Text.UTF8Encoding $false
             [System.IO.File]::WriteAllText($tempFile, $content, $utf8NoBom)
-            Write-Host "✅ SQL script prepared successfully" -ForegroundColor Green
+            Write-Host "SQL script prepared successfully" -ForegroundColor Green
             
-            Write-Host "ℹ️  Copying schema file to container..." -ForegroundColor Cyan
+            Write-Host "Copying schema file to container..." -ForegroundColor Cyan
             $copyResult = docker cp $tempFile "${ContainerName}:/tmp/schema.sql" 2>&1
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "❌ Failed to copy file to container!" -ForegroundColor Red
-                Write-Host "   Error: $copyResult" -ForegroundColor Red
+                Write-Host "Failed to copy file to container!" -ForegroundColor Red
+                Write-Host "Error: $copyResult" -ForegroundColor Red
                 return $copyResult
             }
-            Write-Host "✅ File copied successfully" -ForegroundColor Green
+            Write-Host "File copied successfully" -ForegroundColor Green
             
-            Write-Host "ℹ️  Executing SQL script in container..." -ForegroundColor Cyan
-            Write-Host "   Database: $Database" -ForegroundColor Gray
+            Write-Host "Executing SQL script in container..." -ForegroundColor Cyan
+            Write-Host "Database: $Database" -ForegroundColor Gray
             
             $sqlcmdOutput = $null
             if ($Database) {
@@ -150,7 +150,7 @@ function Invoke-SqlFile {
             
             # Display output for debugging
             if ($sqlcmdOutput) {
-                Write-Host "📋 SQL Execution Output:" -ForegroundColor Cyan
+                Write-Host "SQL Execution Output:" -ForegroundColor Cyan
                 Write-Host "----------------------------------------" -ForegroundColor DarkGray
                 $sqlcmdOutput | ForEach-Object { 
                     $line = $_.ToString()
@@ -177,7 +177,7 @@ function Invoke-SqlFile {
 }
 
 # Check if SQL Server is running
-Write-Host "ℹ️  Checking SQL Server connection..." -ForegroundColor Cyan
+Write-Host "Checking SQL Server connection..." -ForegroundColor Cyan
 try {
     $testResult = Invoke-SqlCommand -Query "SELECT 1"
     
@@ -185,9 +185,9 @@ try {
         throw "Connection failed"
     }
     
-    Write-Host "✅ SQL Server is running" -ForegroundColor Green
+    Write-Host "SQL Server is running" -ForegroundColor Green
 } catch {
-    Write-Host "❌ SQL Server is not accessible!" -ForegroundColor Red
+    Write-Host "•SQL Server is not accessible!" -ForegroundColor Red
     Write-Host "   Error: $_" -ForegroundColor Red
     Write-Host "   Make sure Docker container is running:" -ForegroundColor Yellow
     Write-Host "   docker ps" -ForegroundColor Yellow
@@ -198,33 +198,33 @@ try {
 }
 
 # Check if database exists
-Write-Host "ℹ️  Checking if database '$DbName' exists..." -ForegroundColor Cyan
+Write-Host "Checking if database '$DbName' exists..." -ForegroundColor Cyan
 $checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = '$DbName'"
 $dbExistsResult = Invoke-SqlCommand -Query $checkDbQuery
 $dbExists = ($dbExistsResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
 
 if ($dbExists -eq "1") {
     if (-not $Force) {
-        Write-Host "⚠️  Database $DbName already exists!" -ForegroundColor Yellow
-        Write-Host "   Use -Force to recreate it" -ForegroundColor Yellow
+        Write-Host "Database $DbName already exists!" -ForegroundColor Yellow
+        Write-Host "Use -Force to recreate it" -ForegroundColor Yellow
         exit 0
     }
     
-    Write-Host "⚠️  Dropping existing database..." -ForegroundColor Yellow
+    Write-Host "Dropping existing database..." -ForegroundColor Yellow
     $dropQuery = "DROP DATABASE [$DbName]"
     Invoke-SqlCommand -Query $dropQuery | Out-Null
     Start-Sleep -Seconds 2
 }
 
 # Create database
-Write-Host "📦 Creating database '$DbName'..." -ForegroundColor Cyan
+Write-Host "Creating database '$DbName'..." -ForegroundColor Cyan
 try {
     $createQuery = "CREATE DATABASE [$DbName]"
     Invoke-SqlCommand -Query $createQuery | Out-Null
-    Write-Host "✅ Database created" -ForegroundColor Green
+    Write-Host "Database created" -ForegroundColor Green
 } catch {
-    Write-Host "❌ Failed to create database: $_" -ForegroundColor Red
-    Write-Host "   Query: $createQuery" -ForegroundColor Gray
+    Write-Host "Failed to create database: $_" -ForegroundColor Red
+    Write-Host "Query: $createQuery" -ForegroundColor Gray
     exit 1
 }
 
@@ -233,7 +233,7 @@ Start-Sleep -Seconds 2
 
 if (-not $NoEFCoreMode) {
     # Try EF Core migrations first (preferred method)
-    Write-Host "ℹ️  Attempting EF Core migrations..." -ForegroundColor Cyan
+    Write-Host "Attempting EF Core migrations..." -ForegroundColor Cyan
     $backendDir = Join-Path $PSScriptRoot "..\..\src\backend\ServiceCatalogueManager.Api"
     try {
         Push-Location $backendDir
@@ -241,14 +241,14 @@ if (-not $NoEFCoreMode) {
         # Check if EF Core tools are available
         $efAvailable = $null -ne (Get-Command "dotnet-ef" -ErrorAction SilentlyContinue)
         if (-not $efAvailable) {
-            Write-Host "ℹ️  Installing EF Core tools..." -ForegroundColor Cyan
+            Write-Host "Installing EF Core tools..." -ForegroundColor Cyan
             dotnet tool install --global dotnet-ef --version 8.* 2>$null | Out-Null
         }
         
         # Zkontrolovat, zda projekt existuje
         $projectFile = Join-Path $backendDir "ServiceCatalogueManager.Api.csproj"
         if (-not (Test-Path $projectFile)) {
-            Write-Host "⚠️  EF Core project not found at $projectFile" -ForegroundColor Yellow
+            Write-Host "EF Core project not found at $projectFile" -ForegroundColor Yellow
             Write-Host "Falling back to SQL scripts..." -ForegroundColor Yellow
             throw "EF Core project not found"
         }
@@ -259,31 +259,31 @@ if (-not $NoEFCoreMode) {
         $env:ConnectionStrings__AzureSQL = $connectionString
         $env:ConnectionStrings__DefaultConnection = $connectionString
         
-        Write-Host "ℹ️  Applying EF Core migrations..." -ForegroundColor Cyan
+        Write-Host "Applying EF Core migrations..." -ForegroundColor Cyan
         Write-Host "Connection String: $connectionString" -ForegroundColor Gray
         
         # Try to run EF Core migrations with explicit project specification
-        Write-Host "ℹ️  Running: dotnet ef database update --connection \"$env:AzureSQL__ConnectionString\"" -ForegroundColor Gray
+        Write-Host "Running: dotnet ef database update --connection \"$env:AzureSQL__ConnectionString\"" -ForegroundColor Gray
         $migrationResult = dotnet ef database update --connection "$env:AzureSQL__ConnectionString" 2>&1
         Write-Host "EF Core output: $migrationResult" -ForegroundColor Gray
         
-        # Kontrola na chybu s '*' (wildcard expansion error)
+   
         if ($migrationResult -like "*'*' is not recognized*" -or $migrationResult -like "*wildcard*") {
-            Write-Host "⚠️  EF Core migrace selhala kvůli syntaktické chybě, zkouším alternativní přístup..." -ForegroundColor Yellow
+            Write-Host "EF Core migrace selhala kvÅ¯li syntaktickÃ© chybÄ›, zkouÅ¡Ã­m alternativnÃ­ pÅ™Ã­stup..." -ForegroundColor Yellow
             
-            # Alternativní přístup - použití příkazu bez problémových parametrů
+            
             $env:DOTNET_ENVIRONMENT = "Docker"
             $migrationResult = dotnet ef database update 2>&1
             Write-Host "Alternative EF Core output: $migrationResult" -ForegroundColor Gray
         }
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ EF Core migrations applied successfully" -ForegroundColor Green
+            Write-Host "EF Core migrations applied successfully" -ForegroundColor Green
             
-            # Ověření EF Core migrací
-            Write-Host "ℹ️  Verifying EF Core migration tables..." -ForegroundColor Cyan
+      
+            Write-Host "Verifying EF Core migration tables..." -ForegroundColor Cyan
             
-            # Zkontrolovat, zda existuje tabulka migrací
+            # Zkontrolovat, zda existuje tabulka migracÃ­
             $efTableExistsQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory' AND TABLE_CATALOG = '$DbName'"
             $efTableExistsResult = Invoke-SqlCommand -Query $efTableExistsQuery
             $efTableExists = ($efTableExistsResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
@@ -292,53 +292,53 @@ if (-not $NoEFCoreMode) {
                 $efCountQuery = "SELECT COUNT(*) FROM [$DbName].[__EFMigrationsHistory]"
                 $efCountResult = Invoke-SqlCommand -Query $efCountQuery
                 $efMigrationCount = ($efCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
-                Write-Host "✅ EF Core migrations table exists with $efMigrationCount migrations" -ForegroundColor Green
+                Write-Host "EF Core migrations table exists with $efMigrationCount migrations" -ForegroundColor Green
             } else {
-                Write-Host "⚠️  EF Core migrations table not found" -ForegroundColor Yellow
+                Write-Host "EF Core migrations table not found" -ForegroundColor Yellow
             }
             
             # Verify tables
-            Write-Host "ℹ️  Verifying tables..." -ForegroundColor Cyan
+            Write-Host "Verifying tables..." -ForegroundColor Cyan
             $countQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = '$DbName'"
             $tableCountResult = Invoke-SqlCommand -Query $countQuery
             $tableCount = ($tableCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
             
-            Write-Host "✅ Database setup complete!" -ForegroundColor Green
-            Write-Host "   Tables created: $tableCount" -ForegroundColor Green
+            Write-Host "Database setup complete!" -ForegroundColor Green
+            Write-Host "Tables created: $tableCount" -ForegroundColor Green
             Write-Host ""
             Write-Host "Connection String:" -ForegroundColor Cyan
             Write-Host "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" -ForegroundColor White
             Write-Host ""
             exit 0
         } else {
-            Write-Host "⚠️  EF Core migrations failed, falling back to SQL script..." -ForegroundColor Yellow
+            Write-Host "EF Core migrations failed, falling back to SQL script..." -ForegroundColor Yellow
             Write-Host "EF Core error: $migrationResult" -ForegroundColor Red
         }
     } catch {
-        Write-Host "⚠️  EF Core migrations failed: $_" -ForegroundColor Yellow
+        Write-Host "EF Core migrations failed: $_" -ForegroundColor Yellow
         Write-Host "Falling back to SQL script..." -ForegroundColor Yellow
     } finally {
         Pop-Location
     }
 } else {
-    Write-Host "ℹ️  NO EF CORE mode: skipping EF Core migrations, using pure SQL scripts" -ForegroundColor Cyan
+    Write-Host "NO EF CORE mode: skipping EF Core migrations, using pure SQL scripts" -ForegroundColor Cyan
 }
 
-# Fallback to SQL scripts - nová struktura z db_structure.sql
-Write-Host "📝 Implementuji novou SQL strukturu databáze..." -ForegroundColor Cyan
 
-# Použít novou kompletní strukturu z db_structure.sql (přednostní)
+Write-Host "Implementuji novou SQL strukturu databÃ¡ze..." -ForegroundColor Cyan
+
+
 $mainSchemaFile = Join-Path $SCHEMA_DIR "db_structure.sql"
 if (Test-Path $mainSchemaFile) {
-    Write-Host "ℹ️  Aplikuji kompletní strukturu databáze z db_structure.sql..." -ForegroundColor Cyan
-    Write-Host "   Soubor: $mainSchemaFile" -ForegroundColor Gray
+    Write-Host "Aplikuji kompletnÃ­ strukturu databÃ¡ze z db_structure.sql..." -ForegroundColor Cyan
+    Write-Host "Soubor: $mainSchemaFile" -ForegroundColor Gray
     
     try {
         $schemaResult = Invoke-SqlFile -FilePath $mainSchemaFile -Database $DbName
         
         # FIX #3: Improved error detection with better categorization
         Write-Host ""
-        Write-Host "🔍 Analýza výsledku SQL skriptu..." -ForegroundColor Cyan
+        Write-Host "Analza vsledku SQL skriptu..." -ForegroundColor Cyan
         
         # Count different types of messages
         $errorCount = 0
@@ -361,7 +361,7 @@ if (Test-Path $mainSchemaFile) {
         }
         
         Write-Host "   Chyby (Level 16+): $errorCount" -ForegroundColor $(if ($errorCount -gt 0) { "Red" } else { "Green" })
-        Write-Host "   Varování (Level 11-15): $warningCount" -ForegroundColor $(if ($warningCount -gt 0) { "Yellow" } else { "Green" })
+        Write-Host "   VarovÃ¡nÃ­ (Level 11-15): $warningCount" -ForegroundColor $(if ($warningCount -gt 0) { "Yellow" } else { "Green" })
         Write-Host "   Exit Code: $LASTEXITCODE" -ForegroundColor Gray
         
         # Determine overall success
@@ -371,48 +371,48 @@ if (Test-Path $mainSchemaFile) {
         
         if ($hasErrors) {
             Write-Host ""
-            Write-Host "❌ SQL skript obsahuje CHYBY!" -ForegroundColor Red
-            Write-Host "   Databáze nemusí být kompletní." -ForegroundColor Yellow
+            Write-Host "SQL skript obsahuje CHYBY!" -ForegroundColor Red
+            Write-Host "DatabÃ¡ze nemusÃ­ bÃ½t kompletnÃ­." -ForegroundColor Yellow
             
             # Show first few errors for debugging
             $errorLines = $schemaResult | Select-String -Pattern "Msg \d+.*Level (1[6-9]|2[0-5])" -Context 0,2
             if ($errorLines) {
                 Write-Host ""
-                Write-Host "📋 První chyby:" -ForegroundColor Red
+                Write-Host "PrvnÃ­ chyby:" -ForegroundColor Red
                 $errorLines | Select-Object -First 3 | ForEach-Object {
                     Write-Host "   $($_.Line)" -ForegroundColor Red
                 }
             }
         } elseif ($hasWarnings) {
             Write-Host ""
-            Write-Host "⚠️  SQL skript obsahuje varování" -ForegroundColor Yellow
-            Write-Host "   To může být v pořádku (např. drop neexistujících objektů)" -ForegroundColor Cyan
+            Write-Host "SQL skript obsahuje varovÃ¡nÃ­" -ForegroundColor Yellow
+            Write-Host "To mÅ¯Å¾e bÃ½t v poÅ™Ã¡dku (napÅ™. drop neexistujÃ­cÃ­ch objektÅ¯)" -ForegroundColor Cyan
             
             if ($exitCodeOk) {
-                Write-Host "✅ Exit code je OK, pokračuji..." -ForegroundColor Green
+                Write-Host "Exit code je OK, pokraÄuji..." -ForegroundColor Green
             }
         } elseif ($exitCodeOk -and $successCount -gt 0) {
             Write-Host ""
-            Write-Host "✅ Kompletní struktura databáze byla úspěšně aplikována" -ForegroundColor Green
+            Write-Host "KompletnÃ­ struktura databÃ¡ze byla ÃºspÄ›Å¡nÄ› aplikovÃ¡na" -ForegroundColor Green
         } elseif ($exitCodeOk) {
             Write-Host ""
-            Write-Host "✅ SQL skript dokončen bez chyb" -ForegroundColor Green
+            Write-Host "SQL skript dokonÄen bez chyb" -ForegroundColor Green
         } else {
             Write-Host ""
-            Write-Host "⚠️  Neočekávaný výsledek při aplikaci struktury" -ForegroundColor Yellow
+            Write-Host "NeoÄekÃ¡vanÃ½ vÃ½sledek pÅ™i aplikaci struktury" -ForegroundColor Yellow
             Write-Host "   Exit Code: $LASTEXITCODE" -ForegroundColor Gray
         }
         
     } catch {
         Write-Host ""
-        Write-Host "❌ Chyba při aplikaci struktury databáze: $_" -ForegroundColor Red
-        Write-Host "Pokračuji s záložními skripty..." -ForegroundColor Yellow
-        $mainSchemaFile = $null  # Vynutit použití záložních skriptů
+        Write-Host "Chyba pÅ™i aplikaci struktury databÃ¡ze: $_" -ForegroundColor Red
+        Write-Host "PokraÄuji s zÃ¡loÅ¾nÃ­mi skripty..." -ForegroundColor Yellow
+        $mainSchemaFile = $null  # Vynutit pouÅ¾itÃ­ zÃ¡loÅ¾nÃ­ch skriptÅ¯
     }
 } else {
-    Write-Host "⚠️  Hlavní struktura db_structure.sql nebyla nalezena, používám záložní skripty..." -ForegroundColor Yellow
+    Write-Host "HlavnÃ­ struktura db_structure.sql nebyla nalezena, pouÅ¾Ã­vÃ¡m zÃ¡loÅ¾nÃ­ skripty..." -ForegroundColor Yellow
     
-    # Záložní starší skripty (pouze když není db_structure.sql)
+    # ZÃ¡loÅ¾nÃ­ starÅ¡Ã­ skripty (pouze kdyÅ¾ nenÃ­ db_structure.sql)
     $schemaFiles = @(
         "001_initial_schema.sql",
         "002_lookup_tables.sql", 
@@ -423,29 +423,29 @@ if (Test-Path $mainSchemaFile) {
         $fullSchemaPath = Join-Path $SCHEMA_DIR $schemaFile
         
         if (Test-Path $fullSchemaPath) {
-            Write-Host "ℹ️  Aplikuji $schemaFile..." -ForegroundColor Cyan
+            Write-Host "Aplikuji $schemaFile..." -ForegroundColor Cyan
             
             $schemaResult = Invoke-SqlFile -FilePath $fullSchemaPath -Database $DbName
             
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "⚠️  Skript $schemaFile měl varování (může být v pořádku)" -ForegroundColor Yellow
+                Write-Host "Skript $schemaFile mÄ›l varovÃ¡nÃ­ (mÅ¯Å¾e bÃ½t v poÅ™Ã¡dku)" -ForegroundColor Yellow
             } else {
-                Write-Host "✅ $schemaFile úspěšně aplikován" -ForegroundColor Green
+                Write-Host "$schemaFile ÃºspÄ›Å¡nÄ› aplikovÃ¡n" -ForegroundColor Green
             }
         } else {
-            Write-Host "⚠️  Skript nebyl nalezen: $fullSchemaPath" -ForegroundColor Yellow
+            Write-Host "Skript nebyl nalezen: $fullSchemaPath" -ForegroundColor Yellow
         }
     }
 }
 
-# Ověření tabulek - specifické pro novou strukturu
-Write-Host "ℹ️  Ověřuji novou strukturu databáze..." -ForegroundColor Cyan
+# OvÄ›Å™enÃ­ tabulek - specifickÃ© pro novou strukturu
+Write-Host "OvÄ›Å™uji novou strukturu databÃ¡ze..." -ForegroundColor Cyan
 
-# Hlavní kontrola všech tabulek
+# HlavnÃ­ kontrola vÅ¡ech tabulek
 $countQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = '$DbName'"
 $tableCountResult = Invoke-SqlCommand -Query $countQuery
 
-# Lepší extrakce čísla z výsledku
+# LepÅ¡Ã­ extrakce ÄÃ­sla z vÃ½sledku
 try {
     $tableCount = 0
     $tableCountLines = @()
@@ -471,10 +471,10 @@ try {
     $tableCount = 0
 }
 
-# Specifická kontrola hlavních tabulek nové struktury
-Write-Host "ℹ️  Kontrola integrity nové struktury..." -ForegroundColor Cyan
+# SpecifickÃ¡ kontrola hlavnÃ­ch tabulek novÃ© struktury
+Write-Host "Kontrola integrity novÃ© struktury..." -ForegroundColor Cyan
 
-# Načtení a kontrola všech tabulek ze souboru
+# NaÄtenÃ­ a kontrola vÅ¡ech tabulek ze souboru
 $expectedTables = @()
 $foundTables = @()
 $missingTables = @()
@@ -493,10 +493,10 @@ if ($mainSchemaFile -and (Test-Path $mainSchemaFile)) {
                 Sort-Object -Unique
 
             if ($expectedTables.Count -gt 0) {
-                Write-Host "ℹ️  V souboru nalezeno $($expectedTables.Count) tabulek:" -ForegroundColor Cyan
-                Write-Host "   $($expectedTables -join ', ')" -ForegroundColor Gray
+                Write-Host "V souboru nalezeno $($expectedTables.Count) tabulek:" -ForegroundColor Cyan
+                Write-Host "$($expectedTables -join ', ')" -ForegroundColor Gray
             } else {
-                Write-Host "⚠️  Ve struktuře nebyly nalezeny žádné tabulky" -ForegroundColor Yellow
+                Write-Host "Ve struktuÅ™e nebyly nalezeny Å¾Ã¡dnÃ© tabulky" -ForegroundColor Yellow
             }
 
             foreach ($table in $expectedTables) {
@@ -511,29 +511,29 @@ if ($mainSchemaFile -and (Test-Path $mainSchemaFile)) {
                 }
             }
 
-            Write-Host "✅ Vytvořeno tabulek: $($foundTables.Count)" -ForegroundColor Green
+            Write-Host "VytvoÅ™eno tabulek: $($foundTables.Count)" -ForegroundColor Green
 
             if ($missingTables.Count -gt 0) {
-                Write-Host "⚠️  Chybějící tabulky: $($missingTables.Count)" -ForegroundColor Yellow
-                Write-Host "   $($missingTables -join ', ')" -ForegroundColor Gray
-                Write-Host "ℹ️  Kontrola detailů pro chybějící tabulky..." -ForegroundColor Cyan
+                Write-Host "ChybÄ›jÃ­cÃ­ tabulky: $($missingTables.Count)" -ForegroundColor Yellow
+                Write-Host "$($missingTables -join ', ')" -ForegroundColor Gray
+                Write-Host "Kontrola detailÅ¯ pro chybÄ›jÃ­cÃ­ tabulky..." -ForegroundColor Cyan
                 foreach ($table in $missingTables) {
                     Write-Host "   - $table" -ForegroundColor Gray
                 }
             }
         }
     } catch {
-        Write-Host "⚠️  Nepodařilo se načíst soubor pro kontrolu integrity: $_" -ForegroundColor Yellow
+        Write-Host "NepodaÅ™ilo se naÄÃ­st soubor pro kontrolu integrity: $_" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "⚠️  Soubor se strukturou databáze nebyl nalezen, přeskočena kontrola integrity souboru" -ForegroundColor Yellow
+    Write-Host "Soubor se strukturou databÃ¡ze nebyl nalezen, pÅ™eskoÄena kontrola integrity souboru" -ForegroundColor Yellow
 }
 
-# Základní kontrola pomocí INFORMATION_SCHEMA
+# ZÃ¡kladnÃ­ kontrola pomocÃ­ INFORMATION_SCHEMA
 $countQuery = "SELECT COUNT(*) as TableCount FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG = '$DbName'"
 $tableCountResult = Invoke-SqlCommand -Query $countQuery
 
-# Lepší extrakce čísla z výsledku
+# LepÅ¡Ã­ extrakce ÄÃ­sla z vÃ½sledku
 try {
     $tableCount = 0
     $tableCountLines = @()
@@ -559,22 +559,22 @@ try {
     $tableCount = 0
 }
 
-Write-Host "📊 Souhrn struktury databáze" -ForegroundColor Cyan
-Write-Host "   Celkový počet tabulek: $tableCount" -ForegroundColor Gray
+Write-Host "Souhrn struktury databÃ¡ze" -ForegroundColor Cyan
+Write-Host " CelkovÃ½ poÄet tabulek: $tableCount" -ForegroundColor Gray
 if ($foundTables.Count -gt 0) {
-    Write-Host "   Úspěšně vytvořeno: $($foundTables.Count) tabulek ze struktury" -ForegroundColor Gray
+    Write-Host "vytvoÅ™eno: $($foundTables.Count) tabulek ze struktury" -ForegroundColor Gray
 }
 if ($missingTables.Count -gt 0) {
-    Write-Host "   ⚠️  Chybí: $($missingTables.Count) tabulek" -ForegroundColor Yellow
+    Write-Host "ChybÃ­: $($missingTables.Count) tabulek" -ForegroundColor Yellow
 }
 Write-Host ""
 
-# Zvláštní kontrola pro novou strukturu - ověření klíčových tabulek
-Write-Host "ℹ️  Kontrola integrity nové struktury..." -ForegroundColor Cyan
+# ZvlÃ¡Å¡tnÃ­ kontrola pro novou strukturu - ovÄ›Å™enÃ­ klÃ­ÄovÃ½ch tabulek
+Write-Host "Kontrola integrity novÃ© struktury..." -ForegroundColor Cyan
 
-# Pokud máme seznam nalezených tabulek, použijeme ho, jinak základní kontrolu
+# Pokud mÃ¡me seznam nalezenÃ½ch tabulek, pouÅ¾ijeme ho, jinak zÃ¡kladnÃ­ kontrolu
 if ($foundTables.Count -eq 0) {
-    # Záložní základní kontrola
+    # ZÃ¡loÅ¾nÃ­ zÃ¡kladnÃ­ kontrola
     $requiredTables = @(
         "ServiceCatalogItem",
         "LU_ServiceCategory", 
@@ -604,42 +604,42 @@ if ($foundTables.Count -eq 0) {
 $structureSuccess = ($missingTables.Count -eq 0 -and $tableCount -ge 40)
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••" -ForegroundColor Cyan
 if ($structureSuccess) {
-    Write-Host "✅ DATABASE SETUP SUCCESSFUL!" -ForegroundColor Green
-    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "DATABASE SETUP SUCCESSFUL!" -ForegroundColor Green
+    Write-Host "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "✅ Všechny klíčové tabulky nové struktury byly úspěšně vytvořeny!" -ForegroundColor Green
-    Write-Host "   Celkový počet tabulek: $tableCount" -ForegroundColor Green
-    Write-Host "   Vytvořeno z db_structure.sql: $($foundTables.Count) tabulek" -ForegroundColor Green
+    Write-Host "VÅ¡echny klÃ­ÄovÃ© tabulky novÃ© struktury byly ÃºspÄ›Å¡nÄ› vytvoÅ™eny!" -ForegroundColor Green
+    Write-Host "CelkovÃ½ poÄet tabulek: $tableCount" -ForegroundColor Green
+    Write-Host "VytvoÅ™eno z db_structure.sql: $($foundTables.Count) tabulek" -ForegroundColor Green
 } else {
-    Write-Host "⚠️  DATABASE SETUP INCOMPLETE!" -ForegroundColor Yellow
-    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "DATABASE SETUP INCOMPLETE!" -ForegroundColor Yellow
+    Write-Host "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••" -ForegroundColor Cyan
     Write-Host ""
     if ($missingTables.Count -gt 0) {
-        Write-Host "⚠️  Chybějící tabulky ($($missingTables.Count)):" -ForegroundColor Yellow
+        Write-Host "ChybÄ›jÃ­cÃ­ tabulky ($($missingTables.Count)):" -ForegroundColor Yellow
         Write-Host "   $($missingTables -join ', ')" -ForegroundColor Gray
     } else {
-        Write-Host "⚠️  Databáze obsahuje pouze $tableCount tabulek (očekáváno 42)" -ForegroundColor Yellow
+        Write-Host "DatabÃ¡ze obsahuje pouze $tableCount tabulek (oÄekÃ¡vÃ¡no 42)" -ForegroundColor Yellow
     }
     Write-Host ""
-    Write-Host "   To znamená, že SQL struktura nebyla kompletně aplikována." -ForegroundColor Yellow
+    Write-Host "   To znamenÃ¡, Å¾e SQL struktura nebyla kompletnÄ› aplikovÃ¡na." -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "   📋 Doporučené kroky pro diagnostiku:" -ForegroundColor Cyan
-    Write-Host "   1. Zkontrolujte výše uvedený SQL Output pro chyby" -ForegroundColor White
-    Write-Host "   2. Ověřte formát souboru db_structure.sql" -ForegroundColor White
+    Write-Host "   DoporuÄenÃ© kroky pro diagnostiku:" -ForegroundColor Cyan
+    Write-Host "   1. Zkontrolujte vÃ½Å¡e uvedenÃ½ SQL Output pro chyby" -ForegroundColor White
+    Write-Host "   2. OvÄ›Å™te formÃ¡t souboru db_structure.sql" -ForegroundColor White
     Write-Host "   3. Zkuste spustit setup s -Force parametrem znovu" -ForegroundColor White
     Write-Host "   4. Zkontrolujte Docker logs: docker logs $ContainerName" -ForegroundColor White
     Write-Host ""
 }
 
 Write-Host ""
-Write-Host "Připojovací řetězec:" -ForegroundColor Cyan
+Write-Host "PÅ™ipojovacÃ­ Å™etÄ›zec:" -ForegroundColor Cyan
 Write-Host "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" -ForegroundColor White
 Write-Host ""
 
-# Dodatečná kontrola EF Core migrací
-Write-Host "ℹ️  Kontrola EF Core migrací..." -ForegroundColor Cyan
+# DodateÄnÃ¡ kontrola EF Core migracÃ­
+Write-Host "Kontrola EF Core migracÃ­..." -ForegroundColor Cyan
 $efCheckQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory' AND TABLE_CATALOG = '$DbName'"
 $efCheckResult = Invoke-SqlCommand -Query $efCheckQuery
 $efExists = ($efCheckResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
@@ -648,15 +648,15 @@ if ($efExists -eq "1") {
     $efCountQuery = "SELECT COUNT(*) FROM [$DbName].[__EFMigrationsHistory]"
     $efCountResult = Invoke-SqlCommand -Query $efCountQuery
     $efMigrationCount = ($efCountResult | Select-String -Pattern "\d+" | ForEach-Object { $_.Matches.Value } | Select-Object -First 1)
-    Write-Host "✅ EF Core migrace: $efMigrationCount aplikováno" -ForegroundColor Green
+    Write-Host "EF Core migrace: $efMigrationCount aplikovÃ¡no" -ForegroundColor Green
 } else {
-    Write-Host "ℹ️  EF Core migrace nebyly použity (používá se SQL struktura)" -ForegroundColor Cyan
+    Write-Host "EF Core migrace nebyly pouÅ¾ity (pouÅ¾Ã­vÃ¡ se SQL struktura)" -ForegroundColor Cyan
 }
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "📊 CONNECTION INFORMATION" -ForegroundColor Cyan
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••" -ForegroundColor Cyan
+Write-Host "CONNECTION INFORMATION" -ForegroundColor Cyan
+Write-Host "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Server: $SERVER" -ForegroundColor White
 Write-Host "Database: $DbName" -ForegroundColor White
@@ -667,17 +667,17 @@ Write-Host "Server=$SERVER;Database=$DbName;User Id=sa;Password=$SA_PASSWORD;Tru
 Write-Host ""
 
 if (-not $useSqlCmd) {
-    Write-Host "💡 Tip: To connect from outside Docker, install SQL Server Command Line Utilities" -ForegroundColor Cyan
+    Write-Host "Tip: To connect from outside Docker, install SQL Server Command Line Utilities" -ForegroundColor Cyan
     Write-Host "   Download: https://aka.ms/sqlcmd" -ForegroundColor Cyan
     Write-Host ""
 }
 
 # Final exit code based on success
 if ($structureSuccess) {
-    Write-Host "✅ Setup completed successfully!" -ForegroundColor Green
+    Write-Host "Setup completed successfully!" -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "❌ Setup completed with errors - database may be incomplete!" -ForegroundColor Red
+    Write-Host "Setup completed with errors - database may be incomplete!" -ForegroundColor Red
     Write-Host "   Please review the output above and fix any issues." -ForegroundColor Yellow
     exit 1
 }
