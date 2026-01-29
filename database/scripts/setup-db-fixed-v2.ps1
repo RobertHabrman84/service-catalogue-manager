@@ -76,8 +76,9 @@ function Invoke-SqlFile {
             $createIndexCount = ([regex]::Matches($content, "CREATE INDEX", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
             Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX statements" -ForegroundColor Gray
             
-            # FIX #5: Add GO after the entire CLEANUP section (all DROP statements together)
-            $content = $content -replace '(?sm)(-- CLEANUP.*?)(-- Lookup tables.*?LU_ServiceCategory.*?\;)[\r\n]+', "`$1`$2`nGO`n`n"
+            # FIX #6: Add GO after the entire CLEANUP section (all DROP statements together)
+            # Fix: Use case-insensitive pattern and match until last DROP TABLE statement
+            $content = $content -replace '(?smi)(-- CLEANUP.*?IF OBJECT_ID[^;]+DROP TABLE[^;]+;\s*)(?=\s*--\s*=+\s*$)', "`$1`nGO`n`n"
             
             # Add GO batch separators (excluding DROP statements)
             $content = $content -replace '(?m)^\);[\r\n]+(?=\s*(CREATE|INSERT|--|$))', ");\nGO\n"
@@ -129,9 +130,9 @@ function Invoke-SqlFile {
             $createIndexCount = ([regex]::Matches($content, "CREATE INDEX", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
             Write-Host "   Found: $createTableCount CREATE TABLE, $createIndexCount CREATE INDEX statements" -ForegroundColor Gray
             
-            # FIX #5: Add GO after the entire CLEANUP section (all DROP statements together)
-            # Match the CLEANUP block and add GO at the end
-            $content = $content -replace '(?sm)(-- CLEANUP.*?)(-- Lookup tables.*?LU_ServiceCategory.*?\;)[\r\n]+', "`$1`$2`nGO`n`n"
+            # FIX #6: Add GO after the entire CLEANUP section (all DROP statements together)
+            # Fix: Use case-insensitive pattern and match until last DROP TABLE statement
+            $content = $content -replace '(?smi)(-- CLEANUP.*?IF OBJECT_ID[^;]+DROP TABLE[^;]+;\s*)(?=\s*--\s*=+\s*$)', "`$1`nGO`n`n"
             
             # Add GO after CREATE TABLE statements (after closing );)
             # BUT: Make sure we're not in a DROP context
