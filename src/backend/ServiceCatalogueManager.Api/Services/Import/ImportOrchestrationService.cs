@@ -492,7 +492,8 @@ public class ImportOrchestrationService : IImportOrchestrationService
             return cached;
         }
 
-        var sizes = await _unitOfWork.SizeOptions.GetAllAsync();
+        // FIX: Use AsNoTracking() to prevent tracking conflicts
+        var sizes = await _context.LU_SizeOptions.AsNoTracking().ToListAsync();
         // IMPORTANT: Search by Code (which has UNIQUE constraint), not by Name
         var size = sizes.FirstOrDefault(s => 
             s.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
@@ -515,7 +516,8 @@ public class ImportOrchestrationService : IImportOrchestrationService
             catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE") == true || ex.InnerException?.Message?.Contains("duplicate") == true)
             {
                 _logger.LogWarning("Duplicate key detected for size option {Code}, reloading from database", cacheKey);
-                sizes = await _unitOfWork.SizeOptions.GetAllAsync();
+                // FIX: Use AsNoTracking() on reload too
+                sizes = await _context.LU_SizeOptions.AsNoTracking().ToListAsync();
                 size = sizes.FirstOrDefault(s => s.Code.Equals(cacheKey, StringComparison.OrdinalIgnoreCase));
                 if (size == null) throw;
             }
@@ -1078,17 +1080,37 @@ public class ImportOrchestrationService : IImportOrchestrationService
 
         _logger.LogInformation("Importing {Count} size options", sizeOptions.Count);
 
+        // CRITICAL FIX: Batch all ServiceSizeOption inserts into single SaveChanges
+        // Step 1: Pre-load all required LU_SizeOptions with AsNoTracking
+        var sizeNames = sizeOptions.Select(o => o.GetEffectiveSizeName()).Distinct().ToList();
+        var sizeOptionLookup = new Dictionary<string, int>();
+        
+        foreach (var sizeName in sizeNames)
+        {
+            var sizeOption = await FindOrCreateSizeOptionAsync(sizeName);
+            if (sizeOption != null)
+            {
+                sizeOptionLookup[sizeName] = sizeOption.SizeOptionId;
+            }
+        }
+
+        // Step 2: Create all ServiceSizeOption entities (but don't save yet)
+        var serviceSizeOptionsToAdd = new List<ServiceSizeOption>();
+        
         foreach (var option in sizeOptions)
         {
-            // Find or create size option lookup - použití helper metody
             var effectiveSizeName = option.GetEffectiveSizeName();
-            var sizeOption = await FindOrCreateSizeOptionAsync(effectiveSizeName);
+            
+            if (!sizeOptionLookup.TryGetValue(effectiveSizeName, out var sizeOptionId))
+            {
+                _logger.LogWarning("Size option {SizeName} not found, skipping", effectiveSizeName);
+                continue;
+            }
 
-            // Create service size option - použití helper metod
             var serviceSizeOption = new ServiceSizeOption
             {
                 ServiceId = serviceId,
-                SizeOptionId = sizeOption?.SizeOptionId ?? 1,
+                SizeOptionId = sizeOptionId,
                 Description = option.GetEffectiveDescription(),
                 Duration = option.Duration,
                 EffortRange = option.GetEffectiveEffortRange(),
@@ -1096,8 +1118,23 @@ public class ImportOrchestrationService : IImportOrchestrationService
                 ModifiedDate = DateTime.UtcNow
             };
 
-            serviceSizeOption = await _unitOfWork.ServiceSizeOptions.AddAsync(serviceSizeOption);
-            await _unitOfWork.SaveChangesAsync(); // Get ID
+            serviceSizeOptionsToAdd.Add(serviceSizeOption);
+        }
+
+        // Step 3: Batch insert all ServiceSizeOptions in single transaction
+        if (serviceSizeOptionsToAdd.Any())
+        {
+            await _context.ServiceSizeOptions.AddRangeAsync(serviceSizeOptionsToAdd);
+            await _unitOfWork.SaveChangesAsync(); // Single SaveChanges for all ServiceSizeOptions
+            _logger.LogInformation("Successfully imported {Count} ServiceSizeOptions", serviceSizeOptionsToAdd.Count);
+        }
+
+        // Step 4: Now process related entities (EffortEstimationItems) with proper ServiceSizeOptionId
+        for (int i = 0; i < sizeOptions.Count && i < serviceSizeOptionsToAdd.Count; i++)
+        {
+            var option = sizeOptions[i];
+            var serviceSizeOption = serviceSizeOptionsToAdd[i];
+            var effectiveSizeName = option.GetEffectiveSizeName();
 
             // Import team allocations - použití normalizované metody
             var normalizedAllocations = option.GetTeamAllocationsNormalized();

@@ -1,0 +1,120 @@
+{
+  "summary": {
+    "total_entities": 40,
+    "critical_issues": 0,
+    "warnings": 14
+  },
+  "issues": [],
+  "warnings": [
+    {
+      "severity": "WARNING",
+      "entity": "ServicePricingConfig",
+      "issue": "No HasKey mapping found in DbContext",
+      "recommendation": "Add explicit HasKey mapping"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "column": "EstimatedHours",
+      "issue": "DECIMAL column 'EstimatedHours' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.EstimatedHours).HasPrecision(10, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "column": "EffortDays",
+      "issue": "DECIMAL column 'EffortDays' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.EffortDays).HasPrecision(10, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "CloudArchitects",
+      "issue": "DECIMAL column 'CloudArchitects' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.CloudArchitects).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "SolutionArchitects",
+      "issue": "DECIMAL column 'SolutionArchitects' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.SolutionArchitects).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "TechnicalLeads",
+      "issue": "DECIMAL column 'TechnicalLeads' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.TechnicalLeads).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "Developers",
+      "issue": "DECIMAL column 'Developers' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.Developers).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "QAEngineers",
+      "issue": "DECIMAL column 'QAEngineers' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.QAEngineers).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "DevOpsEngineers",
+      "issue": "DECIMAL column 'DevOpsEngineers' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.DevOpsEngineers).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "SecuritySpecialists",
+      "issue": "DECIMAL column 'SecuritySpecialists' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.SecuritySpecialists).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "ProjectManagers",
+      "issue": "DECIMAL column 'ProjectManagers' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.ProjectManagers).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "BusinessAnalysts",
+      "issue": "DECIMAL column 'BusinessAnalysts' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.BusinessAnalysts).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "column": "FTEAllocation",
+      "issue": "DECIMAL column 'FTEAllocation' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.FTEAllocation).HasPrecision(3, 2);"
+    },
+    {
+      "severity": "WARNING",
+      "entity": "TechnicalComplexityAddition",
+      "table": "TechnicalComplexityAddition",
+      "column": "Factor",
+      "issue": "DECIMAL column 'Factor' in DB but no HasPrecision in DbContext",
+      "recommendation": "Add: entity.Property(e => e.Factor).HasPrecision(5, 2);"
+    }
+  ]
+}

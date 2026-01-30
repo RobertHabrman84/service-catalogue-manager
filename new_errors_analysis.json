@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-01-29T23:39:32.038873",
+  "errors": [
+    {
+      "error": "Invalid column name 'Description'",
+      "context": "StakeholderInvolvement MERGE",
+      "affected_tables": [
+        "StakeholderInvolvement"
+      ],
+      "sql_context": "INSERT ([CreatedBy], [CreatedDate], [Description], [InteractionId], [InvolvementDescription]...)",
+      "line": "ImportOrchestrationService.cs:line 1042"
+    },
+    {
+      "error": "Invalid column name 'DurationBySize'",
+      "context": "TimelinePhase INSERT",
+      "affected_tables": [
+        "TimelinePhase"
+      ],
+      "sql_context": "INSERT INTO [TimelinePhase] ([CreatedBy], [CreatedDate], [Description], [DurationBySize]...)",
+      "line": "ImportOrchestrationService.cs:line 1042"
+    }
+  ],
+  "issues": [
+    {
+      "severity": "HIGH",
+      "table": "TimelinePhase",
+      "column": "Description",
+      "issue": "MISSING_COLUMN",
+      "error": "Invalid column name 'DurationBySize'"
+    },
+    {
+      "severity": "HIGH",
+      "table": "TimelinePhase",
+      "column": "DurationBySize",
+      "issue": "MISSING_COLUMN",
+      "error": "Invalid column name 'DurationBySize'"
+    }
+  ],
+  "summary": {
+    "total_errors": 2,
+    "affected_tables": 2,
+    "total_issues": 2
+  }
+}

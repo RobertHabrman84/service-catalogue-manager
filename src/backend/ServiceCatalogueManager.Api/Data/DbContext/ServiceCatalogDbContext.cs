@@ -209,6 +209,9 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
             entity.ToTable("StakeholderInvolvement");
             entity.HasKey(e => e.InvolvementId);
             entity.Property(e => e.StakeholderRole).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.InvolvementType).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.InvolvementDescription).IsRequired();
+            entity.Property(e => e.Description);
 
             entity.HasOne(e => e.Interaction)
                 .WithMany(i => i.StakeholderInvolvements)
@@ -275,6 +278,8 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
             entity.ToTable("TimelinePhase");
             entity.HasKey(e => e.PhaseId);
             entity.Property(e => e.PhaseName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description);
+            entity.Property(e => e.DurationBySize);
 
             entity.HasOne(e => e.Service)
                 .WithMany(s => s.TimelinePhases)
@@ -300,18 +305,26 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
             entity.ToTable("ServiceSizeOption");
             entity.HasKey(e => e.ServiceSizeOptionId);
 
+            // Explicit relationship to Service
             entity.HasOne(e => e.Service)
                 .WithMany(s => s.SizeOptions)
                 .HasForeignKey(e => e.ServiceId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // FIX: Explicit relationship to LU_SizeOption (prevents tracking conflicts)
+            entity.HasOne<LU_SizeOption>()
+                .WithMany()
+                .HasForeignKey(e => e.SizeOptionId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configure EffortEstimationItem
         modelBuilder.Entity<EffortEstimationItem>(entity =>
         {
             entity.ToTable("EffortEstimationItem");
-            entity.HasKey(e => e.EstimationId);
+            entity.HasKey(e => e.EstimationItemId);
             entity.Property(e => e.EffortDays).HasPrecision(18, 2);
+            entity.Property(e => e.EstimatedHours).HasPrecision(10, 2);
 
             entity.HasOne(e => e.Service)
                 .WithMany(s => s.EffortEstimations)
@@ -389,15 +402,19 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("ServiceToolFramework");
             entity.HasKey(e => e.ToolId);
+            // VERIFIED: DB PK column is ToolFrameworkID, entity property is ToolId
             entity.Property(e => e.ToolId).HasColumnName("ToolFrameworkID");
         });
 
-        // ServiceLicense - needs .ToTable() + column mapping
+        // ServiceLicense - needs .ToTable()
         modelBuilder.Entity<ServiceLicense>(entity =>
         {
             entity.ToTable("ServiceLicense");
             entity.HasKey(e => e.LicenseId);
-            entity.Property(e => e.LicenseName).HasColumnName("LicenseDescription");
+            // VERIFIED: DB has both LicenseName and LicenseDescription columns
+            // LicenseName maps to LicenseName (no mapping needed)
+            // Entity may have LicenseDescription property mapping to LicenseDescription column
+            // Removed incorrect mapping: entity.Property(e => e.LicenseName).HasColumnName("LicenseDescription");
         });
 
         // Sizing entities - need .ToTable()
@@ -422,7 +439,10 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             entity.ToTable("TechnicalComplexityAddition");
             entity.HasKey(e => e.AdditionId);
+            // VERIFIED: DB has both ComplexityAdditionID (PK) and AdditionId columns
+            // Entity AdditionId property maps to DB ComplexityAdditionID (PK)
             entity.Property(e => e.AdditionId).HasColumnName("ComplexityAdditionID");
+            entity.Property(e => e.Factor).HasPrecision(5, 2);
         });
 
         // ScopeDependency - needs .ToTable()
@@ -436,7 +456,11 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
             .HasKey(e => e.CharacteristicId);
 
         // Configure Calculator entities
-        modelBuilder.Entity<ServicePricingConfig>().HasKey(e => e.PricingConfigId);
+        modelBuilder.Entity<ServicePricingConfig>(entity =>
+        {
+            entity.ToTable("ServicePricingConfig"); // FIX: Added explicit table name
+            entity.HasKey(e => e.PricingConfigId);
+        });
         modelBuilder.Entity<ServiceRoleRate>().HasKey(e => e.RoleRateId);
         modelBuilder.Entity<ServiceBaseEffort>().HasKey(e => e.BaseEffortId);
         modelBuilder.Entity<ServiceContextMultiplier>().HasKey(e => e.MultiplierId);

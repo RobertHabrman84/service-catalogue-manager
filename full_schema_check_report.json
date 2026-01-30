@@ -1,0 +1,556 @@
+{
+  "timestamp": "2026-01-29",
+  "total_tables": 43,
+  "import_relevant_tables": 20,
+  "tables": {
+    "LU_ServiceCategory": {
+      "columns": [
+        "CategoryID",
+        "CategoryCode",
+        "CategoryName",
+        "Description",
+        "ParentCategoryID",
+        "CategoryPath",
+        "SortOrder",
+        "IsActive",
+        "CreatedDate",
+        "ModifiedDate"
+      ],
+      "count": 10
+    },
+    "LU_SizeOption": {
+      "columns": [
+        "SizeOptionID",
+        "SizeCode",
+        "SizeName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_CloudProvider": {
+      "columns": [
+        "CloudProviderID",
+        "ProviderCode",
+        "ProviderName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_DependencyType": {
+      "columns": [
+        "DependencyTypeID",
+        "TypeCode",
+        "TypeName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_PrerequisiteCategory": {
+      "columns": [
+        "PrerequisiteCategoryID",
+        "CategoryCode",
+        "CategoryName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_LicenseType": {
+      "columns": [
+        "LicenseTypeID",
+        "TypeCode",
+        "TypeName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_ToolCategory": {
+      "columns": [
+        "ToolCategoryID",
+        "CategoryCode",
+        "CategoryName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_ScopeType": {
+      "columns": [
+        "ScopeTypeID",
+        "TypeCode",
+        "TypeName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_InteractionLevel": {
+      "columns": [
+        "InteractionLevelID",
+        "LevelCode",
+        "LevelName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_RequirementLevel": {
+      "columns": [
+        "RequirementLevelID",
+        "LevelCode",
+        "LevelName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_Role": {
+      "columns": [
+        "RoleID",
+        "RoleCode",
+        "RoleName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "LU_EffortCategory": {
+      "columns": [
+        "EffortCategoryID",
+        "CategoryCode",
+        "CategoryName",
+        "Description",
+        "SortOrder",
+        "IsActive"
+      ],
+      "count": 6
+    },
+    "ServiceCatalogItem": {
+      "columns": [
+        "ServiceID",
+        "ServiceCode",
+        "ServiceName",
+        "Version",
+        "CategoryID",
+        "Description",
+        "Notes",
+        "IsActive",
+        "CreatedDate",
+        "CreatedBy",
+        "ModifiedDate",
+        "ModifiedBy"
+      ],
+      "count": 12
+    },
+    "UsageScenario": {
+      "columns": [
+        "ScenarioID",
+        "ServiceID",
+        "ScenarioNumber",
+        "ScenarioTitle",
+        "ScenarioDescription",
+        "SortOrder"
+      ],
+      "count": 6
+    },
+    "ServiceDependency": {
+      "columns": [
+        "DependencyID",
+        "ServiceID",
+        "DependencyTypeID",
+        "DependencyName",
+        "DependencyDescription",
+        "RelatedServiceId",
+        "DependentServiceID",
+        "DependentServiceCode",
+        "DependentServiceName",
+        "RequirementLevelID",
+        "Notes",
+        "SortOrder"
+      ],
+      "count": 12
+    },
+    "ServiceScopeCategory": {
+      "columns": [
+        "ScopeCategoryID",
+        "ServiceID",
+        "ScopeTypeID",
+        "CategoryNumber",
+        "CategoryName",
+        "SortOrder"
+      ],
+      "count": 6
+    },
+    "ServiceScopeItem": {
+      "columns": [
+        "ScopeItemID",
+        "ScopeCategoryID",
+        "ItemName",
+        "ItemDescription",
+        "SortOrder"
+      ],
+      "count": 5
+    },
+    "ServicePrerequisite": {
+      "columns": [
+        "PrerequisiteID",
+        "ServiceID",
+        "PrerequisiteCategoryID",
+        "PrerequisiteName",
+        "PrerequisiteDescription",
+        "Description",
+        "RequirementLevelID",
+        "SortOrder",
+        "CreatedDate",
+        "CreatedBy",
+        "ModifiedDate",
+        "ModifiedBy"
+      ],
+      "count": 12
+    },
+    "CloudProviderCapability": {
+      "columns": [
+        "CapabilityID",
+        "ServiceID",
+        "CloudProviderID",
+        "CapabilityType",
+        "CapabilityName",
+        "Notes",
+        "SortOrder"
+      ],
+      "count": 7
+    },
+    "ServiceToolFramework": {
+      "columns": [
+        "ToolFrameworkID",
+        "ServiceID",
+        "ToolCategoryID",
+        "ToolName",
+        "Description",
+        "SortOrder"
+      ],
+      "count": 6
+    },
+    "ServiceLicense": {
+      "columns": [
+        "LicenseID",
+        "ServiceID",
+        "LicenseTypeID",
+        "LicenseName",
+        "LicenseDescription",
+        "Description",
+        "CloudProviderID",
+        "SortOrder"
+      ],
+      "count": 8
+    },
+    "ServiceInteraction": {
+      "columns": [
+        "InteractionID",
+        "ServiceID",
+        "InteractionLevelID",
+        "InteractionDescription",
+        "Notes"
+      ],
+      "count": 5
+    },
+    "CustomerRequirement": {
+      "columns": [
+        "RequirementID",
+        "InteractionID",
+        "ServiceID",
+        "RequirementDescription",
+        "SortOrder"
+      ],
+      "count": 5
+    },
+    "AccessRequirement": {
+      "columns": [
+        "AccessRequirementID",
+        "InteractionID",
+        "ServiceID",
+        "AccessDescription",
+        "RequirementDescription",
+        "SortOrder"
+      ],
+      "count": 6
+    },
+    "StakeholderInvolvement": {
+      "columns": [
+        "InvolvementID",
+        "InteractionID",
+        "ServiceID",
+        "StakeholderRole",
+        "InvolvementType",
+        "InvolvementDescription",
+        "Description",
+        "SortOrder"
+      ],
+      "count": 8
+    },
+    "ServiceInput": {
+      "columns": [
+        "InputID",
+        "ServiceID",
+        "InputName",
+        "ParameterName",
+        "ParameterDescription",
+        "RequirementLevelID",
+        "DataType",
+        "DefaultValue",
+        "Description",
+        "ExampleValue",
+        "SortOrder"
+      ],
+      "count": 11
+    },
+    "ServiceOutputCategory": {
+      "columns": [
+        "OutputCategoryID",
+        "ServiceID",
+        "CategoryNumber",
+        "CategoryName",
+        "SortOrder"
+      ],
+      "count": 5
+    },
+    "ServiceOutputItem": {
+      "columns": [
+        "OutputItemID",
+        "OutputCategoryID",
+        "ItemName",
+        "ItemDescription",
+        "SortOrder"
+      ],
+      "count": 5
+    },
+    "TimelinePhase": {
+      "columns": [
+        "PhaseID",
+        "ServiceID",
+        "PhaseNumber",
+        "PhaseName",
+        "SortOrder"
+      ],
+      "count": 5
+    },
+    "ServiceSizeOption": {
+      "columns": [
+        "ServiceSizeID",
+        "ServiceSizeOptionId",
+        "ServiceID",
+        "SizeOptionID",
+        "Description",
+        "ScopeDescription",
+        "Duration",
+        "DurationInDays",
+        "DurationMin",
+        "DurationMax",
+        "DurationDisplay",
+        "EffortRange",
+        "EffortHoursMin",
+        "EffortHoursMax",
+        "EffortDisplay",
+        "TeamSize",
+        "TeamSizeMin",
+        "TeamSizeMax",
+        "TeamSizeDisplay",
+        "Complexity",
+        "SortOrder"
+      ],
+      "count": 21
+    },
+    "PhaseDurationBySize": {
+      "columns": [
+        "PhaseDurationID",
+        "PhaseID",
+        "SizeOptionID",
+        "DurationMin",
+        "DurationMax",
+        "DurationDisplay"
+      ],
+      "count": 6
+    },
+    "SizingCriteria": {
+      "columns": [
+        "CriteriaID",
+        "ServiceID",
+        "CriteriaName",
+        "CriteriaType",
+        "SortOrder"
+      ],
+      "count": 5
+    },
+    "SizingCriteriaValue": {
+      "columns": [
+        "CriteriaValueID",
+        "CriteriaID",
+        "SizeOptionID",
+        "CriteriaValue",
+        "Notes"
+      ],
+      "count": 5
+    },
+    "SizingParameter": {
+      "columns": [
+        "ParameterID",
+        "ServiceID",
+        "ParameterCategory",
+        "ParameterName",
+        "SortOrder"
+      ],
+      "count": 5
+    },
+    "SizingParameterValue": {
+      "columns": [
+        "ParameterValueID",
+        "ParameterID",
+        "ValueCondition",
+        "ResultSize",
+        "HoursAdjustment",
+        "AdjustmentDisplay",
+        "Notes",
+        "SortOrder"
+      ],
+      "count": 8
+    },
+    "EffortEstimationItem": {
+      "columns": [
+        "EstimationItemID",
+        "EstimationId",
+        "ServiceID",
+        "ServiceSizeOptionId",
+        "EffortCategoryId",
+        "SizeOptionId",
+        "Category",
+        "ScopeArea",
+        "EstimatedHours",
+        "EffortDays",
+        "BaseHours",
+        "Notes",
+        "SortOrder"
+      ],
+      "count": 13
+    },
+    "TechnicalComplexityAddition": {
+      "columns": [
+        "ComplexityAdditionID",
+        "AdditionId",
+        "ServiceID",
+        "ServiceSizeOptionId",
+        "AdditionName",
+        "Condition",
+        "Factor",
+        "HoursAdded",
+        "AdditionalHours",
+        "Description",
+        "Notes",
+        "SortOrder"
+      ],
+      "count": 12
+    },
+    "ScopeDependency": {
+      "columns": [
+        "ScopeDependencyID",
+        "ServiceID",
+        "ScopeArea",
+        "RequiredAreas",
+        "SortOrder"
+      ],
+      "count": 5
+    },
+    "SizingExample": {
+      "columns": [
+        "ExampleID",
+        "ServiceID",
+        "SizeOptionID",
+        "ExampleTitle",
+        "Scenario",
+        "Deliverables",
+        "SortOrder"
+      ],
+      "count": 7
+    },
+    "SizingExampleCharacteristic": {
+      "columns": [
+        "CharacteristicID",
+        "ExampleID",
+        "CharacteristicDescription",
+        "SortOrder"
+      ],
+      "count": 4
+    },
+    "ServiceResponsibleRole": {
+      "columns": [
+        "ServiceRoleID",
+        "ServiceID",
+        "RoleID",
+        "IsPrimaryOwner",
+        "Responsibility",
+        "SortOrder"
+      ],
+      "count": 6
+    },
+    "ServiceTeamAllocation": {
+      "columns": [
+        "AllocationID",
+        "TeamAllocationId",
+        "ServiceID",
+        "SizeOptionID",
+        "ServiceSizeOptionId",
+        "RoleID",
+        "CloudArchitects",
+        "SolutionArchitects",
+        "TechnicalLeads",
+        "Developers",
+        "QAEngineers",
+        "DevOpsEngineers",
+        "SecuritySpecialists",
+        "ProjectManagers",
+        "BusinessAnalysts",
+        "FTEAllocation",
+        "Notes",
+        "SortOrder"
+      ],
+      "count": 18
+    },
+    "ServiceMultiCloudConsideration": {
+      "columns": [
+        "ConsiderationID",
+        "ServiceID",
+        "ConsiderationTitle",
+        "ConsiderationDescription",
+        "SortOrder"
+      ],
+      "count": 5
+    }
+  },
+  "critical_issues": [
+    {
+      "table": "TimelinePhase",
+      "issue": "Missing columns: Description, DurationBySize",
+      "severity": "HIGH",
+      "status": "FIX_REQUIRED"
+    },
+    {
+      "table": "StakeholderInvolvement",
+      "issue": "Description exists in schema but DbContext mapping incomplete",
+      "severity": "MEDIUM",
+      "status": "VERIFY_MAPPING"
+    }
+  ]
+}

@@ -1,0 +1,1267 @@
+{
+  "database_tables": {
+    "LU_ServiceCategory": [
+      "CategoryID",
+      "CategoryCode",
+      "CategoryName",
+      "Description",
+      "ParentCategoryID",
+      "CategoryPath",
+      "SortOrder",
+      "IsActive",
+      "CreatedDate",
+      "ModifiedDate"
+    ],
+    "LU_SizeOption": [
+      "SizeOptionID",
+      "SizeCode",
+      "SizeName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_CloudProvider": [
+      "CloudProviderID",
+      "ProviderCode",
+      "ProviderName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_DependencyType": [
+      "DependencyTypeID",
+      "TypeCode",
+      "TypeName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_PrerequisiteCategory": [
+      "PrerequisiteCategoryID",
+      "CategoryCode",
+      "CategoryName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_LicenseType": [
+      "LicenseTypeID",
+      "TypeCode",
+      "TypeName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_ToolCategory": [
+      "ToolCategoryID",
+      "CategoryCode",
+      "CategoryName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_ScopeType": [
+      "ScopeTypeID",
+      "TypeCode",
+      "TypeName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_InteractionLevel": [
+      "InteractionLevelID",
+      "LevelCode",
+      "LevelName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_RequirementLevel": [
+      "RequirementLevelID",
+      "LevelCode",
+      "LevelName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_Role": [
+      "RoleID",
+      "RoleCode",
+      "RoleName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "LU_EffortCategory": [
+      "EffortCategoryID",
+      "CategoryCode",
+      "CategoryName",
+      "Description",
+      "SortOrder",
+      "IsActive"
+    ],
+    "ServiceCatalogItem": [
+      "ServiceID",
+      "ServiceCode",
+      "ServiceName",
+      "Version",
+      "CategoryID",
+      "Description",
+      "Notes",
+      "IsActive",
+      "CreatedDate",
+      "CreatedBy",
+      "ModifiedDate",
+      "ModifiedBy"
+    ],
+    "UsageScenario": [
+      "ScenarioID",
+      "ServiceID",
+      "ScenarioNumber",
+      "ScenarioTitle",
+      "ScenarioDescription",
+      "SortOrder"
+    ],
+    "ServiceDependency": [
+      "DependencyID",
+      "ServiceID",
+      "DependencyTypeID",
+      "DependencyName",
+      "DependencyDescription",
+      "DependentServiceID",
+      "DependentServiceCode",
+      "DependentServiceName",
+      "RequirementLevelID",
+      "Notes",
+      "SortOrder"
+    ],
+    "ServiceScopeCategory": [
+      "ScopeCategoryID",
+      "ServiceID",
+      "ScopeTypeID",
+      "CategoryNumber",
+      "CategoryName",
+      "SortOrder"
+    ],
+    "ServiceScopeItem": [
+      "ScopeItemID",
+      "ScopeCategoryID",
+      "ItemName",
+      "ItemDescription",
+      "SortOrder"
+    ],
+    "ServicePrerequisite": [
+      "PrerequisiteID",
+      "ServiceID",
+      "PrerequisiteCategoryID",
+      "PrerequisiteName",
+      "PrerequisiteDescription",
+      "Description",
+      "RequirementLevelID",
+      "SortOrder",
+      "--",
+      "CreatedDate",
+      "CreatedBy",
+      "ModifiedDate",
+      "ModifiedBy"
+    ],
+    "CloudProviderCapability": [
+      "CapabilityID",
+      "ServiceID",
+      "CloudProviderID",
+      "CapabilityType",
+      "CapabilityName",
+      "Notes",
+      "SortOrder"
+    ],
+    "ServiceToolFramework": [
+      "ToolFrameworkID",
+      "ServiceID",
+      "ToolCategoryID",
+      "ToolName",
+      "Description",
+      "SortOrder"
+    ],
+    "ServiceLicense": [
+      "LicenseID",
+      "ServiceID",
+      "LicenseTypeID",
+      "LicenseDescription",
+      "Description",
+      "CloudProviderID",
+      "SortOrder"
+    ],
+    "ServiceInteraction": [
+      "InteractionID",
+      "ServiceID",
+      "InteractionLevelID",
+      "Notes"
+    ],
+    "CustomerRequirement": [
+      "RequirementID",
+      "ServiceID",
+      "RequirementDescription",
+      "SortOrder"
+    ],
+    "AccessRequirement": [
+      "AccessRequirementID",
+      "ServiceID",
+      "RequirementDescription",
+      "SortOrder"
+    ],
+    "StakeholderInvolvement": [
+      "InvolvementID",
+      "ServiceID",
+      "StakeholderRole",
+      "InvolvementDescription",
+      "SortOrder"
+    ],
+    "ServiceInput": [
+      "InputID",
+      "ServiceID",
+      "ParameterName",
+      "ParameterDescription",
+      "RequirementLevelID",
+      "DataType",
+      "DefaultValue",
+      "SortOrder"
+    ],
+    "ServiceOutputCategory": [
+      "OutputCategoryID",
+      "ServiceID",
+      "CategoryNumber",
+      "CategoryName",
+      "SortOrder"
+    ],
+    "ServiceOutputItem": [
+      "OutputItemID",
+      "OutputCategoryID",
+      "ItemName",
+      "ItemDescription",
+      "SortOrder"
+    ],
+    "TimelinePhase": [
+      "PhaseID",
+      "ServiceID",
+      "PhaseNumber",
+      "PhaseName",
+      "SortOrder"
+    ],
+    "ServiceSizeOption": [
+      "ServiceSizeID",
+      "ServiceID",
+      "SizeOptionID",
+      "ScopeDescription",
+      "DurationMin",
+      "DurationMax",
+      "DurationDisplay",
+      "EffortHoursMin",
+      "EffortHoursMax",
+      "EffortDisplay",
+      "TeamSizeMin",
+      "TeamSizeMax",
+      "TeamSizeDisplay",
+      "Complexity",
+      "SortOrder"
+    ],
+    "PhaseDurationBySize": [
+      "PhaseDurationID",
+      "PhaseID",
+      "SizeOptionID",
+      "DurationMin",
+      "DurationMax",
+      "DurationDisplay"
+    ],
+    "SizingCriteria": [
+      "CriteriaID",
+      "ServiceID",
+      "CriteriaName",
+      "CriteriaType",
+      "SortOrder"
+    ],
+    "SizingCriteriaValue": [
+      "CriteriaValueID",
+      "CriteriaID",
+      "SizeOptionID",
+      "CriteriaValue",
+      "Notes"
+    ],
+    "SizingParameter": [
+      "ParameterID",
+      "ServiceID",
+      "ParameterCategory",
+      "ParameterName",
+      "SortOrder"
+    ],
+    "SizingParameterValue": [
+      "ParameterValueID",
+      "ParameterID",
+      "ValueCondition",
+      "ResultSize",
+      "HoursAdjustment",
+      "AdjustmentDisplay",
+      "Notes",
+      "SortOrder"
+    ],
+    "EffortEstimationItem": [
+      "EstimationItemID",
+      "ServiceID",
+      "ScopeArea",
+      "BaseHours",
+      "Notes",
+      "SortOrder"
+    ],
+    "TechnicalComplexityAddition": [
+      "ComplexityAdditionID",
+      "ServiceID",
+      "AdditionName",
+      "Condition",
+      "HoursAdded",
+      "Notes",
+      "SortOrder"
+    ],
+    "ScopeDependency": [
+      "ScopeDependencyID",
+      "ServiceID",
+      "ScopeArea",
+      "RequiredAreas",
+      "SortOrder"
+    ],
+    "SizingExample": [
+      "ExampleID",
+      "ServiceID",
+      "SizeOptionID",
+      "ExampleTitle",
+      "Scenario",
+      "Deliverables",
+      "SortOrder"
+    ],
+    "SizingExampleCharacteristic": [
+      "CharacteristicID",
+      "ExampleID",
+      "CharacteristicDescription",
+      "SortOrder"
+    ],
+    "ServiceResponsibleRole": [
+      "ServiceRoleID",
+      "ServiceID",
+      "RoleID",
+      "IsPrimaryOwner",
+      "Responsibility",
+      "SortOrder"
+    ],
+    "ServiceTeamAllocation": [
+      "AllocationID",
+      "ServiceID",
+      "SizeOptionID",
+      "RoleID",
+      "FTEAllocation",
+      "Notes",
+      "SortOrder"
+    ],
+    "ServiceMultiCloudConsideration": [
+      "ConsiderationID",
+      "ServiceID",
+      "ConsiderationTitle",
+      "ConsiderationDescription",
+      "SortOrder"
+    ]
+  },
+  "entity_models": {
+    "ServicePricingConfig": [
+      "PricingConfigId",
+      "ServiceId",
+      "Margin",
+      "RiskPremium",
+      "Contingency",
+      "Discount",
+      "HoursPerDay"
+    ],
+    "ServiceRoleRate": [
+      "RoleRateId",
+      "ServiceId",
+      "RoleCode",
+      "RoleName",
+      "DailyRate",
+      "IsPrimary",
+      "SortOrder"
+    ],
+    "ServiceBaseEffort": [
+      "BaseEffortId",
+      "ServiceId",
+      "EffortCode",
+      "Label",
+      "Description",
+      "Hours",
+      "SortOrder"
+    ],
+    "ServiceContextMultiplier": [
+      "MultiplierId",
+      "ServiceId",
+      "MultiplierCode",
+      "MultiplierName",
+      "SortOrder"
+    ],
+    "ServiceContextMultiplierValue": [
+      "ValueId",
+      "MultiplierId",
+      "ValueCode",
+      "ValueLabel",
+      "MultiplierValue",
+      "SortOrder"
+    ],
+    "ServiceScopeArea": [
+      "ScopeAreaId",
+      "ServiceId",
+      "AreaCode",
+      "AreaName",
+      "Description",
+      "Category",
+      "Hours",
+      "IsRequired",
+      "RequiresAreaCodes",
+      "SortOrder"
+    ],
+    "ServiceComplianceFactor": [
+      "FactorId",
+      "ServiceId",
+      "FactorCode",
+      "FactorLabel",
+      "Hours",
+      "SortOrder"
+    ],
+    "ServiceCalculatorSection": [
+      "SectionId",
+      "ServiceId",
+      "SectionCode",
+      "SectionLabel",
+      "SortOrder"
+    ],
+    "ServiceCalculatorGroup": [
+      "GroupId",
+      "SectionId",
+      "GroupTitle",
+      "SortOrder"
+    ],
+    "ServiceCalculatorParameter": [
+      "ParameterId",
+      "GroupId",
+      "ParameterCode",
+      "ParameterLabel",
+      "IsRequired",
+      "DefaultValue",
+      "SortOrder"
+    ],
+    "ServiceCalculatorParameterOption": [
+      "OptionId",
+      "ParameterId",
+      "OptionValue",
+      "OptionLabel",
+      "SizeImpact",
+      "ComplexityHours",
+      "SortOrder"
+    ],
+    "ServiceCalculatorScenario": [
+      "ScenarioId",
+      "ServiceId",
+      "ScenarioCode",
+      "ScenarioName",
+      "Description",
+      "ParameterValuesJson",
+      "SortOrder"
+    ],
+    "ServiceCalculatorPhase": [
+      "PhaseId",
+      "ServiceId",
+      "PhaseCode",
+      "PhaseName",
+      "DurationSmall",
+      "DurationMedium",
+      "DurationLarge",
+      "SortOrder"
+    ],
+    "ServiceTeamComposition": [
+      "CompositionId",
+      "ServiceId",
+      "SizeCode",
+      "RoleCode",
+      "FteAllocation",
+      "SortOrder"
+    ],
+    "ServiceSizingCriteria": [
+      "SizingCriteriaId",
+      "ServiceId",
+      "SizeCode",
+      "Duration",
+      "Effort",
+      "Description"
+    ],
+    "EffortEstimationItem": [
+      "EstimationItemId",
+      "EstimationId",
+      "ServiceId",
+      "ServiceSizeOptionId",
+      "EffortCategoryId",
+      "SizeOptionId",
+      "ScopeArea",
+      "Category",
+      "BaseHours",
+      "EstimatedHours",
+      "EffortDays",
+      "Notes",
+      "SortOrder"
+    ],
+    "ServiceCatalogItem": [
+      "ServiceId",
+      "ServiceCode",
+      "ServiceName",
+      "Version",
+      "CategoryId",
+      "Description",
+      "Notes",
+      "IsActive"
+    ],
+    "ServiceDependency": [
+      "DependencyId",
+      "ServiceId",
+      "DependencyTypeId",
+      "DependencyName",
+      "DependencyDescription",
+      "RelatedServiceId",
+      "DependentServiceCode",
+      "DependentServiceName",
+      "RequirementLevelId",
+      "Notes",
+      "SortOrder"
+    ],
+    "ServiceScopeItem": [
+      "ScopeItemId",
+      "ScopeCategoryId",
+      "ItemName",
+      "ItemDescription",
+      "SortOrder"
+    ],
+    "ServiceToolFramework": [
+      "ToolId",
+      "ServiceId",
+      "ToolCategoryId",
+      "ToolName",
+      "Description",
+      "SortOrder"
+    ],
+    "ServiceLicense": [
+      "LicenseId",
+      "ServiceId",
+      "LicenseTypeId",
+      "LicenseName",
+      "Description",
+      "SortOrder",
+      "CloudProviderId"
+    ],
+    "StakeholderInvolvement": [
+      "InvolvementId",
+      "ServiceId",
+      "InteractionId",
+      "StakeholderRole",
+      "InvolvementType",
+      "InvolvementDescription",
+      "Description",
+      "SortOrder"
+    ],
+    "ServiceOutputCategory": [
+      "OutputCategoryId",
+      "ServiceId",
+      "CategoryNumber",
+      "CategoryName",
+      "SortOrder"
+    ],
+    "ServiceOutputItem": [
+      "OutputItemId",
+      "OutputCategoryId",
+      "ItemName",
+      "ItemDescription",
+      "SortOrder"
+    ],
+    "ServiceSizeOption": [
+      "ServiceSizeOptionId",
+      "ServiceId",
+      "SizeOptionId",
+      "Description",
+      "Duration",
+      "DurationInDays",
+      "EffortRange",
+      "TeamSize",
+      "Complexity"
+    ],
+    "EffortEstimation": [
+      "EffortEstimationId",
+      "ServiceSizeOptionId",
+      "Hours",
+      "HoursMin",
+      "HoursMax"
+    ],
+    "TechnicalComplexityAddition": [
+      "ComplexityAdditionId",
+      "AdditionId",
+      "ServiceId",
+      "ServiceSizeOptionId",
+      "AdditionName",
+      "Factor",
+      "Condition",
+      "AdditionalHours",
+      "Description",
+      "SortOrder"
+    ],
+    "ServiceTeamAllocation": [
+      "TeamAllocationId",
+      "ServiceId",
+      "SizeOptionId",
+      "ServiceSizeOptionId",
+      "CloudArchitects",
+      "SolutionArchitects",
+      "TechnicalLeads",
+      "Developers",
+      "QAEngineers",
+      "DevOpsEngineers",
+      "SecuritySpecialists",
+      "ProjectManagers",
+      "BusinessAnalysts"
+    ],
+    "SizingExample": [
+      "ExampleId",
+      "ServiceId",
+      "SizeOptionId",
+      "ServiceSizeOptionId",
+      "ExampleNumber",
+      "ExampleTitle",
+      "Description",
+      "Scenario",
+      "SortOrder"
+    ],
+    "SizingExampleCharacteristic": [
+      "CharacteristicId",
+      "ExampleId",
+      "CharacteristicDescription",
+      "Characteristic",
+      "SortOrder"
+    ],
+    "ScopeDependency": [
+      "DependencyId",
+      "ScopeDependencyId",
+      "ServiceId",
+      "ServiceSizeOptionId",
+      "DependencyDescription",
+      "SortOrder"
+    ],
+    "SizingParameter": [
+      "ParameterId",
+      "ServiceId",
+      "ServiceSizeOptionId",
+      "ParameterCategory",
+      "ParameterName",
+      "Value",
+      "Unit",
+      "SortOrder"
+    ],
+    "SizingCriteria": [
+      "CriteriaId",
+      "ServiceId",
+      "ServiceSizeOptionId",
+      "CriteriaName",
+      "Criteria",
+      "SortOrder"
+    ],
+    "ServiceMultiCloudConsideration": [
+      "ConsiderationId",
+      "ServiceId",
+      "ConsiderationTitle",
+      "ConsiderationDescription",
+      "Description",
+      "SortOrder"
+    ],
+    "CloudProviderCapability": [
+      "CapabilityId",
+      "ServiceId",
+      "CloudProviderId",
+      "CapabilityType",
+      "CapabilityName",
+      "Notes",
+      "SortOrder"
+    ],
+    "ServiceInput": [
+      "InputId",
+      "ServiceId",
+      "InputName",
+      "ParameterName",
+      "ParameterDescription",
+      "Description",
+      "RequirementLevelId",
+      "DataType",
+      "DefaultValue",
+      "ExampleValue",
+      "SortOrder"
+    ],
+    "ServiceInteraction": [
+      "InteractionId",
+      "ServiceId",
+      "InteractionLevelId",
+      "InteractionDescription"
+    ],
+    "CustomerRequirement": [
+      "RequirementId",
+      "InteractionId",
+      "RequirementDescription",
+      "SortOrder"
+    ],
+    "AccessRequirement": [
+      "AccessId",
+      "InteractionId",
+      "AccessDescription",
+      "SortOrder"
+    ],
+    "ServicePrerequisite": [
+      "PrerequisiteId",
+      "ServiceId",
+      "PrerequisiteCategoryId",
+      "PrerequisiteName",
+      "PrerequisiteDescription",
+      "Description",
+      "RequirementLevelId",
+      "SortOrder"
+    ],
+    "ServiceResponsibleRole": [
+      "ResponsibleRoleId",
+      "ServiceId",
+      "RoleId",
+      "Responsibility",
+      "Responsibilities",
+      "IsPrimaryOwner",
+      "SortOrder"
+    ],
+    "ServiceScopeCategory": [
+      "ScopeCategoryId",
+      "ServiceId",
+      "ScopeTypeId",
+      "CategoryNumber",
+      "CategoryName",
+      "SortOrder"
+    ],
+    "SizingCriteriaValue": [
+      "CriteriaValueId",
+      "CriteriaId",
+      "SizeOptionId",
+      "CriteriaValue",
+      "Notes"
+    ],
+    "SizingParameterValue": [
+      "ParameterValueId",
+      "ParameterId",
+      "ValueCondition",
+      "ResultSize",
+      "HoursAdjustment",
+      "AdjustmentDisplay",
+      "Notes",
+      "SortOrder"
+    ],
+    "TimelinePhase": [
+      "PhaseId",
+      "ServiceId",
+      "PhaseNumber",
+      "PhaseName",
+      "Description",
+      "DurationBySize",
+      "SortOrder"
+    ],
+    "PhaseDurationBySize": [
+      "DurationId",
+      "PhaseDurationId",
+      "PhaseId",
+      "SizeOptionId",
+      "Duration"
+    ],
+    "UsageScenario": [
+      "ScenarioId",
+      "ServiceId",
+      "ScenarioNumber",
+      "ScenarioTitle",
+      "ScenarioDescription",
+      "SortOrder"
+    ],
+    "LU_ServiceCategory": [
+      "CategoryId",
+      "ParentCategoryId",
+      "CategoryPath",
+      "CreatedDate",
+      "ModifiedDate"
+    ],
+    "LU_SizeOption": [
+      "SizeOptionId"
+    ],
+    "LU_CloudProvider": [
+      "CloudProviderId"
+    ],
+    "LU_DependencyType": [
+      "DependencyTypeId"
+    ],
+    "LU_PrerequisiteCategory": [
+      "PrerequisiteCategoryId"
+    ],
+    "LU_LicenseType": [
+      "LicenseTypeId"
+    ],
+    "LU_ToolCategory": [
+      "ToolCategoryId"
+    ],
+    "LU_ScopeType": [
+      "ScopeTypeId"
+    ],
+    "LU_InteractionLevel": [
+      "InteractionLevelId"
+    ],
+    "LU_RequirementLevel": [
+      "RequirementLevelId"
+    ],
+    "LU_Role": [
+      "RoleId"
+    ],
+    "LU_EffortCategory": [
+      "EffortCategoryId"
+    ]
+  },
+  "issues": [
+    {
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "property": "EstimationId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "property": "ServiceSizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "property": "EffortCategoryId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "property": "SizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "property": "Category",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "property": "EstimatedHours",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "EffortEstimationItem",
+      "table": "EffortEstimationItem",
+      "property": "EffortDays",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceDependency",
+      "table": "ServiceDependency",
+      "property": "RelatedServiceId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceToolFramework",
+      "table": "ServiceToolFramework",
+      "property": "ToolId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceLicense",
+      "table": "ServiceLicense",
+      "property": "LicenseName",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "StakeholderInvolvement",
+      "table": "StakeholderInvolvement",
+      "property": "InteractionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "StakeholderInvolvement",
+      "table": "StakeholderInvolvement",
+      "property": "InvolvementType",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "StakeholderInvolvement",
+      "table": "StakeholderInvolvement",
+      "property": "Description",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceSizeOption",
+      "table": "ServiceSizeOption",
+      "property": "ServiceSizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceSizeOption",
+      "table": "ServiceSizeOption",
+      "property": "Description",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceSizeOption",
+      "table": "ServiceSizeOption",
+      "property": "Duration",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceSizeOption",
+      "table": "ServiceSizeOption",
+      "property": "DurationInDays",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceSizeOption",
+      "table": "ServiceSizeOption",
+      "property": "EffortRange",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceSizeOption",
+      "table": "ServiceSizeOption",
+      "property": "TeamSize",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "TechnicalComplexityAddition",
+      "table": "TechnicalComplexityAddition",
+      "property": "AdditionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "TechnicalComplexityAddition",
+      "table": "TechnicalComplexityAddition",
+      "property": "ServiceSizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "TechnicalComplexityAddition",
+      "table": "TechnicalComplexityAddition",
+      "property": "Factor",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "TechnicalComplexityAddition",
+      "table": "TechnicalComplexityAddition",
+      "property": "AdditionalHours",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "TechnicalComplexityAddition",
+      "table": "TechnicalComplexityAddition",
+      "property": "Description",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "TeamAllocationId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "ServiceSizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "CloudArchitects",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "SolutionArchitects",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "TechnicalLeads",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "Developers",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "QAEngineers",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "DevOpsEngineers",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "SecuritySpecialists",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "ProjectManagers",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceTeamAllocation",
+      "table": "ServiceTeamAllocation",
+      "property": "BusinessAnalysts",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingExample",
+      "table": "SizingExample",
+      "property": "ServiceSizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingExample",
+      "table": "SizingExample",
+      "property": "ExampleNumber",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingExample",
+      "table": "SizingExample",
+      "property": "Description",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingExampleCharacteristic",
+      "table": "SizingExampleCharacteristic",
+      "property": "Characteristic",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ScopeDependency",
+      "table": "ScopeDependency",
+      "property": "DependencyId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ScopeDependency",
+      "table": "ScopeDependency",
+      "property": "ServiceSizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ScopeDependency",
+      "table": "ScopeDependency",
+      "property": "DependencyDescription",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingParameter",
+      "table": "SizingParameter",
+      "property": "ServiceSizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingParameter",
+      "table": "SizingParameter",
+      "property": "Value",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingParameter",
+      "table": "SizingParameter",
+      "property": "Unit",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingCriteria",
+      "table": "SizingCriteria",
+      "property": "ServiceSizeOptionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "SizingCriteria",
+      "table": "SizingCriteria",
+      "property": "Criteria",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceMultiCloudConsideration",
+      "table": "ServiceMultiCloudConsideration",
+      "property": "Description",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceInput",
+      "table": "ServiceInput",
+      "property": "InputName",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceInput",
+      "table": "ServiceInput",
+      "property": "Description",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceInput",
+      "table": "ServiceInput",
+      "property": "ExampleValue",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceInteraction",
+      "table": "ServiceInteraction",
+      "property": "InteractionDescription",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "CustomerRequirement",
+      "table": "CustomerRequirement",
+      "property": "InteractionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "AccessRequirement",
+      "table": "AccessRequirement",
+      "property": "AccessId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "AccessRequirement",
+      "table": "AccessRequirement",
+      "property": "InteractionId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "AccessRequirement",
+      "table": "AccessRequirement",
+      "property": "AccessDescription",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceResponsibleRole",
+      "table": "ServiceResponsibleRole",
+      "property": "ResponsibleRoleId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "ServiceResponsibleRole",
+      "table": "ServiceResponsibleRole",
+      "property": "Responsibilities",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "TimelinePhase",
+      "table": "TimelinePhase",
+      "property": "Description",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "TimelinePhase",
+      "table": "TimelinePhase",
+      "property": "DurationBySize",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "PhaseDurationBySize",
+      "table": "PhaseDurationBySize",
+      "property": "DurationId",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    },
+    {
+      "entity": "PhaseDurationBySize",
+      "table": "PhaseDurationBySize",
+      "property": "Duration",
+      "issue_type": "MISSING_COLUMN",
+      "severity": "HIGH"
+    }
+  ]
+}

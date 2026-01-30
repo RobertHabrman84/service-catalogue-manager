@@ -901,6 +901,11 @@ namespace ServiceCatalogueManager.Api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<int>("OutputCategoryId")
                         .HasColumnType("int");
 
@@ -1024,6 +1029,11 @@ namespace ServiceCatalogueManager.Api.Migrations
                     b.Property<string>("ItemDescription")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("ScopeCategoryId")
                         .HasColumnType("int");
