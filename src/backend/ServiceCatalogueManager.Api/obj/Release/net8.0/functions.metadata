@@ -1,0 +1,1082 @@
+[
+  {
+    "name": "ImportService",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ImportFunction.ImportService",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Function",
+        "methods": [
+          "post"
+        ],
+        "route": "services/import",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ImportServicesBulk",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ImportFunction.ImportServicesBulk",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Function",
+        "methods": [
+          "post"
+        ],
+        "route": "services/import/bulk",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ValidateImport",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ImportFunction.ValidateImport",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "services/import/validate",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ImportHealthCheck",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ImportFunction.HealthCheck",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services/import/health",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "PublishToUuBookKit",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.UuBookKit.UuBookKitFunctions.PublishToUuBookKit",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "services/{id:int}/publish",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "SyncToUuBookKit",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.UuBookKit.UuBookKitFunctions.SyncToUuBookKit",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "uubookkit/sync",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetUuBookKitStatus",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.UuBookKit.UuBookKitFunctions.GetUuBookKitStatus",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "uubookkit/status",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetServicePageUrl",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.UuBookKit.UuBookKitFunctions.GetServicePageUrl",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services/{id:int}/uubookkit",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "UnpublishFromUuBookKit",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.UuBookKit.UuBookKitFunctions.UnpublishFromUuBookKit",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "delete"
+        ],
+        "route": "services/{id:int}/publish",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetServices",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ServiceCatalog.ServiceCatalogFunctions.GetServices",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetServiceById",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ServiceCatalog.ServiceCatalogFunctions.GetServiceById",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services/{id:int}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetServiceByCode",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ServiceCatalog.ServiceCatalogFunctions.GetServiceByCode",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services/code/{code}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "CreateService",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ServiceCatalog.ServiceCatalogFunctions.CreateService",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "services",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "UpdateService",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ServiceCatalog.ServiceCatalogFunctions.UpdateService",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "put"
+        ],
+        "route": "services/{id:int}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "DeleteService",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.ServiceCatalog.ServiceCatalogFunctions.DeleteService",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "delete"
+        ],
+        "route": "services/{id:int}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetAllLookups",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetAllLookups",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetCategories",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetCategories",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/categories",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetSizeOptions",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetSizeOptions",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/size-options",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetCloudProviders",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetCloudProviders",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/cloud-providers",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetDependencyTypes",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetDependencyTypes",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/dependency-types",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetRoles",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetRoles",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/roles",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetEffortCategories",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetEffortCategories",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/effort-categories",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetPrerequisiteCategories",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetPrerequisiteCategories",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/prerequisite-categories",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetToolCategories",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetToolCategories",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/tool-categories",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetRequirementLevels",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetRequirementLevels",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/requirement-levels",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetServicesList",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetServicesList",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/services-list",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetLicenseTypes",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Lookup.LookupFunctions.GetLicenseTypes",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "lookups/license-types",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "Health",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Health.HealthFunctions.Health",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "health",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "HealthDetailed",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Health.HealthFunctions.HealthDetailed",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "health/detailed",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "Liveness",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Health.HealthFunctions.Liveness",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "health/live",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "Readiness",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Health.HealthFunctions.Readiness",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "health/ready",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ExportToPdf",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Export.ExportFunctions.ExportToPdf",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "export/pdf",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ExportToMarkdown",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Export.ExportFunctions.ExportToMarkdown",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "export/markdown",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ExportServiceToPdf",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Export.ExportFunctions.ExportServiceToPdf",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services/{id:int}/export/pdf",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ExportServiceToMarkdown",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Export.ExportFunctions.ExportServiceToMarkdown",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services/{id:int}/export/markdown",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "SaveExport",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Export.ExportFunctions.SaveExport",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "export/save",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetExportHistory",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Export.ExportFunctions.GetExportHistory",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "export/history",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetCalculatorConfig",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Calculator.CalculatorFunctions.GetCalculatorConfig",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services/{serviceId:int}/calculator-config",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetCalculatorConfigByCode",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Calculator.CalculatorFunctions.GetCalculatorConfigByCode",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "services/code/{serviceCode}/calculator-config",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetServiceMap",
+    "scriptFile": "ServiceCatalogueManager.Api.dll",
+    "entryPoint": "ServiceCatalogueManager.Api.Functions.Calculator.CalculatorFunctions.GetServiceMap",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "service-map",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  }
+]

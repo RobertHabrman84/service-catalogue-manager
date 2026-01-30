@@ -57,11 +57,11 @@ IF OBJECT_ID('dbo.LU_ServiceCategory', 'U') IS NOT NULL DROP TABLE dbo.LU_Servic
 -- Service Categories (e.g., Services / Architecture / Technical Architecture)
 CREATE TABLE dbo.LU_ServiceCategory (
     CategoryID INT IDENTITY(1,1) PRIMARY KEY,
-    CategoryCode NVARCHAR(50) NOT NULL UNIQUE,
-    CategoryName NVARCHAR(200) NOT NULL,
-    Description NVARCHAR(MAX) NULL,                                                 -- Category description
-    ParentCategoryID INT NULL REFERENCES dbo.LU_ServiceCategory(CategoryID),
-    CategoryPath NVARCHAR(500) NULL, -- Full path like "Services / Architecture / Technical Architecture"
+    CategoryCode NVARCHAR(50) NULL DEFAULT '' UNIQUE,
+    CategoryName NVARCHAR(200) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',                                                 -- Category description
+    ParentCategoryID INT NULL DEFAULT 0 REFERENCES dbo.LU_ServiceCategory(CategoryID),
+    CategoryPath NVARCHAR(500) NULL DEFAULT '', -- Full path like "Services / Architecture / Technical Architecture"
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1,
     CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
@@ -71,9 +71,9 @@ CREATE TABLE dbo.LU_ServiceCategory (
 -- Size Options (S, M, L, XL, etc.)
 CREATE TABLE dbo.LU_SizeOption (
     SizeOptionID INT IDENTITY(1,1) PRIMARY KEY,
-    SizeCode NVARCHAR(10) NOT NULL UNIQUE,
-    SizeName NVARCHAR(50) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    SizeCode NVARCHAR(10) NULL DEFAULT '' UNIQUE,
+    SizeName NVARCHAR(50) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -81,9 +81,9 @@ CREATE TABLE dbo.LU_SizeOption (
 -- Cloud Providers
 CREATE TABLE dbo.LU_CloudProvider (
     CloudProviderID INT IDENTITY(1,1) PRIMARY KEY,
-    ProviderCode NVARCHAR(20) NOT NULL UNIQUE,
-    ProviderName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    ProviderCode NVARCHAR(20) NULL DEFAULT '' UNIQUE,
+    ProviderName NVARCHAR(100) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -91,9 +91,9 @@ CREATE TABLE dbo.LU_CloudProvider (
 -- Dependency Types (Prerequisite, Triggers for, Parallel)
 CREATE TABLE dbo.LU_DependencyType (
     DependencyTypeID INT IDENTITY(1,1) PRIMARY KEY,
-    TypeCode NVARCHAR(50) NOT NULL UNIQUE,
-    TypeName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(500) NULL,
+    TypeCode NVARCHAR(50) NULL DEFAULT '' UNIQUE,
+    TypeName NVARCHAR(100) NULL DEFAULT '',
+    Description NVARCHAR(500) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -101,9 +101,9 @@ CREATE TABLE dbo.LU_DependencyType (
 -- Prerequisite Categories (Organizational, Technical, Documentation)
 CREATE TABLE dbo.LU_PrerequisiteCategory (
     PrerequisiteCategoryID INT IDENTITY(1,1) PRIMARY KEY,
-    CategoryCode NVARCHAR(50) NOT NULL UNIQUE,
-    CategoryName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    CategoryCode NVARCHAR(50) NULL DEFAULT '' UNIQUE,
+    CategoryName NVARCHAR(100) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -111,9 +111,9 @@ CREATE TABLE dbo.LU_PrerequisiteCategory (
 -- License Types (Required by Customer, Recommended/Optional, Provided by Service Provider)
 CREATE TABLE dbo.LU_LicenseType (
     LicenseTypeID INT IDENTITY(1,1) PRIMARY KEY,
-    TypeCode NVARCHAR(50) NOT NULL UNIQUE,
-    TypeName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    TypeCode NVARCHAR(50) NULL DEFAULT '' UNIQUE,
+    TypeName NVARCHAR(100) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -121,9 +121,9 @@ CREATE TABLE dbo.LU_LicenseType (
 -- Tool Categories (Cloud Platforms, Design & Documentation, IaC, Assessment & Analysis)
 CREATE TABLE dbo.LU_ToolCategory (
     ToolCategoryID INT IDENTITY(1,1) PRIMARY KEY,
-    CategoryCode NVARCHAR(50) NOT NULL UNIQUE,
-    CategoryName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    CategoryCode NVARCHAR(50) NULL DEFAULT '' UNIQUE,
+    CategoryName NVARCHAR(100) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -131,9 +131,9 @@ CREATE TABLE dbo.LU_ToolCategory (
 -- Scope Type (In Scope, Out of Scope)
 CREATE TABLE dbo.LU_ScopeType (
     ScopeTypeID INT IDENTITY(1,1) PRIMARY KEY,
-    TypeCode NVARCHAR(20) NOT NULL UNIQUE,
-    TypeName NVARCHAR(50) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    TypeCode NVARCHAR(20) NULL DEFAULT '' UNIQUE,
+    TypeName NVARCHAR(50) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -141,9 +141,9 @@ CREATE TABLE dbo.LU_ScopeType (
 -- Interaction Level (HIGH, MEDIUM, LOW)
 CREATE TABLE dbo.LU_InteractionLevel (
     InteractionLevelID INT IDENTITY(1,1) PRIMARY KEY,
-    LevelCode NVARCHAR(20) NOT NULL UNIQUE,
-    LevelName NVARCHAR(50) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    LevelCode NVARCHAR(20) NULL DEFAULT '' UNIQUE,
+    LevelName NVARCHAR(50) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -151,9 +151,9 @@ CREATE TABLE dbo.LU_InteractionLevel (
 -- Requirement Level (Required, Recommended, Optional)
 CREATE TABLE dbo.LU_RequirementLevel (
     RequirementLevelID INT IDENTITY(1,1) PRIMARY KEY,
-    LevelCode NVARCHAR(20) NOT NULL UNIQUE,
-    LevelName NVARCHAR(50) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    LevelCode NVARCHAR(20) NULL DEFAULT '' UNIQUE,
+    LevelName NVARCHAR(50) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -161,9 +161,9 @@ CREATE TABLE dbo.LU_RequirementLevel (
 -- Roles
 CREATE TABLE dbo.LU_Role (
     RoleID INT IDENTITY(1,1) PRIMARY KEY,
-    RoleCode NVARCHAR(50) NOT NULL UNIQUE,
-    RoleName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(500) NULL,
+    RoleCode NVARCHAR(50) NULL DEFAULT '' UNIQUE,
+    RoleName NVARCHAR(100) NULL DEFAULT '',
+    Description NVARCHAR(500) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -171,9 +171,9 @@ CREATE TABLE dbo.LU_Role (
 -- Effort Categories
 CREATE TABLE dbo.LU_EffortCategory (
     EffortCategoryID INT IDENTITY(1,1) PRIMARY KEY,
-    CategoryCode NVARCHAR(50) NOT NULL UNIQUE,
-    CategoryName NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(MAX) NULL,
+    CategoryCode NVARCHAR(50) NULL DEFAULT '' UNIQUE,
+    CategoryName NVARCHAR(100) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1
 );
@@ -184,17 +184,17 @@ CREATE TABLE dbo.LU_EffortCategory (
 
 CREATE TABLE dbo.ServiceCatalogItem (
     ServiceID INT IDENTITY(1,1) PRIMARY KEY,
-    ServiceCode NVARCHAR(50) NOT NULL UNIQUE,           -- e.g., "ID0XX"
-    ServiceName NVARCHAR(200) NOT NULL,                  -- e.g., "Application Landing Zone Design"
+    ServiceCode NVARCHAR(50) NULL DEFAULT '' UNIQUE,           -- e.g., "ID0XX"
+    ServiceName NVARCHAR(200) NULL DEFAULT '',                  -- e.g., "Application Landing Zone Design"
     Version NVARCHAR(20) NOT NULL DEFAULT 'v1.0',
     CategoryID INT NOT NULL REFERENCES dbo.LU_ServiceCategory(CategoryID),
-    Description NVARCHAR(MAX) NOT NULL,
-    Notes NVARCHAR(MAX) NULL,                            -- Additional notes
+    Description NVARCHAR(MAX) NULL DEFAULT '',
+    Notes NVARCHAR(MAX) NULL DEFAULT '',                            -- Additional notes
     IsActive BIT NOT NULL DEFAULT 1,
     CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    CreatedBy NVARCHAR(100) NULL,
+    CreatedBy NVARCHAR(100) NULL DEFAULT '',
     ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    ModifiedBy NVARCHAR(100) NULL
+    ModifiedBy NVARCHAR(100) NULL DEFAULT ''
 );
 
 CREATE INDEX IX_ServiceCatalogItem_Category ON dbo.ServiceCatalogItem(CategoryID);
@@ -207,9 +207,9 @@ CREATE INDEX IX_ServiceCatalogItem_Active ON dbo.ServiceCatalogItem(IsActive);
 CREATE TABLE dbo.UsageScenario (
     ScenarioID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ScenarioNumber INT NOT NULL,
-    ScenarioTitle NVARCHAR(200) NOT NULL,
-    ScenarioDescription NVARCHAR(MAX) NOT NULL,
+    ScenarioNumber INT NULL DEFAULT 0,
+    ScenarioTitle NVARCHAR(200) NULL DEFAULT '',
+    ScenarioDescription NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -223,13 +223,14 @@ CREATE TABLE dbo.ServiceDependency (
     DependencyID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     DependencyTypeID INT NOT NULL REFERENCES dbo.LU_DependencyType(DependencyTypeID),
-    DependencyName NVARCHAR(200) NULL,                                         -- Friendly name for the dependency
-    DependencyDescription NVARCHAR(MAX) NULL,                                  -- Detailed description
-    DependentServiceID INT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID),  -- NULL if external service
-    DependentServiceCode NVARCHAR(50) NULL,                                    -- Service code for lookup/reference
-    DependentServiceName NVARCHAR(200) NOT NULL,                               -- Name for display/external services
-    RequirementLevelID INT NULL REFERENCES dbo.LU_RequirementLevel(RequirementLevelID),
-    Notes NVARCHAR(500) NULL,
+    DependencyName NVARCHAR(200) NULL DEFAULT '',                                         -- Friendly name for the dependency
+    DependencyDescription NVARCHAR(MAX) NULL DEFAULT '',                                  -- Detailed description
+    RelatedServiceId INT NULL DEFAULT 0,                                                 -- Related service (nullable)
+    DependentServiceID INT NULL DEFAULT 0 REFERENCES dbo.ServiceCatalogItem(ServiceID),  -- NULL if external service
+    DependentServiceCode NVARCHAR(50) NULL DEFAULT '',                                    -- Service code for lookup/reference
+    DependentServiceName NVARCHAR(200) NULL DEFAULT '',                               -- Name for display/external services
+    RequirementLevelID INT NULL DEFAULT 0 REFERENCES dbo.LU_RequirementLevel(RequirementLevelID),
+    Notes NVARCHAR(500) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -245,8 +246,8 @@ CREATE TABLE dbo.ServiceScopeCategory (
     ScopeCategoryID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     ScopeTypeID INT NOT NULL REFERENCES dbo.LU_ScopeType(ScopeTypeID),
-    CategoryNumber INT NULL,                             -- e.g., 1, 2, 3 for numbered categories
-    CategoryName NVARCHAR(200) NOT NULL,                 -- e.g., "Platform Architecture"
+    CategoryNumber INT NULL DEFAULT 0,                             -- e.g., 1, 2, 3 for numbered categories
+    CategoryName NVARCHAR(200) NULL DEFAULT '',                 -- e.g., "Platform Architecture"
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -257,7 +258,7 @@ CREATE TABLE dbo.ServiceScopeItem (
     ScopeItemID INT IDENTITY(1,1) PRIMARY KEY,
     ScopeCategoryID INT NOT NULL REFERENCES dbo.ServiceScopeCategory(ScopeCategoryID) ON DELETE CASCADE,
     ItemName NVARCHAR(500) NOT NULL DEFAULT '',
-    ItemDescription NVARCHAR(MAX) NOT NULL,
+    ItemDescription NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -271,16 +272,16 @@ CREATE TABLE dbo.ServicePrerequisite (
     PrerequisiteID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     PrerequisiteCategoryID INT NOT NULL REFERENCES dbo.LU_PrerequisiteCategory(PrerequisiteCategoryID),
-    PrerequisiteName NVARCHAR(MAX) NOT NULL,
+    PrerequisiteName NVARCHAR(MAX) NULL DEFAULT '',
     PrerequisiteDescription NVARCHAR(MAX) NOT NULL DEFAULT '',
-    Description NVARCHAR(MAX) NULL,
-    RequirementLevelID INT NULL REFERENCES dbo.LU_RequirementLevel(RequirementLevelID),
+    Description NVARCHAR(MAX) NULL DEFAULT '',
+    RequirementLevelID INT NULL DEFAULT 0 REFERENCES dbo.LU_RequirementLevel(RequirementLevelID),
     SortOrder INT NOT NULL DEFAULT 0,
     -- Audit fields
     CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    CreatedBy NVARCHAR(MAX) NULL,
+    CreatedBy NVARCHAR(MAX) NULL DEFAULT '',
     ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    ModifiedBy NVARCHAR(MAX) NULL
+    ModifiedBy NVARCHAR(MAX) NULL DEFAULT ''
 );
 
 CREATE INDEX IX_ServicePrerequisite_Service ON dbo.ServicePrerequisite(ServiceID);
@@ -295,9 +296,9 @@ CREATE TABLE dbo.CloudProviderCapability (
     CapabilityID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     CloudProviderID INT NOT NULL REFERENCES dbo.LU_CloudProvider(CloudProviderID),
-    CapabilityType NVARCHAR(100) NOT NULL,              -- e.g., "Reference Architecture", "Landing Zone Accelerator"
-    CapabilityName NVARCHAR(200) NOT NULL,              -- e.g., "AWS Well-Architected Framework"
-    Notes NVARCHAR(500) NULL,
+    CapabilityType NVARCHAR(100) NULL DEFAULT '',              -- e.g., "Reference Architecture", "Landing Zone Accelerator"
+    CapabilityName NVARCHAR(200) NULL DEFAULT '',              -- e.g., "AWS Well-Architected Framework"
+    Notes NVARCHAR(500) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -308,8 +309,8 @@ CREATE TABLE dbo.ServiceToolFramework (
     ToolFrameworkID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     ToolCategoryID INT NOT NULL REFERENCES dbo.LU_ToolCategory(ToolCategoryID),
-    ToolName NVARCHAR(200) NOT NULL,
-    Description NVARCHAR(500) NULL,
+    ToolName NVARCHAR(200) NULL DEFAULT '',
+    Description NVARCHAR(500) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -323,9 +324,10 @@ CREATE TABLE dbo.ServiceLicense (
     LicenseID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     LicenseTypeID INT NOT NULL REFERENCES dbo.LU_LicenseType(LicenseTypeID),
-    LicenseDescription NVARCHAR(MAX) NOT NULL,
-    Description NVARCHAR(MAX) NULL,                                                -- Additional description/notes
-    CloudProviderID INT NULL REFERENCES dbo.LU_CloudProvider(CloudProviderID),    -- Optional, if specific to a cloud
+    LicenseName NVARCHAR(200) NOT NULL DEFAULT '',
+    LicenseDescription NVARCHAR(MAX) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',                                                -- Additional description/notes
+    CloudProviderID INT NULL DEFAULT 0 REFERENCES dbo.LU_CloudProvider(CloudProviderID),    -- Optional, if specific to a cloud
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -339,7 +341,8 @@ CREATE TABLE dbo.ServiceInteraction (
     InteractionID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     InteractionLevelID INT NOT NULL REFERENCES dbo.LU_InteractionLevel(InteractionLevelID),
-    Notes NVARCHAR(MAX) NULL
+    InteractionDescription NVARCHAR(MAX) NOT NULL DEFAULT '',
+    Notes NVARCHAR(MAX) NULL DEFAULT ''
 );
 
 CREATE UNIQUE INDEX IX_ServiceInteraction_Service ON dbo.ServiceInteraction(ServiceID);
@@ -347,8 +350,9 @@ CREATE UNIQUE INDEX IX_ServiceInteraction_Service ON dbo.ServiceInteraction(Serv
 -- Customer Requirements (Customer Must Provide)
 CREATE TABLE dbo.CustomerRequirement (
     RequirementID INT IDENTITY(1,1) PRIMARY KEY,
-    ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    RequirementDescription NVARCHAR(MAX) NOT NULL,
+    InteractionID INT NULL DEFAULT 0 REFERENCES dbo.ServiceInteraction(InteractionID) ON DELETE CASCADE,
+    ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE NO ACTION,
+    RequirementDescription NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -357,8 +361,10 @@ CREATE INDEX IX_CustomerRequirement_Service ON dbo.CustomerRequirement(ServiceID
 -- Access Requirements
 CREATE TABLE dbo.AccessRequirement (
     AccessRequirementID INT IDENTITY(1,1) PRIMARY KEY,
-    ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    RequirementDescription NVARCHAR(MAX) NOT NULL,
+    InteractionID INT NULL DEFAULT 0 REFERENCES dbo.ServiceInteraction(InteractionID) ON DELETE CASCADE,
+    ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE NO ACTION,
+    AccessDescription NVARCHAR(MAX) NOT NULL DEFAULT '',
+    RequirementDescription NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -367,9 +373,12 @@ CREATE INDEX IX_AccessRequirement_Service ON dbo.AccessRequirement(ServiceID);
 -- Stakeholder Involvement
 CREATE TABLE dbo.StakeholderInvolvement (
     InvolvementID INT IDENTITY(1,1) PRIMARY KEY,
-    ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    StakeholderRole NVARCHAR(200) NOT NULL,             -- e.g., "CTO/CIO or delegate"
-    InvolvementDescription NVARCHAR(MAX) NOT NULL,      -- e.g., "Kick-off, key decision points, final sign-off"
+    InteractionID INT NULL DEFAULT 0 REFERENCES dbo.ServiceInteraction(InteractionID) ON DELETE CASCADE,
+    ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE NO ACTION,
+    StakeholderRole NVARCHAR(200) NULL DEFAULT '',             -- e.g., "CTO/CIO or delegate"
+    InvolvementType NVARCHAR(200) NOT NULL DEFAULT '',
+    InvolvementDescription NVARCHAR(MAX) NULL DEFAULT '',      -- e.g., "Kick-off, key decision points, final sign-off"
+    Description NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -382,11 +391,14 @@ CREATE INDEX IX_StakeholderInvolvement_Service ON dbo.StakeholderInvolvement(Ser
 CREATE TABLE dbo.ServiceInput (
     InputID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ParameterName NVARCHAR(200) NOT NULL,
-    ParameterDescription NVARCHAR(MAX) NOT NULL,
+    InputName NVARCHAR(200) NOT NULL DEFAULT '',
+    ParameterName NVARCHAR(200) NULL DEFAULT '',
+    ParameterDescription NVARCHAR(MAX) NULL DEFAULT '',
     RequirementLevelID INT NOT NULL REFERENCES dbo.LU_RequirementLevel(RequirementLevelID),
-    DataType NVARCHAR(50) NULL,                         -- e.g., "Text", "Number", "List", "Boolean"
-    DefaultValue NVARCHAR(500) NULL,
+    DataType NVARCHAR(50) NULL DEFAULT '',                         -- e.g., "Text", "Number", "List", "Boolean"
+    DefaultValue NVARCHAR(500) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
+    ExampleValue NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -400,8 +412,8 @@ CREATE INDEX IX_ServiceInput_Service ON dbo.ServiceInput(ServiceID);
 CREATE TABLE dbo.ServiceOutputCategory (
     OutputCategoryID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    CategoryNumber INT NULL,
-    CategoryName NVARCHAR(200) NOT NULL,
+    CategoryNumber INT NULL DEFAULT 0,
+    CategoryName NVARCHAR(200) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -412,7 +424,7 @@ CREATE TABLE dbo.ServiceOutputItem (
     OutputItemID INT IDENTITY(1,1) PRIMARY KEY,
     OutputCategoryID INT NOT NULL REFERENCES dbo.ServiceOutputCategory(OutputCategoryID) ON DELETE CASCADE,
     ItemName NVARCHAR(500) NOT NULL DEFAULT '',
-    ItemDescription NVARCHAR(MAX) NOT NULL,
+    ItemDescription NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -425,8 +437,10 @@ CREATE INDEX IX_ServiceOutputItem_Category ON dbo.ServiceOutputItem(OutputCatego
 CREATE TABLE dbo.TimelinePhase (
     PhaseID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    PhaseNumber INT NOT NULL,
-    PhaseName NVARCHAR(200) NOT NULL,
+    PhaseNumber INT NULL DEFAULT 0,
+    PhaseName NVARCHAR(200) NULL DEFAULT '',
+    Description NVARCHAR(MAX) NULL DEFAULT '',
+    DurationBySize NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -441,19 +455,25 @@ CREATE INDEX IX_TimelinePhase_Service ON dbo.TimelinePhase(ServiceID);
 
 CREATE TABLE dbo.ServiceSizeOption (
     ServiceSizeID INT IDENTITY(1,1) PRIMARY KEY,
+    ServiceSizeOptionId INT NULL DEFAULT 0,                           -- Additional identifier (optional)
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
-    ScopeDescription NVARCHAR(MAX) NULL,                -- Description of what this size covers
-    DurationMin NVARCHAR(50) NULL,                      -- e.g., "2 weeks" or "2-3 weeks"
-    DurationMax NVARCHAR(50) NULL,
-    DurationDisplay NVARCHAR(100) NULL,                 -- e.g., "2-3 weeks"
-    EffortHoursMin INT NULL,
-    EffortHoursMax INT NULL,
-    EffortDisplay NVARCHAR(100) NULL,                   -- e.g., "40-60 hours"
-    TeamSizeMin INT NULL,
-    TeamSizeMax INT NULL,
-    TeamSizeDisplay NVARCHAR(100) NULL,                 -- e.g., "1-2 resources"
-    Complexity NVARCHAR(50) NULL,                       -- e.g., "Low", "Medium", "High"
+    Description NVARCHAR(MAX) NULL DEFAULT '',                         -- General description
+    ScopeDescription NVARCHAR(MAX) NULL DEFAULT '',                    -- Description of what this size covers
+    Duration NVARCHAR(100) NULL DEFAULT '',                            -- Duration text
+    DurationInDays INT NULL DEFAULT 0,                                -- Duration in days
+    DurationMin NVARCHAR(50) NULL DEFAULT '',                          -- e.g., "2 weeks" or "2-3 weeks"
+    DurationMax NVARCHAR(50) NULL DEFAULT '',
+    DurationDisplay NVARCHAR(100) NULL DEFAULT '',                     -- e.g., "2-3 weeks"
+    EffortRange NVARCHAR(100) NULL DEFAULT '',                         -- Effort range text
+    EffortHoursMin INT NULL DEFAULT 0,
+    EffortHoursMax INT NULL DEFAULT 0,
+    EffortDisplay NVARCHAR(100) NULL DEFAULT '',                       -- e.g., "40-60 hours"
+    TeamSize NVARCHAR(50) NULL DEFAULT '',                             -- Team size text
+    TeamSizeMin INT NULL DEFAULT 0,
+    TeamSizeMax INT NULL DEFAULT 0,
+    TeamSizeDisplay NVARCHAR(100) NULL DEFAULT '',                     -- e.g., "1-2 resources"
+    Complexity NVARCHAR(50) NULL DEFAULT '',                           -- e.g., "Low", "Medium", "High"
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -464,9 +484,9 @@ CREATE TABLE dbo.PhaseDurationBySize (
     PhaseDurationID INT IDENTITY(1,1) PRIMARY KEY,
     PhaseID INT NOT NULL REFERENCES dbo.TimelinePhase(PhaseID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
-    DurationMin NVARCHAR(50) NULL,
-    DurationMax NVARCHAR(50) NULL,
-    DurationDisplay NVARCHAR(100) NULL                  -- e.g., "2-3 days"
+    DurationMin NVARCHAR(50) NULL DEFAULT '',
+    DurationMax NVARCHAR(50) NULL DEFAULT '',
+    DurationDisplay NVARCHAR(100) NULL DEFAULT ''                  -- e.g., "2-3 days"
 );
 
 CREATE INDEX IX_PhaseDurationBySize_Phase ON dbo.PhaseDurationBySize(PhaseID);
@@ -478,8 +498,8 @@ CREATE INDEX IX_PhaseDurationBySize_Phase ON dbo.PhaseDurationBySize(PhaseID);
 CREATE TABLE dbo.SizingCriteria (
     CriteriaID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    CriteriaName NVARCHAR(200) NOT NULL,                -- e.g., "Number of applications"
-    CriteriaType NVARCHAR(50) NULL,                     -- e.g., "Scale", "Technical"
+    CriteriaName NVARCHAR(200) NULL DEFAULT '',                -- e.g., "Number of applications"
+    CriteriaType NVARCHAR(50) NULL DEFAULT '',                     -- e.g., "Scale", "Technical"
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -490,8 +510,8 @@ CREATE TABLE dbo.SizingCriteriaValue (
     CriteriaValueID INT IDENTITY(1,1) PRIMARY KEY,
     CriteriaID INT NOT NULL REFERENCES dbo.SizingCriteria(CriteriaID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
-    CriteriaValue NVARCHAR(500) NOT NULL,               -- e.g., "1", "2-5", "6+"
-    Notes NVARCHAR(500) NULL
+    CriteriaValue NVARCHAR(500) NULL DEFAULT '',               -- e.g., "1", "2-5", "6+"
+    Notes NVARCHAR(500) NULL DEFAULT ''
 );
 
 CREATE INDEX IX_SizingCriteriaValue_Criteria ON dbo.SizingCriteriaValue(CriteriaID);
@@ -503,8 +523,8 @@ CREATE INDEX IX_SizingCriteriaValue_Criteria ON dbo.SizingCriteriaValue(Criteria
 CREATE TABLE dbo.SizingParameter (
     ParameterID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ParameterCategory NVARCHAR(50) NOT NULL,            -- "Scale" or "Technical"
-    ParameterName NVARCHAR(200) NOT NULL,               -- e.g., "Number of Applications", "Hybrid Connectivity"
+    ParameterCategory NVARCHAR(50) NULL DEFAULT '',            -- "Scale" or "Technical"
+    ParameterName NVARCHAR(200) NULL DEFAULT '',               -- e.g., "Number of Applications", "Hybrid Connectivity"
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -514,11 +534,11 @@ CREATE INDEX IX_SizingParameter_Service ON dbo.SizingParameter(ServiceID);
 CREATE TABLE dbo.SizingParameterValue (
     ParameterValueID INT IDENTITY(1,1) PRIMARY KEY,
     ParameterID INT NOT NULL REFERENCES dbo.SizingParameter(ParameterID) ON DELETE CASCADE,
-    ValueCondition NVARCHAR(500) NOT NULL,              -- e.g., "1 application", "ExpressRoute/Direct Connect required"
-    ResultSize NVARCHAR(50) NULL,                       -- e.g., "Size S", "Size M"
-    HoursAdjustment INT NULL,                           -- e.g., 16, -8
-    AdjustmentDisplay NVARCHAR(100) NULL,               -- e.g., "+16 hours", "baseline"
-    Notes NVARCHAR(500) NULL,
+    ValueCondition NVARCHAR(500) NULL DEFAULT '',              -- e.g., "1 application", "ExpressRoute/Direct Connect required"
+    ResultSize NVARCHAR(50) NULL DEFAULT '',                       -- e.g., "Size S", "Size M"
+    HoursAdjustment INT NULL DEFAULT 0,                           -- e.g., 16, -8
+    AdjustmentDisplay NVARCHAR(100) NULL DEFAULT '',               -- e.g., "+16 hours", "baseline"
+    Notes NVARCHAR(500) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -530,10 +550,17 @@ CREATE INDEX IX_SizingParameterValue_Parameter ON dbo.SizingParameterValue(Param
 
 CREATE TABLE dbo.EffortEstimationItem (
     EstimationItemID INT IDENTITY(1,1) PRIMARY KEY,
+    EstimationId INT NULL DEFAULT 0,                                  -- Additional identifier
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ScopeArea NVARCHAR(200) NOT NULL,                   -- e.g., "Platform Architecture", "Network Architecture"
-    BaseHours INT NOT NULL,
-    Notes NVARCHAR(MAX) NULL,
+    ServiceSizeOptionId INT NULL DEFAULT 0,                           -- Link to specific size option
+    EffortCategoryId INT NULL DEFAULT 0,                              -- Category identifier
+    SizeOptionId INT NULL DEFAULT 0,                                  -- Size option reference
+    Category NVARCHAR(200) NULL DEFAULT '',                            -- Category name
+    ScopeArea NVARCHAR(200) NULL DEFAULT '',                       -- e.g., "Platform Architecture", "Network Architecture"
+    EstimatedHours DECIMAL(10, 2) NULL DEFAULT 0,                     -- Estimated hours
+    EffortDays DECIMAL(10, 2) NULL DEFAULT 0,                         -- Effort in days
+    BaseHours INT NULL DEFAULT 0,
+    Notes NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -542,11 +569,16 @@ CREATE INDEX IX_EffortEstimationItem_Service ON dbo.EffortEstimationItem(Service
 -- Technical Complexity Additions
 CREATE TABLE dbo.TechnicalComplexityAddition (
     ComplexityAdditionID INT IDENTITY(1,1) PRIMARY KEY,
+    AdditionId INT NULL DEFAULT 0,                                    -- Additional identifier (optional)
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    AdditionName NVARCHAR(200) NOT NULL,                -- e.g., "Hybrid connectivity"
-    Condition NVARCHAR(500) NOT NULL,                   -- e.g., "On-premises integration required"
-    HoursAdded INT NOT NULL,
-    Notes NVARCHAR(500) NULL,
+    ServiceSizeOptionId INT NULL DEFAULT 0,                           -- Optional reference to size option
+    AdditionName NVARCHAR(200) NULL DEFAULT '',                    -- e.g., "Hybrid connectivity"
+    Condition NVARCHAR(500) NULL DEFAULT '',                       -- e.g., "On-premises integration required"
+    Factor DECIMAL(5, 2) NULL DEFAULT 0,                              -- Complexity factor
+    HoursAdded INT NULL DEFAULT 0,
+    AdditionalHours INT NULL DEFAULT 0,                               -- Additional hours (alias/alternative)
+    Description NVARCHAR(MAX) NULL DEFAULT '',                         -- Detailed description
+    Notes NVARCHAR(500) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -559,8 +591,8 @@ CREATE INDEX IX_TechnicalComplexityAddition_Service ON dbo.TechnicalComplexityAd
 CREATE TABLE dbo.ScopeDependency (
     ScopeDependencyID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ScopeArea NVARCHAR(200) NOT NULL,                   -- e.g., "Container Platform Design"
-    RequiredAreas NVARCHAR(MAX) NOT NULL,               -- e.g., "Compute Architecture, Network Architecture"
+    ScopeArea NVARCHAR(200) NULL DEFAULT '',                   -- e.g., "Container Platform Design"
+    RequiredAreas NVARCHAR(MAX) NULL DEFAULT '',               -- e.g., "Compute Architecture, Network Architecture"
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -574,9 +606,9 @@ CREATE TABLE dbo.SizingExample (
     ExampleID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
-    ExampleTitle NVARCHAR(200) NOT NULL,                -- e.g., "Single PaaS Web Application Landing Zone"
-    Scenario NVARCHAR(MAX) NOT NULL,
-    Deliverables NVARCHAR(MAX) NULL,
+    ExampleTitle NVARCHAR(200) NULL DEFAULT '',                -- e.g., "Single PaaS Web Application Landing Zone"
+    Scenario NVARCHAR(MAX) NULL DEFAULT '',
+    Deliverables NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -586,7 +618,7 @@ CREATE INDEX IX_SizingExample_Service ON dbo.SizingExample(ServiceID);
 CREATE TABLE dbo.SizingExampleCharacteristic (
     CharacteristicID INT IDENTITY(1,1) PRIMARY KEY,
     ExampleID INT NOT NULL REFERENCES dbo.SizingExample(ExampleID) ON DELETE CASCADE,
-    CharacteristicDescription NVARCHAR(MAX) NOT NULL,
+    CharacteristicDescription NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -601,7 +633,7 @@ CREATE TABLE dbo.ServiceResponsibleRole (
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     RoleID INT NOT NULL REFERENCES dbo.LU_Role(RoleID),
     IsPrimaryOwner BIT NOT NULL DEFAULT 0,
-    Responsibility NVARCHAR(MAX) NOT NULL,
+    Responsibility NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -613,11 +645,23 @@ CREATE INDEX IX_ServiceResponsibleRole_Service ON dbo.ServiceResponsibleRole(Ser
 
 CREATE TABLE dbo.ServiceTeamAllocation (
     AllocationID INT IDENTITY(1,1) PRIMARY KEY,
+    TeamAllocationId INT NULL DEFAULT 0,                              -- Additional identifier
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
     SizeOptionID INT NOT NULL REFERENCES dbo.LU_SizeOption(SizeOptionID),
+    ServiceSizeOptionId INT NULL DEFAULT 0,                           -- Link to specific size option
     RoleID INT NOT NULL REFERENCES dbo.LU_Role(RoleID),
-    FTEAllocation DECIMAL(3,2) NOT NULL,                -- e.g., 0.80, 1.00
-    Notes NVARCHAR(500) NULL,
+    -- Individual role allocations
+    CloudArchitects DECIMAL(3,2) NULL DEFAULT 0,
+    SolutionArchitects DECIMAL(3,2) NULL DEFAULT 0,
+    TechnicalLeads DECIMAL(3,2) NULL DEFAULT 0,
+    Developers DECIMAL(3,2) NULL DEFAULT 0,
+    QAEngineers DECIMAL(3,2) NULL DEFAULT 0,
+    DevOpsEngineers DECIMAL(3,2) NULL DEFAULT 0,
+    SecuritySpecialists DECIMAL(3,2) NULL DEFAULT 0,
+    ProjectManagers DECIMAL(3,2) NULL DEFAULT 0,
+    BusinessAnalysts DECIMAL(3,2) NULL DEFAULT 0,
+    FTEAllocation DECIMAL(3,2) NULL DEFAULT 0,                    -- e.g., 0.80, 1.00
+    Notes NVARCHAR(500) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -630,8 +674,8 @@ CREATE INDEX IX_ServiceTeamAllocation_Service ON dbo.ServiceTeamAllocation(Servi
 CREATE TABLE dbo.ServiceMultiCloudConsideration (
     ConsiderationID INT IDENTITY(1,1) PRIMARY KEY,
     ServiceID INT NOT NULL REFERENCES dbo.ServiceCatalogItem(ServiceID) ON DELETE CASCADE,
-    ConsiderationTitle NVARCHAR(200) NOT NULL,          -- e.g., "Design Pattern Abstraction"
-    ConsiderationDescription NVARCHAR(MAX) NOT NULL,
+    ConsiderationTitle NVARCHAR(200) NULL DEFAULT '',          -- e.g., "Design Pattern Abstraction"
+    ConsiderationDescription NVARCHAR(MAX) NULL DEFAULT '',
     SortOrder INT NOT NULL DEFAULT 0
 );
 
@@ -831,14 +875,14 @@ GO
 
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceInput') AND name = 'Description')
 BEGIN
-    ALTER TABLE dbo.ServiceInput ADD Description NVARCHAR(MAX) NULL;
+    ALTER TABLE dbo.ServiceInput ADD Description NVARCHAR(MAX) NULL DEFAULT '';
     PRINT 'Added Description to ServiceInput';
 END
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceInput') AND name = 'ExampleValue')
 BEGIN
-    ALTER TABLE dbo.ServiceInput ADD ExampleValue NVARCHAR(MAX) NULL;
+    ALTER TABLE dbo.ServiceInput ADD ExampleValue NVARCHAR(MAX) NULL DEFAULT '';
     PRINT 'Added ExampleValue to ServiceInput';
 END
 GO
@@ -846,9 +890,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceInput') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceInput ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceInput';
 END
@@ -860,9 +904,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.UsageScenario') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.UsageScenario ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to UsageScenario';
 END
@@ -874,9 +918,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceDependency') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceDependency ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceDependency';
 END
@@ -888,9 +932,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceScopeCategory') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceScopeCategory ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceScopeCategory';
 END
@@ -902,9 +946,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceScopeItem') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceScopeItem ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceScopeItem';
 END
@@ -916,9 +960,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServicePrerequisite') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServicePrerequisite ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServicePrerequisite';
 END
@@ -930,9 +974,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.CloudProviderCapability') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.CloudProviderCapability ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to CloudProviderCapability';
 END
@@ -944,9 +988,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceToolFramework') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceToolFramework ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceToolFramework';
 END
@@ -958,9 +1002,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceLicense') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceLicense ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceLicense';
 END
@@ -972,9 +1016,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceInteraction') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceInteraction ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceInteraction';
 END
@@ -986,9 +1030,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.CustomerRequirement') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.CustomerRequirement ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to CustomerRequirement';
 END
@@ -1000,9 +1044,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.AccessRequirement') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.AccessRequirement ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to AccessRequirement';
 END
@@ -1014,9 +1058,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.StakeholderInvolvement') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.StakeholderInvolvement ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to StakeholderInvolvement';
 END
@@ -1028,9 +1072,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceOutputCategory') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceOutputCategory ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceOutputCategory';
 END
@@ -1052,9 +1096,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceOutputItem') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceOutputItem ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceOutputItem';
 END
@@ -1066,9 +1110,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.TimelinePhase') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.TimelinePhase ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to TimelinePhase';
 END
@@ -1080,9 +1124,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.PhaseDurationBySize') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.PhaseDurationBySize ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to PhaseDurationBySize';
 END
@@ -1094,9 +1138,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceSizeOption') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceSizeOption ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceSizeOption';
 END
@@ -1108,9 +1152,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SizingCriteria') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.SizingCriteria ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to SizingCriteria';
 END
@@ -1122,9 +1166,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SizingCriteriaValue') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.SizingCriteriaValue ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to SizingCriteriaValue';
 END
@@ -1136,9 +1180,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SizingParameter') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.SizingParameter ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to SizingParameter';
 END
@@ -1150,9 +1194,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SizingParameterValue') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.SizingParameterValue ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to SizingParameterValue';
 END
@@ -1164,9 +1208,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.EffortEstimationItem') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.EffortEstimationItem ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to EffortEstimationItem';
 END
@@ -1178,9 +1222,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.TechnicalComplexityAddition') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.TechnicalComplexityAddition ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to TechnicalComplexityAddition';
 END
@@ -1192,9 +1236,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ScopeDependency') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ScopeDependency ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ScopeDependency';
 END
@@ -1206,9 +1250,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SizingExample') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.SizingExample ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to SizingExample';
 END
@@ -1220,9 +1264,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SizingExampleCharacteristic') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.SizingExampleCharacteristic ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to SizingExampleCharacteristic';
 END
@@ -1234,9 +1278,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceResponsibleRole') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceResponsibleRole ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceResponsibleRole';
 END
@@ -1248,9 +1292,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceTeamAllocation') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceTeamAllocation ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceTeamAllocation';
 END
@@ -1262,9 +1306,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ServiceMultiCloudConsideration') AND name = 'CreatedBy')
 BEGIN
     ALTER TABLE dbo.ServiceMultiCloudConsideration ADD 
-        CreatedBy NVARCHAR(100) NULL,
+        CreatedBy NVARCHAR(100) NULL DEFAULT '',
         CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        ModifiedBy NVARCHAR(100) NULL,
+        ModifiedBy NVARCHAR(100) NULL DEFAULT '',
         ModifiedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE();
     PRINT 'Added audit columns to ServiceMultiCloudConsideration';
 END

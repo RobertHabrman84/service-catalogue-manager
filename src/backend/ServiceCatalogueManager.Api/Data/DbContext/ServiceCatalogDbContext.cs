@@ -209,6 +209,9 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
             entity.ToTable("StakeholderInvolvement");
             entity.HasKey(e => e.InvolvementId);
             entity.Property(e => e.StakeholderRole).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.InvolvementType).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.InvolvementDescription).IsRequired();
+            entity.Property(e => e.Description);
 
             entity.HasOne(e => e.Interaction)
                 .WithMany(i => i.StakeholderInvolvements)
@@ -275,6 +278,8 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
             entity.ToTable("TimelinePhase");
             entity.HasKey(e => e.PhaseId);
             entity.Property(e => e.PhaseName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description);
+            entity.Property(e => e.DurationBySize);
 
             entity.HasOne(e => e.Service)
                 .WithMany(s => s.TimelinePhases)
@@ -310,8 +315,9 @@ public class ServiceCatalogDbContext : Microsoft.EntityFrameworkCore.DbContext
         modelBuilder.Entity<EffortEstimationItem>(entity =>
         {
             entity.ToTable("EffortEstimationItem");
-            entity.HasKey(e => e.EstimationId);
+            entity.HasKey(e => e.EstimationItemId);
             entity.Property(e => e.EffortDays).HasPrecision(18, 2);
+            entity.Property(e => e.EstimatedHours).HasPrecision(10, 2);
 
             entity.HasOne(e => e.Service)
                 .WithMany(s => s.EffortEstimations)
